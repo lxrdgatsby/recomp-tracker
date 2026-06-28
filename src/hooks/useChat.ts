@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext'
 import {
   deleteConversation,
   fetchConversationMessages,
-  getStoredActiveConversationId,
   linkOrphanMessages,
   saveChatMessage,
   storeActiveConversationId,
@@ -25,14 +24,6 @@ export interface ChatMsg {
   content: string
 }
 
-function welcomeMessage(username?: string | null): ChatMsg {
-  return {
-    id: 'welcome',
-    role: 'assistant',
-    content: `Hey${username ? ` @${username}` : ''}! I'm your peptide protocol assistant. Ask me about dosing, stacking, your 90-day plan, or tell me what you're currently running — I can update your profile automatically.`,
-  }
-}
-
 export function useChat() {
   const { user, userProfile, trackerState, setTrackerState, refreshProfile } =
     useAuth()
@@ -42,7 +33,6 @@ export function useChat() {
   )
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [loading, setLoading] = useState(false)
-  const [historyLoaded, setHistoryLoaded] = useState(false)
   const [isDraft, setIsDraft] = useState(true)
   const sendingRef = useRef(false)
 
@@ -50,53 +40,50 @@ export function useChat() {
     async (conversationId: string) => {
       if (!user) return
       const history = await fetchConversationMessages(user.id, conversationId)
-      if (history.length > 0) {
-        setMessages(
-          history.map((m) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-          }))
-        )
-      } else {
-        setMessages([welcomeMessage(userProfile?.username)])
-      }
+      setMessages(
+        history.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+        }))
+      )
     },
-    [user, userProfile?.username]
+    [user]
   )
 
   useEffect(() => {
-    if (!user || historyLoaded) return
+    if (!user) {
+      setConversations([])
+      setActiveConversationId(null)
+      setMessages([])
+      setIsDraft(true)
+      return
+    }
 
-    setHistoryLoaded(true)
+    let cancelled = false
 
     const init = async () => {
       try {
         const convs = await syncConversationsForUser(user.id)
+        if (cancelled) return
         setConversations(convs)
-
-        if (convs.length === 0) {
-          setIsDraft(true)
-          setMessages([welcomeMessage(userProfile?.username)])
-          return
-        }
-
-        const storedId = getStoredActiveConversationId(user.id)
-        const active = convs.find((c) => c.id === storedId) ?? convs[0]
-
-        setActiveConversationId(active.id)
-        setIsDraft(false)
-        storeActiveConversationId(user.id, active.id)
-        await loadMessagesForConversation(active.id)
+        setActiveConversationId(null)
+        setIsDraft(true)
+        setMessages([])
+        storeActiveConversationId(user.id, null)
       } catch (err) {
         console.error('chat init:', err)
+        if (cancelled) return
         setIsDraft(true)
-        setMessages([welcomeMessage(userProfile?.username)])
+        setMessages([])
       }
     }
 
     void init()
-  }, [user, historyLoaded, userProfile?.username, loadMessagesForConversation])
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
 
   const getUserContext = useCallback(
     () => buildUserContextForChat(userProfile, trackerState),
@@ -192,9 +179,9 @@ export function useChat() {
     if (!user) return
     setActiveConversationId(null)
     setIsDraft(true)
-    setMessages([welcomeMessage(userProfile?.username)])
+    setMessages([])
     storeActiveConversationId(user.id, null)
-  }, [user, userProfile?.username])
+  }, [user])
 
   const pinConversation = useCallback(
     async (conversationId: string, pinned: boolean) => {
@@ -251,7 +238,7 @@ export function useChat() {
       const needsNewConversation = isDraft || !conversationId
       const isFirstUserMessage =
         needsNewConversation ||
-        messages.filter((m) => m.role === 'user' && m.id !== 'welcome').length === 0
+        messages.filter((m) => m.role === 'user').length === 0
 
       if (needsNewConversation) {
         const title = titleFromMessage(trimmed)
@@ -270,9 +257,10 @@ export function useChat() {
         content: trimmed,
       }
 
-      const apiMessages = [...messages, userMsg]
-        .filter((m) => m.id !== 'welcome')
-        .map((m) => ({ role: m.role, content: m.content }))
+      const apiMessages = [...messages, userMsg].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }))
 
       setMessages((prev) => [...prev, userMsg])
       setLoading(true)
@@ -370,7 +358,6 @@ export function useChat() {
   return {
     messages,
     loading,
-    historyLoaded,
     sendMessage,
     conversations,
     activeConversationId,

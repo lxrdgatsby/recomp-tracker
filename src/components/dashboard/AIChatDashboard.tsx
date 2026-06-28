@@ -31,9 +31,7 @@ export function AIChatDashboard() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const showEmptyState =
-    messages.length <= 1 &&
-    (isDraft || messages[0]?.id === 'welcome')
+  const showEmptyState = messages.length === 0
 
   const updateSuggestionVisibility = () => {
     const el = scrollRef.current
