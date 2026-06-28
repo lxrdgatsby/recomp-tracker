@@ -5,30 +5,6 @@ const INPUT_CLASS =
 
 const STORAGE_KEY = 'doseCalculator'
 
-interface SavedDoseCalculator {
-  vialMg: number
-  bacWaterMl: number
-  targetDoseMg: number
-}
-
-function readStorage(): SavedDoseCalculator | null {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) return null
-    const data = JSON.parse(saved) as Partial<SavedDoseCalculator>
-    if (
-      typeof data.vialMg === 'number' &&
-      typeof data.bacWaterMl === 'number' &&
-      typeof data.targetDoseMg === 'number'
-    ) {
-      return data as SavedDoseCalculator
-    }
-  } catch {
-    // ignore invalid storage
-  }
-  return null
-}
-
 interface DoseCalculatorProps {
   initialVialMg?: number
   initialBacWaterMl?: number
@@ -40,21 +16,39 @@ export function DoseCalculator({
   initialBacWaterMl = 2,
   initialTargetDoseMg = 1,
 }: DoseCalculatorProps) {
-  const saved = readStorage()
-  const [vialMg, setVialMg] = useState(saved?.vialMg ?? initialVialMg)
-  const [bacWaterMl, setBacWaterMl] = useState(
-    saved?.bacWaterMl ?? initialBacWaterMl
-  )
-  const [targetDoseMg, setTargetDoseMg] = useState(
-    saved?.targetDoseMg ?? initialTargetDoseMg
-  )
+  const [vialMg, setVialMg] = useState(initialVialMg)
+  const [bacWaterMl, setBacWaterMl] = useState(initialBacWaterMl)
+  const [targetDoseMg, setTargetDoseMg] = useState(initialTargetDoseMg)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      try {
+        const data = JSON.parse(saved) as {
+          vialMg?: number
+          bacWaterMl?: number
+          targetDoseMg?: number
+        }
+        if (typeof data.vialMg === 'number') setVialMg(data.vialMg)
+        if (typeof data.bacWaterMl === 'number') setBacWaterMl(data.bacWaterMl)
+        if (typeof data.targetDoseMg === 'number') {
+          setTargetDoseMg(data.targetDoseMg)
+        }
+      } catch {
+        // ignore invalid storage
+      }
+    }
+    setReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!ready) return
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ vialMg, bacWaterMl, targetDoseMg })
     )
-  }, [vialMg, bacWaterMl, targetDoseMg])
+  }, [vialMg, bacWaterMl, targetDoseMg, ready])
 
   const concentration = bacWaterMl > 0 ? vialMg / bacWaterMl : 0
   const units =
