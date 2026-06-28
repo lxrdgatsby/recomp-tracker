@@ -21,8 +21,12 @@ interface AuthContextValue {
   trackerState: TrackerState
   loading: boolean
   configured: boolean
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>
+  signUp: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null; needsConfirmation: boolean }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  resendConfirmation: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   setTrackerState: (state: TrackerState) => void
@@ -82,15 +86,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe()
   }, [loadUserData])
 
+  const getEmailRedirectTo = () =>
+    `${window.location.origin}/login?confirmed=1`
+
   const signUp = useCallback(async (email: string, password: string) => {
-    if (!supabase) return { error: 'Supabase not configured' }
-    const { error } = await supabase.auth.signUp({ email, password })
-    return { error: error?.message ?? null }
+    if (!supabase)
+      return { error: 'Supabase not configured', needsConfirmation: false }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: getEmailRedirectTo() },
+    })
+    if (error) return { error: error.message, needsConfirmation: false }
+
+    // Sign out so user isn't stuck in a half-logged-in state before confirming
+    await supabase.auth.signOut()
+
+    const needsConfirmation = !data.session && !!data.user
+    return { error: null, needsConfirmation }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return { error: 'Supabase not configured' }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error) return { error: null }
+
+    const msg = error.message.toLowerCase()
+    if (msg.includes('confirm') || msg.includes('verified')) {
+      return {
+        error:
+          'Please confirm your email first. Check your inbox for a message from PeptideTracker, then try again.',
+      }
+    }
+    return { error: error.message }
+  }, [])
+
+  const resendConfirmation = useCallback(async (email: string) => {
+    if (!supabase) return { error: 'Supabase not configured' }
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: getEmailRedirectTo() },
+    })
     return { error: error?.message ?? null }
   }, [])
 
@@ -108,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured: isSupabaseConfigured,
       signUp,
       signIn,
+      resendConfirmation,
       signOut,
       refreshProfile,
       setTrackerState,
@@ -120,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signUp,
       signIn,
+      resendConfirmation,
       signOut,
       refreshProfile,
     ]

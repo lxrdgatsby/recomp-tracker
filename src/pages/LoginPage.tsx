@@ -1,17 +1,22 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { MedicalDisclaimer } from '../components/layout/MedicalDisclaimer'
 
 export function LoginPage() {
-  const { signIn, user, userProfile, configured } = useAuth()
+  const { signIn, resendConfirmation, user, userProfile, configured } = useAuth()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const justConfirmed = params.get('confirmed') === '1'
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showResend, setShowResend] = useState(false)
+  const [resent, setResent] = useState(false)
 
   if (!configured) return <Navigate to="/setup" replace />
   if (user && userProfile?.onboardingCompleted) return <Navigate to="/app" replace />
@@ -21,14 +26,27 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setShowResend(false)
     setLoading(true)
     const { error: err } = await signIn(email, password)
     setLoading(false)
     if (err) {
       setError(err)
+      if (err.toLowerCase().includes('confirm')) setShowResend(true)
       return
     }
-    navigate('/app')
+    navigate('/onboarding')
+  }
+
+  const handleResend = async () => {
+    if (!email) return
+    setResent(false)
+    const { error: err } = await resendConfirmation(email)
+    if (err) {
+      setError(err)
+      return
+    }
+    setResent(true)
   }
 
   return (
@@ -41,6 +59,12 @@ export function LoginPage() {
           <p className="mt-2 text-center text-sm text-slate-400">
             Sign in to your account
           </p>
+
+          {justConfirmed && (
+            <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+              Email confirmed! You can sign in now.
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <Input
@@ -63,8 +87,26 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            {error && (
-              <p className="text-sm text-red-400">{error}</p>
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            {showResend && (
+              <div className="rounded-xl border border-slate-800 bg-navy-900 p-4 text-sm">
+                <p className="text-slate-400">
+                  Haven&apos;t received it? Check spam or resend the confirmation
+                  email.
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="mt-3 w-full"
+                  onClick={handleResend}
+                >
+                  Resend confirmation email
+                </Button>
+                {resent && (
+                  <p className="mt-2 text-xs text-emerald-400">Email sent!</p>
+                )}
+              </div>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign In'}

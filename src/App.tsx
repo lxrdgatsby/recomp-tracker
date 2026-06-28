@@ -12,6 +12,7 @@ import {
 import { LoginPage } from './pages/LoginPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { SetupPage } from './pages/SetupPage'
+import { ConfirmEmailPage } from './pages/ConfirmEmailPage'
 import { SignupPage } from './pages/SignupPage'
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/confirm-email" element={<ConfirmEmailPage />} />
           <Route
             path="/onboarding"
             element={
