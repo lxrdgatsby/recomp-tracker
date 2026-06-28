@@ -5,7 +5,7 @@ import {
   Plus,
   Syringe,
 } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Peptide, TrackerState } from '../../types'
 import {
@@ -14,6 +14,7 @@ import {
 } from '../../utils/peptideSchedule'
 import { getTitrationForDay } from '../../utils/recompProtocol'
 import { DoseCalculator } from './DoseCalculator'
+import { InjectionSiteMap } from './InjectionSiteMap'
 
 interface PeptidesViewProps {
   state: TrackerState
@@ -67,17 +68,9 @@ function buildStackCards(state: TrackerState, today: string): StackCard[] {
   })
 }
 
-const INJECTION_SITES = [
-  'Abdomen — rotate between four quadrants, 2 inches from navel',
-  'Thigh — alternate left and right, front or outer area',
-  'Upper arm — back of arm, alternate sides each dose',
-  'Rotate sites weekly to reduce irritation and lipohypertrophy',
-]
-
 export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
   const { peptides } = state
   const today = format(new Date(), 'yyyy-MM-dd')
-  const guideRef = useRef<HTMLDivElement>(null)
   const [showSites, setShowSites] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
 
@@ -101,7 +94,7 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
         <p className="text-slate-400">Reconstitution • Dosing • Protocols</p>
       </div>
 
-      <div ref={guideRef} className="mb-8">
+      <div className="mb-8">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-500/10">
@@ -266,16 +259,8 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
         )}
 
         {showSites && (
-          <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm">
-            <p className="font-medium">Site rotation</p>
-            <ul className="mt-3 space-y-2 text-slate-400">
-              {INJECTION_SITES.map((site) => (
-                <li key={site} className="flex gap-2">
-                  <span className="text-emerald-400">•</span>
-                  <span>{site}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="mt-3">
+            <InjectionSiteMap />
           </div>
         )}
       </div>

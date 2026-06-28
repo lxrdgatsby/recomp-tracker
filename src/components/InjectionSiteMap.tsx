@@ -1,0 +1,1 @@
+export { InjectionSiteMap as default, InjectionSiteMap } from './peptides/InjectionSiteMap'
