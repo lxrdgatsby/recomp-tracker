@@ -1,12 +1,15 @@
-import {
-  addDays,
-  format,
-  parse,
-  parseISO,
-  startOfMonth,
-} from 'date-fns'
-import { Target, X } from 'lucide-react'
+import { differenceInCalendarDays, format, parse, parseISO } from 'date-fns'
+import { Calendar, Target, TrendingUp, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import type { TrackerState } from '../../types'
 import { computeAdherence } from '../../utils/adherence'
 import {
@@ -20,13 +23,6 @@ interface ProgressViewProps {
   onLogWeight: (date: string, weight: number) => void
 }
 
-interface DisplayMilestone {
-  title: string
-  date: string
-  goal: string
-  achieved: boolean
-}
-
 const ADHERENCE_STATS = [
   { key: 'overall' as const, label: 'Overall', colorClass: 'text-emerald-400' },
   {
@@ -37,75 +33,108 @@ const ADHERENCE_STATS = [
   { key: 'workout' as const, label: 'Workouts', colorClass: 'text-blue-400' },
 ]
 
-function getMonthWeightChange(
-  history: TrackerState['weightHistory'],
-  currentWeight: number
-): { delta: number; label: string } | null {
-  const monthStart = startOfMonth(new Date())
-  const monthEntries = [...history]
-    .filter((e) => parseISO(e.date) >= monthStart)
-    .sort((a, b) => a.date.localeCompare(b.date))
+const UPCOMING_WEEKS = [2, 4, 8]
 
-  if (monthEntries.length === 0) return null
-
-  const baseline = monthEntries[0].weight
-  const latest =
-    monthEntries.length > 1
-      ? monthEntries[monthEntries.length - 1].weight
-      : currentWeight
-  const delta = Math.round((baseline - latest) * 10) / 10
-  if (delta === 0) return null
-
-  const arrow = delta > 0 ? '↓' : '↑'
-  return {
-    delta,
-    label: `${arrow} ${Math.abs(delta)} lbs this month`,
-  }
+interface ChartPoint {
+  date: string
+  weight: number
+  goal: number
 }
 
-function buildMilestones(state: TrackerState): DisplayMilestone[] {
+interface UpcomingMilestone {
+  week: string
+  date: string
+  target: string
+  status: string
+  statusClass: string
+}
+
+function buildChartData(state: TrackerState): ChartPoint[] {
+  const { profile, weightHistory } = state
+  const start = parseISO(profile.startDate)
+  const startWeight = getStartWeight(profile, weightHistory)
+
+  const entries = [...weightHistory].sort((a, b) => a.date.localeCompare(b.date))
+
+  if (entries.length === 0) {
+    const today = new Date()
+    const weeksElapsed = Math.max(0, differenceInCalendarDays(today, start) / 7)
+    const goal = Math.max(
+      profile.goalWeight,
+      Math.round(
+        (startWeight - weeksElapsed * profile.weeklyLossTarget) * 10
+      ) / 10
+    )
+    return [
+      {
+        date: format(today, 'MMM d'),
+        weight: startWeight,
+        goal,
+      },
+    ]
+  }
+
+  return entries.map((entry) => {
+    const entryDate = parseISO(entry.date)
+    const weeksElapsed = Math.max(
+      0,
+      differenceInCalendarDays(entryDate, start) / 7
+    )
+    const goal = Math.max(
+      profile.goalWeight,
+      Math.round(
+        (startWeight - weeksElapsed * profile.weeklyLossTarget) * 10
+      ) / 10
+    )
+    return {
+      date: format(entryDate, 'MMM d'),
+      weight: entry.weight,
+      goal,
+    }
+  })
+}
+
+function getYDomain(chartData: ChartPoint[], goalWeight: number): [number, number] {
+  const values = chartData.flatMap((d) => [d.weight, d.goal])
+  const min = Math.floor(Math.min(...values, goalWeight) - 4)
+  const max = Math.ceil(Math.max(...values) + 4)
+  return [min, Math.max(max, min + 8)]
+}
+
+function buildUpcomingMilestones(state: TrackerState): UpcomingMilestone[] {
   const { profile, weightHistory } = state
   const startWeight = getStartWeight(profile, weightHistory)
   const currentWeight = getLatestWeight(profile, weightHistory)
+  const today = new Date()
   const milestones = getMilestones(profile, startWeight)
 
-  const week2 = milestones.find((m) => m.week === 2)
-  const week4 = milestones.find((m) => m.week === 4)
+  return UPCOMING_WEEKS.map((weekNum) => {
+    const milestone = milestones.find((m) => m.week === weekNum)
+    if (!milestone) return null
 
-  const first10Target = Math.round((startWeight - 10) * 10) / 10
-  const weeksTo10 = Math.ceil(10 / profile.weeklyLossTarget)
-  const first10Date = format(
-    addDays(parseISO(profile.startDate), weeksTo10 * 7),
-    'MMM d'
-  )
+    const milestoneDate = parse(milestone.date, 'MMM d, yyyy', new Date())
+    const shortDate = format(milestoneDate, 'MMM d')
+    const achieved = currentWeight <= milestone.projectedWeight
+    const isPast = milestoneDate < today
 
-  const toDisplay = (
-    title: string,
-    date: string,
-    projectedWeight: number
-  ): DisplayMilestone => ({
-    title,
-    date,
-    goal: `~${projectedWeight} lbs`,
-    achieved: currentWeight <= projectedWeight,
-  })
+    let status = 'Upcoming'
+    let statusClass = 'text-emerald-400'
+    if (isPast && achieved) {
+      status = 'Achieved'
+      statusClass = 'text-emerald-400'
+    } else if (isPast) {
+      status = 'In progress'
+      statusClass = 'text-amber-400'
+    }
 
-  const result: DisplayMilestone[] = []
-  if (week2) {
-    result.push(
-      toDisplay(week2.label, format(parse(week2.date, 'MMM d, yyyy', new Date()), 'MMM d'), week2.projectedWeight)
-    )
-  }
-  if (week4) {
-    result.push(
-      toDisplay(week4.label, format(parse(week4.date, 'MMM d, yyyy', new Date()), 'MMM d'), week4.projectedWeight)
-    )
-  }
-  result.push(
-    toDisplay('First 10lbs Lost', first10Date, first10Target)
-  )
-
-  return result
+    return {
+      week: `Week ${weekNum}`,
+      date: shortDate,
+      target: `~${milestone.projectedWeight} lbs`,
+      status,
+      statusClass,
+    }
+  }).filter((m): m is UpcomingMilestone => m != null)
 }
 
 export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
@@ -115,6 +144,8 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
 
   const adherence = useMemo(() => computeAdherence(state), [state])
   const currentWeight = getLatestWeight(profile, weightHistory)
+  const startWeight = getStartWeight(profile, weightHistory)
+  const totalLoss = Math.round((startWeight - currentWeight) * 10) / 10
 
   const adherenceValues = {
     overall: adherence.overall,
@@ -122,31 +153,18 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
     workout: adherence.workoutPct,
   }
 
-  const chartEntries = useMemo(
-    () =>
-      [...weightHistory]
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((e) => ({
-          date: format(parseISO(e.date), 'MMM d'),
-          weight: e.weight,
-        })),
-    [weightHistory]
+  const chartData = useMemo(() => buildChartData(state), [state])
+  const yDomain = useMemo(
+    () => getYDomain(chartData, profile.goalWeight),
+    [chartData, profile.goalWeight]
+  )
+  const upcomingMilestones = useMemo(
+    () => buildUpcomingMilestones(state),
+    [state]
   )
 
-  const barScale = useMemo(() => {
-    if (chartEntries.length === 0) {
-      return { min: profile.goalWeight - 10, max: currentWeight + 10 }
-    }
-    const weights = chartEntries.map((e) => e.weight)
-    const min = Math.min(...weights, profile.goalWeight) - 5
-    const max = Math.max(...weights, currentWeight) + 5
-    return { min, max: Math.max(max, min + 1) }
-  }, [chartEntries, profile.goalWeight, currentWeight])
-
-  const monthChange = getMonthWeightChange(weightHistory, currentWeight)
-  const milestones = useMemo(() => buildMilestones(state), [state])
-
   const today = format(new Date(), 'yyyy-MM-dd')
+  const hasLoggedWeights = weightHistory.length > 0
 
   const openLogModal = () => {
     setWeightInput(String(currentWeight))
@@ -163,20 +181,20 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
 
   return (
     <div className="pb-8 text-white">
-      <div className="pt-2">
-        <h1 className="mb-1 text-3xl font-semibold tracking-tight">Progress</h1>
-        <p className="text-slate-400">
-          Weight history, adherence, and milestones
-        </p>
+      <div className="pb-6 pt-2">
+        <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
+        <p className="text-slate-400">Track your recomp journey</p>
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-3">
+      <div className="mb-8 grid grid-cols-3 gap-3">
         {ADHERENCE_STATS.map((stat) => (
           <div
             key={stat.key}
-            className="rounded-2xl bg-white/5 p-4 text-center"
+            className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center"
           >
-            <div className={`text-3xl font-semibold tabular-nums ${stat.colorClass}`}>
+            <div
+              className={`text-3xl font-semibold tabular-nums ${stat.colorClass}`}
+            >
               {adherenceValues[stat.key]}%
             </div>
             <div className="mt-1 text-xs text-slate-400">{stat.label}</div>
@@ -184,99 +202,102 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
         ))}
       </div>
 
-      <div className="mt-8">
+      <div className="mb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-medium">Weight Trend</h2>
-          {monthChange && (
-            <span
-              className={`text-xs ${
-                monthChange.delta > 0 ? 'text-emerald-400' : 'text-amber-400'
-              }`}
-            >
-              {monthChange.label}
-            </span>
+          {totalLoss > 0 && (
+            <div className="flex items-center gap-1 text-sm text-emerald-400">
+              <TrendingUp size={16} />-{totalLoss} lbs
+            </div>
           )}
         </div>
 
-        <div className="relative flex h-64 items-end justify-between rounded-2xl bg-white/5 p-6">
-          {chartEntries.length === 0 ? (
-            <p className="w-full text-center text-sm text-slate-500">
-              No weight logged yet. Tap the target button to log your first
-              weigh-in.
+        <div className="h-72 rounded-3xl bg-white/5 p-4">
+          {!hasLoggedWeights && (
+            <p className="mb-2 text-center text-xs text-slate-500">
+              Log weight to build your trend line
             </p>
-          ) : (
-            chartEntries.map((entry) => {
-              const range = barScale.max - barScale.min
-              const heightPx = Math.max(
-                12,
-                ((entry.weight - barScale.min) / range) * 180
-              )
-              return (
-                <div
-                  key={entry.date}
-                  className="flex flex-1 flex-col items-center"
-                >
-                  <div
-                    className="w-8 rounded-t bg-emerald-500 transition-all"
-                    style={{ height: `${heightPx}px` }}
-                  />
-                  <div className="mt-2 text-xs text-slate-400">{entry.date}</div>
-                  <div className="text-sm font-medium tabular-nums">
-                    {entry.weight}
-                  </div>
-                </div>
-              )
-            })
           )}
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+              <XAxis
+                dataKey="date"
+                stroke="#666"
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                axisLine={{ stroke: '#334155' }}
+              />
+              <YAxis
+                domain={yDomain}
+                stroke="#666"
+                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                axisLine={{ stroke: '#334155' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: '#0a0a0a',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12,
+                  color: '#e2e8f0',
+                }}
+                labelStyle={{ color: '#94a3b8' }}
+              />
+              <Line
+                type="natural"
+                dataKey="weight"
+                name="Weight"
+                stroke="#10b981"
+                strokeWidth={3}
+                dot={{ fill: '#10b981', r: 5 }}
+                activeDot={{ r: 6 }}
+              />
+              <Line
+                type="natural"
+                dataKey="goal"
+                name="Target"
+                stroke="#666"
+                strokeDasharray="4 2"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="mt-8">
-        <h2 className="mb-4 font-medium">Key Milestones</h2>
+      <div>
+        <h2 className="mb-4 flex items-center gap-2 font-medium">
+          <Calendar size={18} /> Upcoming Milestones
+        </h2>
+
         <div className="space-y-3">
-          {milestones.map((milestone) => (
+          {upcomingMilestones.map((milestone) => (
             <div
-              key={milestone.title}
-              className="flex items-center justify-between rounded-2xl bg-white/5 p-4"
+              key={milestone.week}
+              className="flex items-center justify-between rounded-2xl bg-white/5 p-5"
             >
               <div>
-                <div className="font-medium">{milestone.title}</div>
-                <div className="text-xs text-slate-400">{milestone.date}</div>
-              </div>
-              <div className="text-right">
-                <div
-                  className={`text-sm ${
-                    milestone.achieved ? 'text-emerald-400' : 'text-emerald-400/80'
-                  }`}
-                >
-                  {milestone.goal}
-                  {milestone.achieved && (
-                    <span className="ml-1 text-xs text-emerald-500">✓</span>
-                  )}
+                <div className="font-medium">{milestone.week} Check-in</div>
+                <div className="text-xs text-slate-400">
+                  {milestone.date} • {milestone.target}
                 </div>
-                <button
-                  type="button"
-                  onClick={openLogModal}
-                  className="mt-1 rounded-full bg-white/10 px-3 py-1 text-xs transition-colors hover:bg-white/20"
-                >
-                  Log Now
-                </button>
+              </div>
+              <div className={`text-right text-sm ${milestone.statusClass}`}>
+                {milestone.status}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="fixed right-6 bottom-20 z-40 lg:bottom-8">
-        <button
-          type="button"
-          onClick={openLogModal}
-          className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-black shadow-xl shadow-emerald-500/30 transition-colors hover:bg-emerald-600"
-          aria-label="Log weight"
-        >
-          <Target size={24} />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={openLogModal}
+        className="fixed right-6 bottom-20 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 shadow-2xl shadow-emerald-500/50 transition-colors hover:bg-emerald-600 lg:bottom-8"
+        aria-label="Log weight"
+      >
+        <Target size={26} className="text-black" />
+      </button>
 
       {showLogModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
