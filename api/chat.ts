@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { runChat, type ChatRequestBody } from './chatHandler.ts'
+import { runChat, type ChatRequestBody } from './chatHandler.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

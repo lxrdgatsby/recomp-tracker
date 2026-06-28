@@ -49,6 +49,10 @@ create table if not exists public.chat_messages (
   created_at timestamptz default now()
 );
 
+-- Existing databases may have chat_messages without conversation_id
+alter table public.chat_messages
+  add column if not exists conversation_id uuid references public.chat_conversations on delete cascade;
+
 create index if not exists chat_messages_user_id_idx on public.chat_messages (user_id, created_at);
 create index if not exists chat_messages_conversation_id_idx
   on public.chat_messages (conversation_id, created_at);

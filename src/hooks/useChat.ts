@@ -15,6 +15,7 @@ import {
   type ChatConversation,
 } from '../lib/chatService'
 import { createLocalConversation } from '../lib/localChatStore'
+import { parseChatApiResponse } from '../lib/parseChatApiResponse'
 import { applyProfileUpdates } from '../lib/profileService'
 import type { Peptide } from '../types'
 
@@ -314,11 +315,7 @@ export function useChat() {
           }),
         })
 
-        const data = await parseChatResponse(res)
-
-        if (!res.ok) {
-          throw new Error(data.error ?? 'AI request failed')
-        }
+        const data = await parseChatApiResponse(res)
 
         if (data.profileUpdates && typeof data.profileUpdates === 'object') {
           await applyUpdates(data.profileUpdates as Record<string, unknown>)
@@ -386,24 +383,3 @@ export function useChat() {
   }
 }
 
-async function parseChatResponse(
-  res: Response
-): Promise<{ content?: string; error?: string; profileUpdates?: unknown }> {
-  const text = await res.text()
-  if (!text.trim()) {
-    throw new Error(
-      'AI assistant is unavailable. Add OPENAI_API_KEY to .env.local (local) or Vercel → Settings → Environment Variables (production), then restart and try again.'
-    )
-  }
-  try {
-    return JSON.parse(text) as {
-      content?: string
-      error?: string
-      profileUpdates?: unknown
-    }
-  } catch {
-    throw new Error(
-      'AI assistant returned an invalid response. Refresh the page and try again.'
-    )
-  }
-}

@@ -26,6 +26,11 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
+            urlPattern: /^\/api\//,
+            handler: 'NetworkOnly',
+            method: 'POST',
+          },
+          {
             urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
             handler: 'CacheFirst',
             options: {
