@@ -1,6 +1,11 @@
-import { Check, Plus, Trash2 } from 'lucide-react'
+import { Check, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import {
+  PEPTIDE_CATALOG,
+  getCatalogEntry,
+  type PeptideCatalogEntry,
+} from '../../constants/peptideCatalog'
 import type { FamiliarityLevel, Gender } from '../../types/auth'
 import {
   AGE_OPTIONS,
@@ -9,6 +14,7 @@ import {
   parseTrainingActivities,
   serializeTrainingActivities,
 } from '../../types/auth'
+import { generateId } from '../../lib/generateId'
 import type { Peptide, PeptideFrequency, Profile, TrackerState } from '../../types'
 import { AutoResizeTextarea } from '../ui/AutoResizeTextarea'
 import { Button } from '../ui/Button'
@@ -32,14 +38,18 @@ interface ProfileViewProps {
   ) => void | Promise<void>
 }
 
-function newPeptide(): Peptide {
+const PEPTIDE_SELECT_CLASS =
+  'w-full rounded-xl border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none'
+
+function peptideFromCatalog(entry: PeptideCatalogEntry): Peptide {
   return {
-    id: crypto.randomUUID(),
-    name: '',
-    dose: '',
-    frequency: 'daily',
-    timing: '',
-    notes: '',
+    id: generateId(),
+    name: entry.name,
+    dose: entry.defaultDose,
+    frequency: entry.frequency,
+    timing: entry.timing,
+    notes: entry.notes,
+    vialSize: entry.defaultDose,
   }
 }
 
@@ -132,6 +142,7 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   }
   const [justSaved, setJustSaved] = useState(false)
   const [saving, setLoading] = useState(false)
+  const [peptidePicker, setPeptidePicker] = useState('')
 
   const profileDirty = isDraftDirty(draftProfile, state.profile)
   const peptidesDirty = useMemo(
@@ -149,6 +160,21 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
     additionalInfo !== (userProfile?.additionalInfo ?? '')
   const isDirty = profileDirty || peptidesDirty || questionnaireDirty
   const isValid = draftToProfile(draftProfile) !== null
+
+  const availableCatalogPeptides = useMemo(() => {
+    const addedNames = new Set(
+      draftPeptides.map((p) => p.name.trim().toLowerCase())
+    )
+    return PEPTIDE_CATALOG.filter(
+      (entry) => !addedNames.has(entry.name.toLowerCase())
+    )
+  }, [draftPeptides])
+
+  const addPeptideFromCatalog = (catalogId: string) => {
+    const entry = getCatalogEntry(catalogId)
+    if (!entry) return
+    setDraftPeptides((prev) => [...prev, peptideFromCatalog(entry)])
+  }
 
   const updatePeptide = (id: string, patch: Partial<Peptide>) => {
     setDraftPeptides((prev) =>
@@ -366,25 +392,38 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
         </div>
       </Card>
 
-      <Card
-        title="Peptide Stack"
-        action={
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() =>
-              setDraftPeptides((prev) => [...prev, newPeptide()])
-            }
-          >
-            <Plus size={14} />
-            Add Peptide
-          </Button>
-        }
-      >
+      <Card title="Peptide Stack">
         <div className="space-y-4">
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-slate-300">
+              Add peptide
+            </span>
+            <select
+              className={PEPTIDE_SELECT_CLASS}
+              value={peptidePicker}
+              onChange={(e) => {
+                const catalogId = e.target.value
+                if (!catalogId) return
+                addPeptideFromCatalog(catalogId)
+                setPeptidePicker('')
+              }}
+            >
+              <option value="">
+                {availableCatalogPeptides.length > 0
+                  ? 'Choose your peptides…'
+                  : 'All catalog peptides added'}
+              </option>
+              {availableCatalogPeptides.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} — {entry.tagline}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {draftPeptides.length === 0 && (
             <p className="text-sm text-slate-500">
-              No peptides in your stack. Tap Add Peptide to get started.
+              No peptides in your stack. Choose one from the dropdown above.
             </p>
           )}
           {draftPeptides.map((p) => (
