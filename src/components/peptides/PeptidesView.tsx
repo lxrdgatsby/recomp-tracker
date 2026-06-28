@@ -8,12 +8,12 @@ import {
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Peptide, TrackerState } from '../../types'
-import { getDaysIntoCycle } from '../../utils/calculations'
 import {
   getInjectionsForDate,
   isInjectionDone,
 } from '../../utils/peptideSchedule'
 import { getTitrationForDay } from '../../utils/recompProtocol'
+import { DoseCalculator } from './DoseCalculator'
 
 interface PeptidesViewProps {
   state: TrackerState
@@ -83,12 +83,16 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
 
   const stackCards = useMemo(() => buildStackCards(state, today), [state, today])
 
-  const examplePeptide = peptides.find((p) => p.protocol) ?? peptides[0]
-
-  const scrollToGuide = () => {
-    setShowCalculator(false)
-    guideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const calculatorPeptide = peptides.find((p) => p.protocol)
+  const calculatorDefaults = useMemo(() => {
+    const protocol = calculatorPeptide?.protocol
+    if (!protocol) return {}
+    return {
+      initialVialMg: protocol.vialMg,
+      initialBacWaterMl: protocol.bacWaterMl,
+      initialTargetDoseMg: protocol.startingDoseMg,
+    }
+  }, [calculatorPeptide])
 
   return (
     <div className="pb-8 text-white">
@@ -230,7 +234,6 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
             onClick={() => {
               setShowSites(false)
               setShowCalculator((v) => !v)
-              if (!showCalculator) scrollToGuide()
             }}
             className="h-full rounded-2xl border border-white/10 bg-white/5 p-5 text-left transition-colors hover:bg-white/10"
           >
@@ -254,25 +257,11 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
         </div>
 
         {showCalculator && (
-          <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm">
-            <p className="font-medium text-emerald-400">U-100 syringe math</p>
-            <p className="mt-2 font-mono text-xs text-slate-300">
-              concentration = vial mg ÷ BAC water ml
-              <br />
-              syringe units = (dose mg ÷ concentration) × 100
-            </p>
-            {examplePeptide?.protocol && (
-              <p className="mt-3 text-slate-400">
-                <span className="text-white">{examplePeptide.name}:</span>{' '}
-                {examplePeptide.protocol.calculationSummary}
-              </p>
-            )}
-            <p className="mt-3 text-xs text-slate-500">
-              Week {getDaysIntoCycle(state.profile.startDate) > 0
-                ? Math.ceil(getDaysIntoCycle(state.profile.startDate) / 7)
-                : 1}{' '}
-              of your plan — titration may change syringe units over time.
-            </p>
+          <div className="mt-3">
+            <DoseCalculator
+              key={calculatorPeptide?.id ?? 'default'}
+              {...calculatorDefaults}
+            />
           </div>
         )}
 
