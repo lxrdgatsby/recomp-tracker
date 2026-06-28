@@ -394,36 +394,9 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
 
       <Card title="Peptide Stack">
         <div className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-slate-300">
-              Add peptide
-            </span>
-            <select
-              className={PEPTIDE_SELECT_CLASS}
-              value={peptidePicker}
-              onChange={(e) => {
-                const catalogId = e.target.value
-                if (!catalogId) return
-                addPeptideFromCatalog(catalogId)
-                setPeptidePicker('')
-              }}
-            >
-              <option value="">
-                {availableCatalogPeptides.length > 0
-                  ? 'Choose your peptides…'
-                  : 'All catalog peptides added'}
-              </option>
-              {availableCatalogPeptides.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name} — {entry.tagline}
-                </option>
-              ))}
-            </select>
-          </label>
-
           {draftPeptides.length === 0 && (
             <p className="text-sm text-slate-500">
-              No peptides in your stack. Choose one from the dropdown above.
+              No peptides in your stack. Add one using the dropdown below.
             </p>
           )}
           {draftPeptides.map((p) => (
@@ -497,6 +470,33 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
               </div>
             </div>
           ))}
+
+          <label className="block space-y-1.5 border-t border-slate-800/80 pt-4">
+            <span className="text-sm font-medium text-slate-300">
+              Add another peptide
+            </span>
+            <select
+              className={PEPTIDE_SELECT_CLASS}
+              value={peptidePicker}
+              onChange={(e) => {
+                const catalogId = e.target.value
+                if (!catalogId) return
+                addPeptideFromCatalog(catalogId)
+                setPeptidePicker('')
+              }}
+            >
+              <option value="">
+                {availableCatalogPeptides.length > 0
+                  ? 'Choose your peptides…'
+                  : 'All catalog peptides added'}
+              </option>
+              {availableCatalogPeptides.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} — {entry.tagline}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </Card>
       </div>
