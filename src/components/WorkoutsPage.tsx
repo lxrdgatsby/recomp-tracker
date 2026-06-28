@@ -1,0 +1,1 @@
+export { WorkoutsView as default, WorkoutsView } from './workouts/WorkoutsView'
