@@ -1,10 +1,12 @@
-import { addDays, format, parseISO } from 'date-fns'
+import { addDays, differenceInDays, format, parseISO } from 'date-fns'
 import type { InjectionLog, Peptide } from '../types'
+import { getTitrationForDay } from './recompProtocol'
 
 export interface ScheduledInjection {
   peptideId: string
   peptideName: string
   dose: string
+  syringeUnits?: number
   timing: string
   notes?: string
 }
@@ -15,6 +17,7 @@ export function getInjectionsForDate(
   startDate: string
 ): ScheduledInjection[] {
   const start = parseISO(startDate)
+  const dayInCycle = Math.max(0, differenceInDays(date, start))
 
   return peptides
     .filter((p) => {
@@ -22,13 +25,23 @@ export function getInjectionsForDate(
       if (p.frequency === 'daily') return true
       return isWeeklyInjectionDay(date, start)
     })
-    .map((p) => ({
-      peptideId: p.id,
-      peptideName: p.name,
-      dose: p.dose,
-      timing: p.timing ?? (p.frequency === 'weekly' ? 'Weekly — same day each week' : 'Daily'),
-      notes: p.notes,
-    }))
+    .map((p) => {
+      const tier = getTitrationForDay(p, dayInCycle)
+      const dose = tier?.doseLabel ?? p.dose
+      const syringeUnits = tier?.syringeUnits ?? p.protocol?.startingSyringeUnits
+      const titrationNote = tier?.notes
+
+      return {
+        peptideId: p.id,
+        peptideName: p.name,
+        dose,
+        syringeUnits,
+        timing:
+          p.timing ??
+          (p.frequency === 'weekly' ? 'Weekly — same day each week' : 'Daily'),
+        notes: titrationNote ? `${titrationNote}. ${p.notes ?? ''}`.trim() : p.notes,
+      }
+    })
 }
 
 function isWeeklyInjectionDay(date: Date, start: Date): boolean {

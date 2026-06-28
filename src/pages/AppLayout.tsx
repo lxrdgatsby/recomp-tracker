@@ -6,12 +6,14 @@ import { InstallAppButton } from '../components/layout/InstallAppButton'
 import { MedicalDisclaimer } from '../components/layout/MedicalDisclaimer'
 import { Sidebar } from '../components/layout/Sidebar'
 import { useAuth } from '../contexts/AuthContext'
-import { saveProfileToDb } from '../lib/profileService'
+import { saveProfileToDb, saveReconstitutionPlan } from '../lib/profileService'
+import type { PeptideSelection } from '../constants/peptideCatalog'
 import type { Peptide, Profile, TrackerState, ViewId } from '../types'
 import { exportState } from '../utils/storage'
 
 const ROUTE_MAP: Record<string, ViewId> = {
   '/app': 'dashboard',
+  '/app/faqs': 'faqs',
   '/app/profile': 'profile',
   '/app/peptides': 'peptides',
   '/app/plan': 'plan',
@@ -21,6 +23,7 @@ const ROUTE_MAP: Record<string, ViewId> = {
 
 const VIEW_ROUTES: Record<ViewId, string> = {
   dashboard: '/app',
+  faqs: '/app/faqs',
   profile: '/app/profile',
   peptides: '/app/peptides',
   plan: '/app/plan',
@@ -38,11 +41,18 @@ export interface AppContext {
       mainGoal?: string | null
       interestedPeptides?: string | null
       additionalInfo?: string | null
+      gender?: string | null
+      age?: number | null
+      trainingActivities?: string | null
     }
   ) => Promise<void>
   logWeight: (date: string, weight: number) => Promise<void>
   toggleInjection: (date: string, peptideId: string) => Promise<void>
   toggleWorkout: (date: string, week: number, dayIndex: number) => Promise<void>
+  updateReconstitution: (
+    state: TrackerState,
+    selections: PeptideSelection[]
+  ) => Promise<void>
 }
 
 export function useAppContext() {
@@ -50,7 +60,8 @@ export function useAppContext() {
 }
 
 export function AppLayout() {
-  const { user, userProfile, trackerState, setTrackerState, signOut } = useAuth()
+  const { user, userProfile, trackerState, setTrackerState, signOut, refreshProfile } =
+    useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -99,6 +110,13 @@ export function AppLayout() {
         : [...trackerState.injectionLogs, { date, peptideId }]
       await persistState({ ...trackerState, injectionLogs })
     },
+    updateReconstitution: async (state, selections) => {
+      setTrackerState(state)
+      if (user) {
+        await saveReconstitutionPlan(user.id, selections, state)
+        await refreshProfile()
+      }
+    },
     toggleWorkout: async (date, week, dayIndex) => {
       const exists = trackerState.workoutCompletions.some(
         (c) => c.date === date && c.week === week && c.dayIndex === dayIndex
@@ -123,7 +141,7 @@ export function AppLayout() {
         onSignOut={signOut}
       />
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex h-svh min-h-0 flex-1 flex-col lg:min-h-screen lg:h-auto">
         <header className="no-print flex items-center justify-between border-b border-slate-800/80 bg-navy-900/50 px-4 py-3 lg:hidden">
           <div>
             <h1 className="text-lg font-bold text-white">
@@ -149,8 +167,8 @@ export function AppLayout() {
         <main
           className={`flex-1 ${
             activeView === 'dashboard'
-              ? 'overflow-hidden pb-16 lg:pb-0'
-              : 'overflow-y-auto px-4 py-6 pb-24 lg:px-8 lg:pb-8'
+              ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+              : 'overflow-y-auto px-4 pt-6 pb-[var(--mobile-nav-height)] lg:px-8 lg:pb-8'
           }`}
         >
           {activeView === 'dashboard' ? (

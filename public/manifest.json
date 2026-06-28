@@ -1,6 +1,6 @@
 {
-  "name": "Peptide Tracker",
-  "short_name": "Peptide",
+  "name": "PepTrack App",
+  "short_name": "PepTrack App",
   "description": "90-day body recomposition tracker with peptide scheduling, workouts, and progress charts.",
   "start_url": "/",
   "scope": "/",

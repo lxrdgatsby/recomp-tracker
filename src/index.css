@@ -11,6 +11,10 @@
   --color-emerald-500: #10b981;
 }
 
+:root {
+  --mobile-nav-height: calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+
 html {
   color-scheme: dark;
 }

@@ -5,8 +5,26 @@ import { useAuth } from '../contexts/AuthContext'
 import { completeOnboarding, isUsernameAvailable } from '../lib/profileService'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import {
+  DatabaseSetupPanel,
+  isDatabaseSetupError,
+} from '../components/onboarding/DatabaseSetupPanel'
+import { PeptideSelector } from '../components/onboarding/PeptideSelector'
 import { MedicalDisclaimer } from '../components/layout/MedicalDisclaimer'
-import type { FamiliarityLevel, Questionnaire } from '../types/auth'
+import {
+  formatPeptideSelections,
+  type PeptideSelection,
+} from '../constants/peptideCatalog'
+import type { FamiliarityLevel, Gender, Questionnaire } from '../types/auth'
+import {
+  AGE_OPTIONS,
+  GENDER_OPTIONS,
+  TRAINING_OPTIONS,
+  serializeTrainingActivities,
+} from '../types/auth'
+
+const SELECT_CLASS =
+  'w-full rounded-xl border border-slate-700 bg-navy-950 px-4 py-3 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none'
 
 const STEPS = [
   {
@@ -16,13 +34,13 @@ const STEPS = [
   },
   {
     id: 'goal',
-    title: 'Your main goal',
-    subtitle: 'What are you optimizing for?',
+    title: 'Your goals',
+    subtitle: 'Select all that apply',
   },
   {
     id: 'peptides',
     title: 'Your peptides',
-    subtitle: 'What are you using or interested in?',
+    subtitle: "Select which peptides you're currently on and milligram",
   },
   {
     id: 'weight',
@@ -32,7 +50,7 @@ const STEPS = [
   {
     id: 'info',
     title: 'About you',
-    subtitle: 'Age, training, anything relevant',
+    subtitle: 'A few details to personalize your experience',
   },
   {
     id: 'username',
@@ -58,14 +76,34 @@ export function OnboardingPage() {
   const [loading, setLoading] = useState(false)
 
   const [familiarity, setFamiliarity] = useState<FamiliarityLevel>('beginner')
-  const [mainGoal, setMainGoal] = useState('Body recomposition')
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(['Body recomposition'])
   const [customGoal, setCustomGoal] = useState('')
-  const [interestedPeptides, setInterestedPeptides] = useState(
-    'Retatrutide, Tesamorelin, AOD9604, BPC-157'
-  )
+
+  const toggleGoal = (goal: string) => {
+    setSelectedGoals((prev) =>
+      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
+    )
+  }
+  const [peptideSelections, setPeptideSelections] = useState<PeptideSelection[]>([])
   const [currentWeight, setCurrentWeight] = useState('')
   const [goalWeight, setGoalWeight] = useState('')
+  const [gender, setGender] = useState<Gender | ''>('')
+  const [age, setAge] = useState<number | ''>('')
+  const [selectedTraining, setSelectedTraining] = useState<string[]>([])
   const [additionalInfo, setAdditionalInfo] = useState('')
+
+  const toggleTraining = (activity: string) => {
+    if (activity === 'Not training right now') {
+      setSelectedTraining(['Not training right now'])
+      return
+    }
+    setSelectedTraining((prev) => {
+      const withoutNone = prev.filter((t) => t !== 'Not training right now')
+      return withoutNone.includes(activity)
+        ? withoutNone.filter((t) => t !== activity)
+        : [...withoutNone, activity]
+    })
+  }
   const [username, setUsername] = useState('')
 
   const current = STEPS[step]
@@ -80,6 +118,12 @@ export function OnboardingPage() {
           !isNaN(parseFloat(currentWeight)) &&
           !isNaN(parseFloat(goalWeight))
         )
+      case 'peptides':
+        return peptideSelections.length > 0
+      case 'goal':
+        return selectedGoals.length > 0 || customGoal.trim().length > 0
+      case 'info':
+        return gender !== '' && age !== '' && selectedTraining.length > 0
       case 'username':
         return username.trim().length >= 3
       default:
@@ -93,19 +137,33 @@ export function OnboardingPage() {
     setLoading(true)
 
     const name = username.trim().toLowerCase()
-    const available = await isUsernameAvailable(name)
+    const { available, error: usernameError } = await isUsernameAvailable(name)
+    if (usernameError) {
+      setError(usernameError)
+      setLoading(false)
+      return
+    }
     if (!available) {
       setError('Username is already taken')
       setLoading(false)
       return
     }
 
+    const goals = [
+      ...selectedGoals,
+      ...(customGoal.trim() ? [customGoal.trim()] : []),
+    ]
+
     const questionnaire: Questionnaire = {
       familiarity,
-      mainGoal: customGoal || mainGoal,
-      interestedPeptides,
+      mainGoal: goals.join(', '),
+      peptideSelections,
+      interestedPeptides: formatPeptideSelections(peptideSelections),
       currentWeight: parseFloat(currentWeight),
       goalWeight: parseFloat(goalWeight),
+      gender: gender as Gender,
+      age: age as number,
+      trainingActivities: serializeTrainingActivities(selectedTraining),
       additionalInfo,
     }
 
@@ -170,12 +228,9 @@ export function OnboardingPage() {
                   <button
                     key={g}
                     type="button"
-                    onClick={() => {
-                      setMainGoal(g)
-                      setCustomGoal('')
-                    }}
+                    onClick={() => toggleGoal(g)}
                     className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
-                      mainGoal === g && !customGoal
+                      selectedGoals.includes(g)
                         ? 'border-teal-500/50 bg-teal-500/10 text-teal-400'
                         : 'border-slate-800 bg-navy-900 text-slate-300 hover:border-slate-700'
                     }`}
@@ -184,21 +239,22 @@ export function OnboardingPage() {
                   </button>
                 ))}
                 <Input
-                  label="Or describe your goal"
-                  placeholder="Custom goal"
+                  label="Anything else? (optional)"
+                  placeholder="e.g. Improve sleep, joint health…"
                   value={customGoal}
                   onChange={(e) => setCustomGoal(e.target.value)}
                 />
+                <p className="text-xs text-slate-500">
+                  Tap goals to select or deselect. You can pick more than one.
+                </p>
               </div>
             )}
 
             {current.id === 'peptides' && (
-              <textarea
-                className="w-full rounded-xl border border-slate-700 bg-navy-950 px-4 py-3 text-base text-slate-100 placeholder:text-slate-600 focus:border-teal-500/60 focus:outline-none"
-                rows={4}
-                placeholder="e.g. Retatrutide 2mg weekly, Tesamorelin daily…"
-                value={interestedPeptides}
-                onChange={(e) => setInterestedPeptides(e.target.value)}
+              <PeptideSelector
+                selections={peptideSelections}
+                onChange={setPeptideSelections}
+                familiarity={familiarity}
               />
             )}
 
@@ -222,13 +278,80 @@ export function OnboardingPage() {
             )}
 
             {current.id === 'info' && (
-              <textarea
-                className="w-full rounded-xl border border-slate-700 bg-navy-950 px-4 py-3 text-base text-slate-100 placeholder:text-slate-600 focus:border-teal-500/60 focus:outline-none"
-                rows={4}
-                placeholder="Age, training experience, injuries, timeline…"
-                value={additionalInfo}
-                onChange={(e) => setAdditionalInfo(e.target.value)}
-              />
+              <div className="space-y-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium text-slate-300">Gender</span>
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value as Gender | '')}
+                      className={SELECT_CLASS}
+                    >
+                      <option value="" disabled>
+                        Select gender
+                      </option>
+                      {GENDER_OPTIONS.map(({ value, label }) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium text-slate-300">Age</span>
+                    <select
+                      value={age}
+                      onChange={(e) =>
+                        setAge(e.target.value ? Number(e.target.value) : '')
+                      }
+                      className={SELECT_CLASS}
+                    >
+                      <option value="" disabled>
+                        Select age
+                      </option>
+                      {AGE_OPTIONS.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-slate-300">Training</p>
+                  <p className="text-xs text-slate-500">Select all that apply</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TRAINING_OPTIONS.map((activity) => (
+                      <button
+                        key={activity}
+                        type="button"
+                        onClick={() => toggleTraining(activity)}
+                        className={`rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
+                          selectedTraining.includes(activity)
+                            ? 'border-teal-500/50 bg-teal-500/10 text-teal-400'
+                            : 'border-slate-800 bg-navy-900 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        {activity}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-slate-300">
+                    Tell Us More? (daily habits, eating regimen, etc.)
+                  </span>
+                  <textarea
+                    className="w-full rounded-xl border border-slate-700 bg-navy-950 px-4 py-3 text-base text-slate-100 placeholder:text-slate-600 focus:border-teal-500/60 focus:outline-none"
+                    rows={4}
+                    placeholder="e.g. 16:8 fasting, high protein, 8k steps daily…"
+                    value={additionalInfo}
+                    onChange={(e) => setAdditionalInfo(e.target.value)}
+                  />
+                </label>
+              </div>
             )}
 
             {current.id === 'username' && (
@@ -248,7 +371,12 @@ export function OnboardingPage() {
               </>
             )}
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && (
+              <div className="space-y-3">
+                <p className="text-sm text-red-400">{error}</p>
+                {isDatabaseSetupError(error) && <DatabaseSetupPanel />}
+              </div>
+            )}
           </div>
         </div>
       </div>

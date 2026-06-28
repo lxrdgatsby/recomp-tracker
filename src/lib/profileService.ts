@@ -1,7 +1,14 @@
 import { DEFAULT_PEPTIDES, DEFAULT_PROFILE } from '../constants/defaults'
+import {
+  formatPeptideSelections,
+  type PeptideSelection,
+} from '../constants/peptideCatalog'
+import { generateRecompPlan, normalizeSelection } from '../utils/recompProtocol'
+import type { Questionnaire } from '../types/auth'
+import { formatSupabaseError } from './supabaseErrors'
 import { supabase } from './supabase'
 import type { Peptide, Profile, TrackerState } from '../types'
-import type { Questionnaire, UserProfile } from '../types/auth'
+import type { UserProfile } from '../types/auth'
 
 interface DbProfile {
   id: string
@@ -10,7 +17,11 @@ interface DbProfile {
   familiarity: string | null
   main_goal: string | null
   interested_peptides: string | null
+  peptide_selections: PeptideSelection[] | null
   additional_info: string | null
+  gender: string | null
+  age: number | null
+  training_activities: string | null
   current_weight: number | null
   goal_weight: number | null
   height: string | null
@@ -29,7 +40,13 @@ function mapDbProfile(row: DbProfile): UserProfile {
     familiarity: row.familiarity as UserProfile['familiarity'],
     mainGoal: row.main_goal,
     interestedPeptides: row.interested_peptides,
+    peptideSelections: (row.peptide_selections ?? []).map((s) =>
+      normalizeSelection(s as PeptideSelection)
+    ),
     additionalInfo: row.additional_info,
+    gender: row.gender as UserProfile['gender'],
+    age: row.age,
+    trainingActivities: row.training_activities,
     currentWeight: row.current_weight,
     goalWeight: row.goal_weight,
     height: row.height,
@@ -41,25 +58,57 @@ function mapDbProfile(row: DbProfile): UserProfile {
   }
 }
 
-export function profileToTrackerState(userProfile: UserProfile): TrackerState {
+function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
   const saved = userProfile.trackerData
+  const profile = {
+    currentWeight: userProfile.currentWeight ?? DEFAULT_PROFILE.currentWeight,
+    goalWeight: userProfile.goalWeight ?? DEFAULT_PROFILE.goalWeight,
+    height: userProfile.height ?? '',
+    startDate: userProfile.startDate ?? DEFAULT_PROFILE.startDate,
+    weeklyLossTarget:
+      userProfile.weeklyLossTarget ?? DEFAULT_PROFILE.weeklyLossTarget,
+  }
+
+  const selections = (userProfile.peptideSelections ?? []).map(normalizeSelection)
+
+  if (selections.length > 0) {
+    const { peptides, recompPlan } = generateRecompPlan({
+      familiarity: userProfile.familiarity ?? 'beginner',
+      mainGoal: userProfile.mainGoal ?? '',
+      gender: userProfile.gender,
+      age: userProfile.age,
+      trainingActivities: userProfile.trainingActivities,
+      additionalInfo: userProfile.additionalInfo,
+      currentWeight: profile.currentWeight,
+      goalWeight: profile.goalWeight,
+      weeklyLossTarget: profile.weeklyLossTarget,
+      peptideSelections: selections,
+    })
+    return {
+      profile,
+      peptides,
+      recompPlan,
+      weightHistory: saved?.weightHistory ?? [],
+      injectionLogs: saved?.injectionLogs ?? [],
+      workoutCompletions: saved?.workoutCompletions ?? [],
+    }
+  }
+
   return {
-    profile: {
-      currentWeight: userProfile.currentWeight ?? DEFAULT_PROFILE.currentWeight,
-      goalWeight: userProfile.goalWeight ?? DEFAULT_PROFILE.goalWeight,
-      height: userProfile.height ?? '',
-      startDate: userProfile.startDate ?? DEFAULT_PROFILE.startDate,
-      weeklyLossTarget:
-        userProfile.weeklyLossTarget ?? DEFAULT_PROFILE.weeklyLossTarget,
-    },
+    profile,
     peptides:
       userProfile.peptideStack.length > 0
         ? userProfile.peptideStack
         : [...DEFAULT_PEPTIDES],
+    recompPlan: saved?.recompPlan,
     weightHistory: saved?.weightHistory ?? [],
     injectionLogs: saved?.injectionLogs ?? [],
     workoutCompletions: saved?.workoutCompletions ?? [],
   }
+}
+
+export function profileToTrackerState(userProfile: UserProfile): TrackerState {
+  return buildTrackerFromProfile(userProfile)
 }
 
 export async function fetchProfile(userId: string): Promise<UserProfile | null> {
@@ -80,7 +129,23 @@ export async function completeOnboarding(
 ): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Supabase not configured' }
 
-  const defaultStack = [...DEFAULT_PEPTIDES]
+  const interestedPeptides =
+    questionnaire.interestedPeptides ||
+    formatPeptideSelections(questionnaire.peptideSelections)
+
+  const { peptides: peptideStack, recompPlan } = generateRecompPlan({
+    familiarity: questionnaire.familiarity,
+    mainGoal: questionnaire.mainGoal,
+    gender: questionnaire.gender,
+    age: questionnaire.age,
+    trainingActivities: questionnaire.trainingActivities,
+    additionalInfo: questionnaire.additionalInfo,
+    currentWeight: questionnaire.currentWeight,
+    goalWeight: questionnaire.goalWeight,
+    weeklyLossTarget: DEFAULT_PROFILE.weeklyLossTarget,
+    peptideSelections: questionnaire.peptideSelections,
+  })
+
   const trackerState: TrackerState = {
     profile: {
       currentWeight: questionnaire.currentWeight,
@@ -89,30 +154,36 @@ export async function completeOnboarding(
       startDate: new Date().toISOString().slice(0, 10),
       weeklyLossTarget: DEFAULT_PROFILE.weeklyLossTarget,
     },
-    peptides: defaultStack,
+    peptides: peptideStack,
+    recompPlan,
     weightHistory: [],
     injectionLogs: [],
     workoutCompletions: [],
   }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
+  const { error } = await supabase.from('profiles').upsert(
+    {
+      id: userId,
       username,
       familiarity: questionnaire.familiarity,
       main_goal: questionnaire.mainGoal,
-      interested_peptides: questionnaire.interestedPeptides,
+      interested_peptides: interestedPeptides,
+      peptide_selections: questionnaire.peptideSelections,
       additional_info: questionnaire.additionalInfo,
+      gender: questionnaire.gender,
+      age: questionnaire.age,
+      training_activities: questionnaire.trainingActivities,
       current_weight: questionnaire.currentWeight,
       goal_weight: questionnaire.goalWeight,
       start_date: trackerState.profile.startDate,
-      peptide_stack: defaultStack,
+      peptide_stack: peptideStack,
       tracker_data: trackerState,
       onboarding_completed: true,
-    })
-    .eq('id', userId)
+    },
+    { onConflict: 'id' }
+  )
 
-  return { error: error?.message ?? null }
+  return { error: error ? formatSupabaseError(error.message) : null }
 }
 
 export async function saveProfileToDb(
@@ -125,6 +196,9 @@ export async function saveProfileToDb(
     mainGoal?: string | null
     interestedPeptides?: string | null
     additionalInfo?: string | null
+    gender?: string | null
+    age?: number | null
+    trainingActivities?: string | null
   }
 ): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Supabase not configured' }
@@ -144,6 +218,10 @@ export async function saveProfileToDb(
     update.interested_peptides = extras.interestedPeptides
   if (extras?.additionalInfo !== undefined)
     update.additional_info = extras.additionalInfo
+  if (extras?.gender !== undefined) update.gender = extras.gender
+  if (extras?.age !== undefined) update.age = extras.age
+  if (extras?.trainingActivities !== undefined)
+    update.training_activities = extras.trainingActivities
 
   const { error } = await supabase.from('profiles').update(update).eq('id', userId)
 
@@ -160,6 +238,9 @@ export async function applyProfileUpdates(
     mainGoal: string
     interestedPeptides: string
     additionalInfo: string
+    gender: string
+    age: number
+    trainingActivities: string
     peptideStack: Peptide[]
   }>,
   trackerState: TrackerState
@@ -181,6 +262,10 @@ export async function applyProfileUpdates(
     dbUpdates.interested_peptides = updates.interestedPeptides
   if (updates.additionalInfo !== undefined)
     dbUpdates.additional_info = updates.additionalInfo
+  if (updates.gender !== undefined) dbUpdates.gender = updates.gender
+  if (updates.age !== undefined) dbUpdates.age = updates.age
+  if (updates.trainingActivities !== undefined)
+    dbUpdates.training_activities = updates.trainingActivities
   if (updates.peptideStack !== undefined) {
     dbUpdates.peptide_stack = updates.peptideStack
   }
@@ -193,41 +278,36 @@ export async function applyProfileUpdates(
   return { error: error?.message ?? null }
 }
 
-export async function fetchChatHistory(
-  userId: string
-): Promise<{ id: string; role: 'user' | 'assistant'; content: string; createdAt: string }[]> {
-  if (!supabase) return []
-  const { data } = await supabase
-    .from('chat_messages')
-    .select('id, role, content, created_at')
-    .eq('user_id', userId)
-    .neq('role', 'system')
-    .order('created_at', { ascending: true })
-    .limit(100)
-
-  return (data ?? []).map((m) => ({
-    id: m.id,
-    role: m.role as 'user' | 'assistant',
-    content: m.content,
-    createdAt: m.created_at,
-  }))
-}
-
-export async function saveChatMessage(
+export async function saveReconstitutionPlan(
   userId: string,
-  role: 'user' | 'assistant',
-  content: string
-): Promise<void> {
-  if (!supabase) return
-  await supabase.from('chat_messages').insert({ user_id: userId, role, content })
+  selections: PeptideSelection[],
+  trackerState: TrackerState
+): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      peptide_selections: selections.map(normalizeSelection),
+      peptide_stack: trackerState.peptides,
+      tracker_data: trackerState,
+    })
+    .eq('id', userId)
+
+  return { error: error ? formatSupabaseError(error.message) : null }
 }
 
-export async function isUsernameAvailable(username: string): Promise<boolean> {
-  if (!supabase) return true
-  const { data } = await supabase
+export async function isUsernameAvailable(
+  username: string
+): Promise<{ available: boolean; error: string | null }> {
+  if (!supabase) return { available: true, error: null }
+  const { data, error } = await supabase
     .from('profiles')
     .select('id')
     .eq('username', username.toLowerCase())
     .maybeSingle()
-  return !data
+  if (error) {
+    return { available: false, error: formatSupabaseError(error.message) }
+  }
+  return { available: !data, error: null }
 }

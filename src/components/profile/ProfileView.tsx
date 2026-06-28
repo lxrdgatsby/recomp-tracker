@@ -1,8 +1,16 @@
 import { Check, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import type { FamiliarityLevel } from '../../types/auth'
+import type { FamiliarityLevel, Gender } from '../../types/auth'
+import {
+  AGE_OPTIONS,
+  GENDER_OPTIONS,
+  TRAINING_OPTIONS,
+  parseTrainingActivities,
+  serializeTrainingActivities,
+} from '../../types/auth'
 import type { Peptide, PeptideFrequency, Profile, TrackerState } from '../../types'
+import { AutoResizeTextarea } from '../ui/AutoResizeTextarea'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { Input } from '../ui/Input'
@@ -17,6 +25,9 @@ interface ProfileViewProps {
       mainGoal?: string | null
       interestedPeptides?: string | null
       additionalInfo?: string | null
+      gender?: string | null
+      age?: number | null
+      trainingActivities?: string | null
     }
   ) => void | Promise<void>
 }
@@ -96,9 +107,29 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   const [interestedPeptides, setInterestedPeptides] = useState(
     userProfile?.interestedPeptides ?? ''
   )
+  const [gender, setGender] = useState<Gender | ''>(
+    userProfile?.gender ?? ''
+  )
+  const [age, setAge] = useState<number | ''>(userProfile?.age ?? '')
+  const [selectedTraining, setSelectedTraining] = useState<string[]>(() =>
+    parseTrainingActivities(userProfile?.trainingActivities)
+  )
   const [additionalInfo, setAdditionalInfo] = useState(
     userProfile?.additionalInfo ?? ''
   )
+
+  const toggleTraining = (activity: string) => {
+    if (activity === 'Not training right now') {
+      setSelectedTraining(['Not training right now'])
+      return
+    }
+    setSelectedTraining((prev) => {
+      const withoutNone = prev.filter((t) => t !== 'Not training right now')
+      return withoutNone.includes(activity)
+        ? withoutNone.filter((t) => t !== activity)
+        : [...withoutNone, activity]
+    })
+  }
   const [justSaved, setJustSaved] = useState(false)
   const [saving, setLoading] = useState(false)
 
@@ -111,6 +142,10 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
     familiarity !== (userProfile?.familiarity ?? 'beginner') ||
     mainGoal !== (userProfile?.mainGoal ?? '') ||
     interestedPeptides !== (userProfile?.interestedPeptides ?? '') ||
+    gender !== (userProfile?.gender ?? '') ||
+    age !== (userProfile?.age ?? '') ||
+    serializeTrainingActivities(selectedTraining) !==
+      (userProfile?.trainingActivities ?? '') ||
     additionalInfo !== (userProfile?.additionalInfo ?? '')
   const isDirty = profileDirty || peptidesDirty || questionnaireDirty
   const isValid = draftToProfile(draftProfile) !== null
@@ -134,6 +169,9 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
       mainGoal,
       interestedPeptides,
       additionalInfo,
+      gender: gender || null,
+      age: age === '' ? null : age,
+      trainingActivities: serializeTrainingActivities(selectedTraining) || null,
     })
     await refreshProfile()
     setLoading(false)
@@ -142,7 +180,8 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   }
 
   return (
-    <div className="space-y-6 pb-4">
+    <div>
+      <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white">Profile & Stack</h2>
@@ -150,11 +189,19 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
             Configure your stats and peptide protocol
           </p>
         </div>
-        {isDirty && (
-          <span className="text-xs font-medium text-amber-400">
-            Unsaved changes
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <span className="text-xs font-medium text-amber-400">
+              Unsaved changes
+            </span>
+          )}
+          {justSaved && !isDirty && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+              <Check size={14} />
+              Saved!
+            </span>
+          )}
+        </div>
       </div>
 
       <Card title="Goals & Background">
@@ -175,38 +222,86 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
               <option value="advanced">Advanced</option>
             </select>
           </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+              Gender
+            </span>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value as Gender | '')}
+              className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
+            >
+              <option value="">Not set</option>
+              {GENDER_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+              Age
+            </span>
+            <select
+              value={age}
+              onChange={(e) =>
+                setAge(e.target.value ? Number(e.target.value) : '')
+              }
+              className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
+            >
+              <option value="">Not set</option>
+              {AGE_OPTIONS.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="space-y-2 sm:col-span-2">
+            <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+              Training
+            </span>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {TRAINING_OPTIONS.map((activity) => (
+                <button
+                  key={activity}
+                  type="button"
+                  onClick={() => toggleTraining(activity)}
+                  className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                    selectedTraining.includes(activity)
+                      ? 'border-teal-500/50 bg-teal-500/10 text-teal-400'
+                      : 'border-slate-700 bg-navy-950 text-slate-300 hover:border-slate-600'
+                  }`}
+                >
+                  {activity}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="sm:col-span-2">
-            <Input
+            <AutoResizeTextarea
               label="Main goal"
+              minRows={3}
               value={mainGoal}
               onChange={(e) => setMainGoal(e.target.value)}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
-                Peptides of interest
-              </span>
-              <textarea
-                className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
-                rows={2}
-                value={interestedPeptides}
-                onChange={(e) => setInterestedPeptides(e.target.value)}
-              />
-            </label>
+            <AutoResizeTextarea
+              label="Peptides of interest"
+              minRows={3}
+              value={interestedPeptides}
+              onChange={(e) => setInterestedPeptides(e.target.value)}
+            />
           </div>
           <div className="sm:col-span-2">
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
-                Additional info
-              </span>
-              <textarea
-                className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
-                rows={2}
-                value={additionalInfo}
-                onChange={(e) => setAdditionalInfo(e.target.value)}
-              />
-            </label>
+            <AutoResizeTextarea
+              label="Tell us more (daily habits, eating regimen, etc.)"
+              minRows={3}
+              value={additionalInfo}
+              onChange={(e) => setAdditionalInfo(e.target.value)}
+            />
           </div>
         </div>
       </Card>
@@ -365,21 +460,14 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
           ))}
         </div>
       </Card>
+      </div>
 
-      <div className="sticky bottom-20 z-40 rounded-xl border border-slate-800 bg-navy-900/95 p-4 shadow-lg backdrop-blur-md lg:bottom-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-slate-500">
-            {isDirty
-              ? 'Tap Save to apply changes across the app.'
-              : 'All changes saved.'}
-          </p>
-          <div className="flex items-center gap-3">
-            {justSaved && (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-400">
-                <Check size={16} />
-                Saved!
-              </span>
-            )}
+      {(isDirty || saving) && (
+        <div className="mt-4 rounded-xl border border-slate-800 bg-navy-900/95 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500">
+              Tap Save to apply changes across the app.
+            </p>
             <Button
               onClick={handleSave}
               disabled={!isDirty || !isValid || saving}
@@ -389,7 +477,7 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
             </Button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

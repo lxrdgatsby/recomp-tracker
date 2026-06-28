@@ -90,6 +90,7 @@ Redeploy after adding variables.
 | Redirects to `/setup` | Add `VITE_SUPABASE_*` env vars and redeploy |
 | "AI assistant not configured" | Add `OPENAI_API_KEY` in Vercel env vars |
 | Username taken | Pick a different username during onboarding |
+| `Could not find the table 'public.profiles'` | Run `supabase/schema.sql` in **SQL Editor** (step 2 above) |
 | Profile not saving | Check Supabase **Logs** and confirm RLS policies ran |
 | 404 on page refresh | Vercel rewrites in `vercel.json` should handle this — redeploy |
 

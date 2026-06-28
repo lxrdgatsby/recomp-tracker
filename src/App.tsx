@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { AppLayout } from './pages/AppLayout'
 import {
+  FAQsRoute,
   PeptidesRoute,
   PlanRoute,
   ProfileRoute,
@@ -40,6 +41,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
+            <Route path="faqs" element={<FAQsRoute />} />
             <Route path="profile" element={<ProfileRoute />} />
             <Route path="peptides" element={<PeptidesRoute />} />
             <Route path="plan" element={<PlanRoute />} />

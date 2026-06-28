@@ -1,4 +1,28 @@
 export type PeptideFrequency = 'daily' | 'weekly'
+export type BacWaterUnits = 100 | 200 | 300
+
+export interface TitrationWeek {
+  weeks: string
+  doseMg: number
+  doseLabel: string
+  syringeUnits: number
+  notes?: string
+}
+
+export interface PeptideProtocol {
+  vialMg: number
+  bacWaterUnits: BacWaterUnits
+  bacWaterMl: number
+  concentrationMgPerMl: number
+  concentrationLabel: string
+  startingDoseMg: number
+  startingDoseLabel: string
+  startingSyringeUnits: number
+  reconstituted: boolean
+  calculationSummary: string
+  reconstitutionSteps: string[]
+  titration: TitrationWeek[]
+}
 
 export interface Peptide {
   id: string
@@ -7,6 +31,17 @@ export interface Peptide {
   frequency: PeptideFrequency
   timing?: string
   notes?: string
+  vialSize?: string
+  protocol?: PeptideProtocol
+}
+
+export interface RecompPlan {
+  generatedAt: string
+  summary: string[]
+  nutritionNotes: string[]
+  trainingNotes: string[]
+  checkInCadence: string
+  reconstitutionReminder?: string
 }
 
 export interface Profile {
@@ -36,6 +71,7 @@ export interface WorkoutCompletion {
 export interface TrackerState {
   profile: Profile
   peptides: Peptide[]
+  recompPlan?: RecompPlan
   weightHistory: WeightEntry[]
   injectionLogs: InjectionLog[]
   workoutCompletions: WorkoutCompletion[]
@@ -43,6 +79,7 @@ export interface TrackerState {
 
 export type ViewId =
   | 'dashboard'
+  | 'faqs'
   | 'profile'
   | 'peptides'
   | 'plan'
