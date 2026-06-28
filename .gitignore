@@ -26,3 +26,5 @@ dev-dist
 *.njsproj
 *.sln
 *.sw?
+.env.local.save
+.env.local*
