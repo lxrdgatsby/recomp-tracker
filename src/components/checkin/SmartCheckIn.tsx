@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   getLastCheckIn,
   saveCheckIn,
@@ -23,6 +23,7 @@ export function SmartCheckIn({ defaultWeight = '', onSubmit }: SmartCheckInProps
     mood: 'Good',
   })
   const [submitted, setSubmitted] = useState(false)
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const last = getLastCheckIn()
@@ -36,9 +37,14 @@ export function SmartCheckIn({ defaultWeight = '', onSubmit }: SmartCheckInProps
         notes: last.notes,
         mood: last.mood,
       })
-      setSubmitted(true)
     }
   }, [defaultWeight])
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+    }
+  }, [])
 
   const handleSubmit = () => {
     const checkInData: CheckInData = {
@@ -48,6 +54,8 @@ export function SmartCheckIn({ defaultWeight = '', onSubmit }: SmartCheckInProps
     saveCheckIn(checkInData)
     onSubmit?.(checkInData)
     setSubmitted(true)
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+    feedbackTimerRef.current = setTimeout(() => setSubmitted(false), 2000)
   }
 
   return (
@@ -109,7 +117,7 @@ export function SmartCheckIn({ defaultWeight = '', onSubmit }: SmartCheckInProps
         onClick={handleSubmit}
         className="mt-6 w-full rounded-2xl bg-emerald-500 py-3.5 font-medium text-black transition-colors hover:bg-emerald-600"
       >
-        {submitted ? '✓ Check-in Saved' : 'Submit Check-in'}
+        {submitted ? 'Check-in Saved ✓' : 'Submit Check-in'}
       </button>
     </div>
   )

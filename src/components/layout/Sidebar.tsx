@@ -1,11 +1,13 @@
 import {
   Activity,
+  Building2,
   Calendar,
   CircleHelp,
   Dumbbell,
   Home,
   LogOut,
   MessageSquare,
+  Settings,
   Syringe,
   User,
 } from 'lucide-react'
@@ -17,6 +19,8 @@ const NAV: { id: ViewId; label: string; icon: typeof MessageSquare }[] = [
   { id: 'dashboard', label: 'Home', icon: Home },
   { id: 'assistant', label: 'Assistant', icon: MessageSquare },
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'company', label: 'Company', icon: Building2 },
   { id: 'peptides', label: 'Peptides', icon: Syringe },
   { id: 'plan', label: '90-Day Plan', icon: Calendar },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },

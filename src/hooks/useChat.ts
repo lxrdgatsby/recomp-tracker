@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CHAT_CONNECTION_ERROR } from '../constants/chatPrompts'
+import {
+  getAssistantContext,
+  getFallbackAssistantResponse,
+} from '../utils/assistantFallback'
 import { buildUserContextForChat } from '../utils/buildUserContext'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -14,7 +19,7 @@ import {
   type ChatConversation,
 } from '../lib/chatService'
 import { createLocalConversation } from '../lib/localChatStore'
-import { parseChatApiResponse } from '../lib/parseChatApiResponse'
+import { fetchChatResponse } from '../lib/getSmartResponse'
 import { applyProfileUpdates } from '../lib/profileService'
 import type { Peptide } from '../types'
 
@@ -294,25 +299,19 @@ export function useChat() {
           )
         }
 
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: apiMessages,
-            userContext: getUserContext(),
-          }),
+        const { content, profileUpdates } = await fetchChatResponse({
+          messages: apiMessages,
+          userContext: getUserContext(),
         })
 
-        const data = await parseChatApiResponse(res)
-
-        if (data.profileUpdates && typeof data.profileUpdates === 'object') {
-          await applyUpdates(data.profileUpdates as Record<string, unknown>)
+        if (profileUpdates) {
+          await applyUpdates(profileUpdates)
         }
 
         const assistantMsg: ChatMsg = {
           id: `a-${Date.now()}`,
           role: 'assistant',
-          content: data.content ?? 'No response from assistant.',
+          content: content || 'No response from assistant.',
         }
         setMessages((prev) => [...prev, assistantMsg])
 
@@ -323,15 +322,26 @@ export function useChat() {
           assistantMsg.content
         )
       } catch (err) {
+        console.error('chat send:', err)
+        const isApiError =
+          err instanceof Error &&
+          (/AI|fetch|network|connect/i.test(err.message) ||
+            err.message.includes('503'))
+        const fallbackContent = isApiError
+          ? CHAT_CONNECTION_ERROR
+          : getFallbackAssistantResponse(trimmed, getAssistantContext())
         const errMsg: ChatMsg = {
           id: `e-${Date.now()}`,
           role: 'assistant',
-          content:
-            err instanceof Error
-              ? err.message
-              : 'Something went wrong. Please try again.',
+          content: fallbackContent,
         }
         setMessages((prev) => [...prev, errMsg])
+        await saveChatMessage(
+          user.id,
+          conversationId,
+          'assistant',
+          errMsg.content
+        )
       } finally {
         sendingRef.current = false
         setLoading(false)

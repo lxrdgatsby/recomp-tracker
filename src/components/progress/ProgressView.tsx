@@ -1,5 +1,5 @@
 import { differenceInCalendarDays, format, parse, parseISO } from 'date-fns'
-import { Calendar, Target, TrendingUp, X } from 'lucide-react'
+import { Calendar, Download, Target, TrendingUp, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
+import { AdvancedAnalytics } from './AdvancedAnalytics'
 import { ProgressCorrelation } from './ProgressCorrelation'
 import type { TrackerState } from '../../types'
 import type { CheckInData } from '../../utils/checkInStorage'
@@ -191,11 +192,26 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
     setCheckInVersion((v) => v + 1)
   }
 
+  const handleExportPdf = async () => {
+    const { exportFullReport } = await import('../../utils/exportPDF')
+    exportFullReport()
+  }
+
   return (
     <div className="pb-8 text-white">
-      <div className="pb-6 pt-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
-        <p className="text-slate-400">Track your recomp journey</p>
+      <div className="flex items-start justify-between gap-3 pb-6 pt-2">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
+          <p className="text-slate-400">Track your recomp journey</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExportPdf}
+          className="flex shrink-0 items-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-400"
+        >
+          <Download size={14} />
+          Export Full Report (PDF)
+        </button>
       </div>
 
       <div className="mb-4">
@@ -205,8 +221,9 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
         />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ProgressCorrelation refreshKey={checkInVersion} />
+        <AdvancedAnalytics refreshKey={checkInVersion} />
       </div>
 
       <div className="mb-8 grid grid-cols-3 gap-3">

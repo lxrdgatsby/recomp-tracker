@@ -10,6 +10,8 @@ import {
   PlanRoute,
   ProfileRoute,
   ProgressRoute,
+  SettingsRoute,
+  CompanyRoute,
   WorkoutsRoute,
 } from './pages/AppRoutes'
 import { LoginPage } from './pages/LoginPage'
@@ -47,6 +49,8 @@ export default function App() {
             <Route path="assistant" element={<AssistantRoute />} />
             <Route path="faqs" element={<FAQsRoute />} />
             <Route path="profile" element={<ProfileRoute />} />
+            <Route path="settings" element={<SettingsRoute />} />
+            <Route path="company" element={<CompanyRoute />} />
             <Route path="peptides" element={<PeptidesRoute />} />
             <Route path="plan" element={<PlanRoute />} />
             <Route path="workouts" element={<WorkoutsRoute />} />

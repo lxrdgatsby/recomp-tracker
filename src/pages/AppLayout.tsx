@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { saveProfileToDb, saveReconstitutionPlan } from '../lib/profileService'
 import type { PeptideSelection } from '../constants/peptideCatalog'
 import type { Peptide, Profile, TrackerState, ViewId } from '../types'
+import { requestNotificationPermission } from '../utils/notifications'
 import { exportState } from '../utils/storage'
 
 const ROUTE_MAP: Record<string, ViewId> = {
@@ -17,6 +18,8 @@ const ROUTE_MAP: Record<string, ViewId> = {
   '/app/assistant': 'assistant',
   '/app/faqs': 'faqs',
   '/app/profile': 'profile',
+  '/app/settings': 'settings',
+  '/app/company': 'company',
   '/app/peptides': 'peptides',
   '/app/plan': 'plan',
   '/app/workouts': 'workouts',
@@ -28,6 +31,8 @@ const VIEW_ROUTES: Record<ViewId, string> = {
   assistant: '/app/assistant',
   faqs: '/app/faqs',
   profile: '/app/profile',
+  settings: '/app/settings',
+  company: '/app/company',
   peptides: '/app/peptides',
   plan: '/app/plan',
   workouts: '/app/workouts',
@@ -75,6 +80,13 @@ export function AppLayout() {
   useEffect(() => {
     setShowOnboarding(!userProfile?.onboardingCompleted)
   }, [userProfile?.onboardingCompleted])
+
+  useEffect(() => {
+    if (showOnboarding) return
+    if ('Notification' in window && Notification.permission === 'default') {
+      void requestNotificationPermission()
+    }
+  }, [showOnboarding])
 
   const activeView = ROUTE_MAP[location.pathname] ?? 'dashboard'
 
@@ -168,7 +180,11 @@ export function AppLayout() {
       />
 
       <div className="flex h-svh min-h-0 min-w-0 flex-1 flex-col lg:min-h-screen lg:h-auto">
-        <header className="no-print flex items-center justify-between border-b border-slate-800/80 bg-navy-900/50 px-4 py-3 lg:hidden">
+        <header
+          className={`no-print flex items-center justify-between border-b border-slate-800/80 bg-navy-900/50 px-4 py-3 lg:hidden ${
+            activeView === 'assistant' ? 'hidden' : ''
+          }`}
+        >
           <div>
             <h1 className="text-lg font-bold text-white">
               Peptide<span className="text-teal-400">Tracker</span>

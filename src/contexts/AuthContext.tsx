@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth'
 import { fetchProfile, profileToTrackerState } from '../lib/profileService'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import type { TrackerState } from '../types'
@@ -26,6 +27,7 @@ interface AuthContextValue {
     password: string
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signInWithMagicLink: (email: string) => Promise<{ error: string | null }>
   resendConfirmation: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -35,11 +37,10 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const { user, session, ready: sessionReady } = useSupabaseAuth()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [trackerState, setTrackerState] = useState<TrackerState>(DEFAULT_STATE)
-  const [loading, setLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(false)
 
   const loadUserData = useCallback(async (userId: string) => {
     const profile = await fetchProfile(userId)
@@ -54,37 +55,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, loadUserData])
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false)
+    if (!sessionReady) return
+
+    if (!user) {
+      setUserProfile(null)
+      setTrackerState(DEFAULT_STATE)
+      setProfileLoading(false)
       return
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
-      if (data.session?.user) {
-        loadUserData(data.session.user.id).finally(() => setLoading(false))
-      } else {
-        setLoading(false)
-      }
+    let cancelled = false
+    setProfileLoading(true)
+    void loadUserData(user.id).finally(() => {
+      if (!cancelled) setProfileLoading(false)
     })
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        setSession(newSession)
-        setUser(newSession?.user ?? null)
-        if (newSession?.user) {
-          await loadUserData(newSession.user.id)
-        } else {
-          setUserProfile(null)
-          setTrackerState(DEFAULT_STATE)
-        }
-        setLoading(false)
-      }
-    )
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, sessionReady, loadUserData])
 
-    return () => listener.subscription.unsubscribe()
-  }, [loadUserData])
+  const loading = !sessionReady || profileLoading
 
   const getEmailRedirectTo = () =>
     `${window.location.origin}/login?confirmed=1`
@@ -107,6 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return { error: null, needsConfirmation }
+  }, [])
+
+  const signInWithMagicLink = useCallback(async (email: string) => {
+    if (!supabase) return { error: 'Supabase not configured' }
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/app`,
+      },
+    })
+    return { error: error?.message ?? null }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -136,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut()
+    window.location.href = '/login'
   }, [])
 
   const value = useMemo(
@@ -148,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured: isSupabaseConfigured,
       signUp,
       signIn,
+      signInWithMagicLink,
       resendConfirmation,
       signOut,
       refreshProfile,
@@ -161,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signUp,
       signIn,
+      signInWithMagicLink,
       resendConfirmation,
       signOut,
       refreshProfile,

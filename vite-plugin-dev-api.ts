@@ -29,12 +29,13 @@ export function devApiPlugin(): Plugin {
             server.config.envDir ?? process.cwd(),
             ''
           )
-          const apiKey = env.OPENAI_API_KEY?.trim()
-
           const raw = await readBody(req)
           const body = raw ? JSON.parse(raw) : {}
           const { runChat } = await import('./api/chatHandler.ts')
-          const result = await runChat(body, apiKey)
+          const result = await runChat(body, {
+            openaiKey: env.OPENAI_API_KEY?.trim(),
+            xaiKey: env.XAI_API_KEY?.trim(),
+          })
 
           if (result.body.error) {
             writeJson(res, result.status, { error: result.body.error })
@@ -43,6 +44,7 @@ export function devApiPlugin(): Plugin {
 
           writeJson(res, result.status, {
             content: result.body.content,
+            reply: result.body.content,
             profileUpdates: result.body.profileUpdates,
           })
         } catch (err) {

@@ -1,5 +1,11 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+/**
+ * Vite env mapping (Next.js equivalents):
+ *   VITE_SUPABASE_URL      ← NEXT_PUBLIC_SUPABASE_URL
+ *   VITE_SUPABASE_ANON_KEY ← NEXT_PUBLIC_SUPABASE_ANON_KEY
+ */
+
 function normalizeSupabaseUrl(raw: string | undefined): string | undefined {
   if (!raw) return undefined
   return raw

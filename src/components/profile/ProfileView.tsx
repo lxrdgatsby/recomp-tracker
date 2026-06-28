@@ -1,4 +1,5 @@
 import { Check, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -270,6 +271,12 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
           <p className="mt-1 text-sm text-slate-400">
             Configure your stats and peptide protocol
           </p>
+          <Link
+            to="/app/settings"
+            className="mt-2 inline-block text-xs text-slate-500 transition-colors hover:text-emerald-400"
+          >
+            Settings →
+          </Link>
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (

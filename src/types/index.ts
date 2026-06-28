@@ -82,6 +82,8 @@ export type ViewId =
   | 'assistant'
   | 'faqs'
   | 'profile'
+  | 'settings'
+  | 'company'
   | 'peptides'
   | 'plan'
   | 'workouts'

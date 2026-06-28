@@ -1,13 +1,20 @@
 export const CHAT_SUGGESTIONS = [
-  "Log today's dose",
-  'How am I progressing?',
-  'Suggest titration',
-  'Side effect check-in',
-  'Review my current stack',
+  'What are peptides?',
+  'How do peptides work?',
+  'Review my current peptide stack',
+  'Help me plan my 90-day recomp',
 ] as const
 
+export const ASSISTANT_TITLE = 'Peptide Protocol Assistant'
+
 export const ASSISTANT_WELCOME =
-  "Hey! I'm your peptide protocol assistant. I can help with dosing, side effects, progress tracking, or adjusting your plan. What's on your mind?"
+  'Ask anything about peptides, dosing, stacking, or your 90-day plan. I can update your profile from our conversation.'
+
+export const ASSISTANT_INPUT_PLACEHOLDER =
+  'Ask about peptides, dosing, your stack, or training...'
+
+export const CHAT_CONNECTION_ERROR =
+  "Sorry, I'm having trouble connecting right now. Please try again."
 
 export const FAQ_QUESTIONS = [
   'Are peptides steroids?',

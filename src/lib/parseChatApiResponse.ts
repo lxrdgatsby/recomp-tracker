@@ -13,10 +13,16 @@ export async function parseChatApiResponse(
 
   const looksLikeHtml = /^\s*</i.test(text)
 
-  let data: { content?: string; error?: string; profileUpdates?: unknown }
+  let data: {
+    content?: string
+    reply?: string
+    error?: string
+    profileUpdates?: unknown
+  }
   try {
     data = JSON.parse(text) as {
       content?: string
+      reply?: string
       error?: string
       profileUpdates?: unknown
     }
@@ -35,5 +41,8 @@ export async function parseChatApiResponse(
     throw new Error(data.error ?? `AI request failed (${res.status})`)
   }
 
-  return data
+  return {
+    ...data,
+    content: data.content ?? data.reply,
+  }
 }

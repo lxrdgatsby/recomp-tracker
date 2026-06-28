@@ -1,24 +1,18 @@
 import { AIChatDashboard } from '../components/dashboard/AIChatDashboard'
-import { DashboardView } from '../components/dashboard/DashboardView'
+import { MasterDashboard } from '../components/dashboard/MasterDashboard'
 import { FAQsView } from '../components/faqs/FAQsView'
 import { ProfileView } from '../components/profile/ProfileView'
+import { CompanyDashboard } from '../components/company/CompanyDashboard'
+import { SettingsPage } from '../components/settings/SettingsPage'
 import { PeptidesView } from '../components/peptides/PeptidesView'
 import { PlanView } from '../components/plan/PlanView'
 import { WorkoutsView } from '../components/workouts/WorkoutsView'
 import { ProgressView } from '../components/progress/ProgressView'
-import { useAuth } from '../contexts/AuthContext'
 import { useAppContext } from './AppLayout'
 
 export function DashboardRoute() {
-  const { state, toggleInjection } = useAppContext()
-  const { userProfile } = useAuth()
-  return (
-    <DashboardView
-      state={state}
-      username={userProfile?.username}
-      onToggleInjection={toggleInjection}
-    />
-  )
+  const { state, logWeight } = useAppContext()
+  return <MasterDashboard state={state} onLogWeight={logWeight} />
 }
 
 export function AssistantRoute() {
@@ -32,6 +26,14 @@ export function FAQsRoute() {
 export function ProfileRoute() {
   const { state, saveProfile } = useAppContext()
   return <ProfileView state={state} onSaveProfile={saveProfile} />
+}
+
+export function SettingsRoute() {
+  return <SettingsPage />
+}
+
+export function CompanyRoute() {
+  return <CompanyDashboard />
 }
 
 export function PeptidesRoute() {

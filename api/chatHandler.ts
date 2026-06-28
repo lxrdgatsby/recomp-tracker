@@ -42,33 +42,125 @@ export interface ChatResponseBody {
   error?: string
 }
 
-function formatOpenAIError(message?: string): string {
-  if (!message) return 'OpenAI API error'
-  if (/quota|billing|insufficient/i.test(message)) {
+export interface ChatApiKeys {
+  openaiKey?: string
+  xaiKey?: string
+}
+
+type AIProvider = 'xai' | 'openai'
+
+const PROVIDER_CONFIG: Record<
+  AIProvider,
+  { url: string; model: string; label: string }
+> = {
+  xai: {
+    url: 'https://api.x.ai/v1/chat/completions',
+    model: 'grok-3-mini',
+    label: 'xAI Grok',
+  },
+  openai: {
+    url: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4o-mini',
+    label: 'OpenAI',
+  },
+}
+
+function resolveProvider(keys: ChatApiKeys): {
+  provider: AIProvider
+  apiKey: string
+} | null {
+  const xaiKey = keys.xaiKey?.trim()
+  if (xaiKey) return { provider: 'xai', apiKey: xaiKey }
+
+  const openaiKey = keys.openaiKey?.trim()
+  if (openaiKey) return { provider: 'openai', apiKey: openaiKey }
+
+  return null
+}
+
+function formatAIError(provider: AIProvider, message?: string): string {
+  if (!message) return `${PROVIDER_CONFIG[provider].label} API error`
+  if (/quota|billing|insufficient|credits/i.test(message)) {
+    if (provider === 'xai') {
+      return (
+        'Your xAI account has no available credits. Go to console.x.ai → Billing, ' +
+        'add credits, then try again.'
+      )
+    }
     return (
       'Your OpenAI account has no available credits. Go to platform.openai.com → Settings → Billing, ' +
-      'add a payment method or top up credits, then try again. The Peptide Tracker app is configured correctly.'
+      'add a payment method or top up credits, then try again.'
     )
   }
   return message
 }
 
+const PROFILE_TOOLS = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'update_profile',
+      description:
+        'Update user profile fields when they share new weight, goals, or peptide stack info',
+      parameters: {
+        type: 'object',
+        properties: {
+          current_weight: { type: 'number', description: 'Current weight in lbs' },
+          goal_weight: { type: 'number', description: 'Goal weight in lbs' },
+          main_goal: {
+            type: 'string',
+            description: 'User goals, comma-separated if multiple',
+          },
+          interested_peptides: { type: 'string' },
+          additional_info: { type: 'string' },
+          gender: {
+            type: 'string',
+            enum: ['male', 'female', 'non_binary', 'prefer_not_to_say'],
+          },
+          age: { type: 'number', description: 'User age (18–50)' },
+          training_activities: {
+            type: 'string',
+            description: 'Comma-separated training activities',
+          },
+          weekly_loss_target: { type: 'number' },
+          peptide_stack: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                dose: { type: 'string' },
+                frequency: { type: 'string', enum: ['daily', 'weekly'] },
+                timing: { type: 'string' },
+                notes: { type: 'string' },
+              },
+              required: ['name', 'dose', 'frequency'],
+            },
+          },
+        },
+      },
+    },
+  },
+]
+
 export async function runChat(
   body: ChatRequestBody,
-  apiKey: string | undefined
+  keys: ChatApiKeys = {}
 ): Promise<{ status: number; body: ChatResponseBody }> {
-  if (!apiKey) {
+  const resolved = resolveProvider(keys)
+  if (!resolved) {
     return {
       status: 503,
       body: {
         content: '',
         profileUpdates: null,
         error:
-          'AI assistant not configured. In recomp-tracker/.env.local, add a line: OPENAI_API_KEY=sk-your-key-here (no # at the start). Get a key at platform.openai.com/api-keys, save the file, then restart npm run dev.',
+          'AI assistant not configured. Add XAI_API_KEY (console.x.ai) or OPENAI_API_KEY to .env.local / Vercel env vars (server-side only — do NOT use NEXT_PUBLIC_), then restart npm run dev.',
       },
     }
   }
 
+  const { provider, apiKey } = resolved
   const { messages, userContext } = body
 
   if (!messages?.length) {
@@ -78,69 +170,23 @@ export async function runChat(
     }
   }
 
-  const tools = [
-    {
-      type: 'function' as const,
-      function: {
-        name: 'update_profile',
-        description:
-          'Update user profile fields when they share new weight, goals, or peptide stack info',
-        parameters: {
-          type: 'object',
-          properties: {
-            current_weight: { type: 'number', description: 'Current weight in lbs' },
-            goal_weight: { type: 'number', description: 'Goal weight in lbs' },
-            main_goal: {
-              type: 'string',
-              description: 'User goals, comma-separated if multiple',
-            },
-            interested_peptides: { type: 'string' },
-            additional_info: { type: 'string' },
-            gender: {
-              type: 'string',
-              enum: ['male', 'female', 'non_binary', 'prefer_not_to_say'],
-            },
-            age: { type: 'number', description: 'User age (18–50)' },
-            training_activities: {
-              type: 'string',
-              description: 'Comma-separated training activities',
-            },
-            weekly_loss_target: { type: 'number' },
-            peptide_stack: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  name: { type: 'string' },
-                  dose: { type: 'string' },
-                  frequency: { type: 'string', enum: ['daily', 'weekly'] },
-                  timing: { type: 'string' },
-                  notes: { type: 'string' },
-                },
-                required: ['name', 'dose', 'frequency'],
-              },
-            },
-          },
-        },
-      },
-    },
-  ]
-
   const systemContent = userContext
     ? `${SYSTEM_PROMPT}\n\n--- USER PROFILE ---\n${userContext}`
     : SYSTEM_PROMPT
 
+  const config = PROVIDER_CONFIG[provider]
+
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(config.url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: config.model,
         messages: [{ role: 'system', content: systemContent }, ...messages],
-        tools,
+        tools: PROFILE_TOOLS,
         tool_choice: 'auto',
         max_tokens: 1200,
         temperature: 0.7,
@@ -165,7 +211,7 @@ export async function runChat(
         body: {
           content: '',
           profileUpdates: null,
-          error: formatOpenAIError(data.error?.message),
+          error: formatAIError(provider, data.error?.message),
         },
       }
     }
@@ -204,3 +250,4 @@ export async function runChat(
     }
   }
 }
+

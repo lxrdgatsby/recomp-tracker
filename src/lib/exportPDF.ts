@@ -1,0 +1,1 @@
+export { exportFullReport } from '../utils/exportPDF'

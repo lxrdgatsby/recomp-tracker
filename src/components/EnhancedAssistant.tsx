@@ -1,1 +1,5 @@
-export { AIChatDashboard as default, AIChatDashboard as EnhancedAssistant } from './dashboard/AIChatDashboard'
+export {
+  AIChatDashboard as default,
+  AIChatDashboard as EnhancedAssistant,
+  AIChatDashboard as SmartAssistant,
+} from './dashboard/AIChatDashboard'
