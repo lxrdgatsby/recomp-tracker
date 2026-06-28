@@ -1,7 +1,33 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const INPUT_CLASS =
   'mt-1 w-full rounded-2xl border border-white/20 bg-black/40 p-3 text-lg text-white focus:border-emerald-500/50 focus:outline-none'
+
+const STORAGE_KEY = 'doseCalculator'
+
+interface SavedDoseCalculator {
+  vialMg: number
+  bacWaterMl: number
+  targetDoseMg: number
+}
+
+function readStorage(): SavedDoseCalculator | null {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return null
+    const data = JSON.parse(saved) as Partial<SavedDoseCalculator>
+    if (
+      typeof data.vialMg === 'number' &&
+      typeof data.bacWaterMl === 'number' &&
+      typeof data.targetDoseMg === 'number'
+    ) {
+      return data as SavedDoseCalculator
+    }
+  } catch {
+    // ignore invalid storage
+  }
+  return null
+}
 
 interface DoseCalculatorProps {
   initialVialMg?: number
@@ -14,9 +40,30 @@ export function DoseCalculator({
   initialBacWaterMl = 2,
   initialTargetDoseMg = 1,
 }: DoseCalculatorProps) {
-  const [vialMg, setVialMg] = useState(initialVialMg)
-  const [bacWaterMl, setBacWaterMl] = useState(initialBacWaterMl)
-  const [targetDoseMg, setTargetDoseMg] = useState(initialTargetDoseMg)
+  const saved = readStorage()
+  const [vialMg, setVialMg] = useState(saved?.vialMg ?? initialVialMg)
+  const [bacWaterMl, setBacWaterMl] = useState(
+    saved?.bacWaterMl ?? initialBacWaterMl
+  )
+  const [targetDoseMg, setTargetDoseMg] = useState(
+    saved?.targetDoseMg ?? initialTargetDoseMg
+  )
+
+  useEffect(() => {
+    const stored = readStorage()
+    if (stored) {
+      setVialMg(stored.vialMg)
+      setBacWaterMl(stored.bacWaterMl)
+      setTargetDoseMg(stored.targetDoseMg)
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ vialMg, bacWaterMl, targetDoseMg })
+    )
+  }, [vialMg, bacWaterMl, targetDoseMg])
 
   const concentration = bacWaterMl > 0 ? vialMg / bacWaterMl : 0
   const units =
