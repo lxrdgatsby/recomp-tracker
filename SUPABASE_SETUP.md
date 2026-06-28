@@ -27,7 +27,7 @@ This creates `profiles` and `chat_messages` tables, RLS policies, and an auto-pr
 
 1. Go to **Project Settings** → **API**
 2. Copy:
-   - **Project URL** → `VITE_SUPABASE_URL`
+   - **Project URL** → `VITE_SUPABASE_URL` (base URL only, e.g. `https://abc123.supabase.co` — **do not** include `/rest/v1/`)
    - **anon public** key → `VITE_SUPABASE_ANON_KEY`
 
 ## 5. Local development
