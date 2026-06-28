@@ -2,8 +2,10 @@ import { Check, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
+  DEFAULT_BAC_WATER,
   PEPTIDE_CATALOG,
   getCatalogEntry,
+  getCatalogEntryByName,
   type PeptideCatalogEntry,
 } from '../../constants/peptideCatalog'
 import type { FamiliarityLevel, Gender } from '../../types/auth'
@@ -16,6 +18,11 @@ import {
 } from '../../types/auth'
 import { generateId } from '../../lib/generateId'
 import type { Peptide, PeptideFrequency, Profile, TrackerState } from '../../types'
+import {
+  buildPeptideWithProtocol,
+  getCurrentInjectionDose,
+  rebuildPeptideForVialSize,
+} from '../../utils/recompProtocol'
 import { AutoResizeTextarea } from '../ui/AutoResizeTextarea'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
@@ -41,7 +48,30 @@ interface ProfileViewProps {
 const PEPTIDE_SELECT_CLASS =
   'w-full rounded-xl border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none'
 
-function peptideFromCatalog(entry: PeptideCatalogEntry): Peptide {
+function getVialSizeLabel(peptide: Peptide): string {
+  if (peptide.vialSize) return peptide.vialSize
+  if (peptide.protocol?.vialMg) {
+    const mg = peptide.protocol.vialMg
+    return mg < 1 ? `${Math.round(mg * 1000)}mcg` : `${mg}mg`
+  }
+  return peptide.dose
+}
+
+function peptideFromCatalog(
+  entry: PeptideCatalogEntry,
+  familiarity: FamiliarityLevel
+): Peptide {
+  const built = buildPeptideWithProtocol(
+    {
+      catalogId: entry.id,
+      dose: entry.defaultDose,
+      status: 'using',
+      bacWaterUnits: DEFAULT_BAC_WATER,
+      reconstituted: false,
+    },
+    familiarity
+  )
+  if (built) return { ...built, id: generateId() }
   return {
     id: generateId(),
     name: entry.name,
@@ -51,6 +81,17 @@ function peptideFromCatalog(entry: PeptideCatalogEntry): Peptide {
     notes: entry.notes,
     vialSize: entry.defaultDose,
   }
+}
+
+function normalizePeptideStack(
+  peptides: Peptide[],
+  familiarity: FamiliarityLevel
+): Peptide[] {
+  return peptides.map((p) => {
+    const entry = getCatalogEntry(p.id) ?? getCatalogEntryByName(p.name)
+    if (!entry) return p
+    return rebuildPeptideForVialSize(p, getVialSizeLabel(p), familiarity)
+  })
 }
 
 type DraftProfile = Omit<
@@ -104,14 +145,16 @@ function clonePeptides(peptides: Peptide[]): Peptide[] {
 
 export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   const { userProfile, refreshProfile } = useAuth()
+  const initialFamiliarity = (userProfile?.familiarity ??
+    'beginner') as FamiliarityLevel
   const [draftProfile, setDraftProfile] = useState(() =>
     profileToDraft(state.profile)
   )
   const [draftPeptides, setDraftPeptides] = useState(() =>
-    clonePeptides(state.peptides)
+    normalizePeptideStack(clonePeptides(state.peptides), initialFamiliarity)
   )
   const [familiarity, setFamiliarity] = useState<FamiliarityLevel>(
-    userProfile?.familiarity ?? 'beginner'
+    initialFamiliarity
   )
   const [mainGoal, setMainGoal] = useState(userProfile?.mainGoal ?? '')
   const [interestedPeptides, setInterestedPeptides] = useState(
@@ -173,7 +216,15 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   const addPeptideFromCatalog = (catalogId: string) => {
     const entry = getCatalogEntry(catalogId)
     if (!entry) return
-    setDraftPeptides((prev) => [...prev, peptideFromCatalog(entry)])
+    setDraftPeptides((prev) => [...prev, peptideFromCatalog(entry, familiarity)])
+  }
+
+  const setPeptideVialSize = (id: string, vialSize: string) => {
+    setDraftPeptides((prev) =>
+      prev.map((p) =>
+        p.id === id ? rebuildPeptideForVialSize(p, vialSize, familiarity) : p
+      )
+    )
   }
 
   const updatePeptide = (id: string, patch: Partial<Peptide>) => {
@@ -190,7 +241,12 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
     const profile = draftToProfile(draftProfile)
     if (!profile) return
     setLoading(true)
-    await onSaveProfile(profile, draftPeptides, {
+    const peptidesToSave = draftPeptides.map((p) => {
+      const entry = getCatalogEntry(p.id) ?? getCatalogEntryByName(p.name)
+      if (!entry) return p
+      return rebuildPeptideForVialSize(p, getVialSizeLabel(p), familiarity)
+    })
+    await onSaveProfile(profile, peptidesToSave, {
       familiarity,
       mainGoal,
       interestedPeptides,
@@ -238,9 +294,11 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
             </span>
             <select
               value={familiarity}
-              onChange={(e) =>
-                setFamiliarity(e.target.value as FamiliarityLevel)
-              }
+              onChange={(e) => {
+                const next = e.target.value as FamiliarityLevel
+                setFamiliarity(next)
+                setDraftPeptides((prev) => normalizePeptideStack(prev, next))
+              }}
               className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
             >
               <option value="beginner">Beginner</option>
@@ -399,15 +457,27 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
               No peptides in your stack. Add one using the dropdown below.
             </p>
           )}
-          {draftPeptides.map((p) => (
+          {draftPeptides.map((p) => {
+            const catalogEntry = getCatalogEntry(p.id) ?? getCatalogEntryByName(p.name)
+            const vialSize = getVialSizeLabel(p)
+            const injection = getCurrentInjectionDose(p, draftProfile.startDate)
+
+            return (
             <div
               key={p.id}
               className="rounded-lg border border-slate-800 bg-navy-950/50 p-4"
             >
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-medium text-teal-400">
-                  {p.name || 'New Peptide'}
-                </span>
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-sm font-medium text-teal-400">
+                    {p.name || 'New Peptide'}
+                  </span>
+                  {catalogEntry && (
+                    <span className="ml-2 text-xs text-slate-500">
+                      {vialSize} vial
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => removePeptide(p.id)}
@@ -417,22 +487,65 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
                   <Trash2 size={16} />
                 </button>
               </div>
+
+              {catalogEntry && catalogEntry.doseOptions.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+                    Vial size
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {catalogEntry.doseOptions.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setPeptideVialSize(p.id, option)}
+                        className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          vialSize === option
+                            ? 'border-teal-500/50 bg-teal-500/10 text-teal-400'
+                            : 'border-slate-700 bg-navy-950 text-slate-300 hover:border-slate-600'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-3 sm:grid-cols-2">
+                {!catalogEntry && (
+                  <Input
+                    label="Name"
+                    value={p.name}
+                    onChange={(e) =>
+                      updatePeptide(p.id, { name: e.target.value })
+                    }
+                  />
+                )}
                 <Input
-                  label="Name"
-                  value={p.name}
-                  onChange={(e) =>
-                    updatePeptide(p.id, { name: e.target.value })
-                  }
+                  label="Injection dose"
+                  value={injection.doseLabel}
+                  readOnly
+                  className="opacity-90"
                 />
-                <Input
-                  label="Dose"
-                  placeholder="e.g. 2mg"
-                  value={p.dose}
-                  onChange={(e) =>
-                    updatePeptide(p.id, { dose: e.target.value })
-                  }
-                />
+                {injection.syringeUnits != null && (
+                  <div className="flex items-end sm:col-span-1">
+                    <p className="rounded-lg border border-teal-500/20 bg-teal-500/5 px-3 py-2.5 text-sm text-teal-300">
+                      Draw <strong>{injection.syringeUnits}</strong> units on
+                      U-100 syringe
+                    </p>
+                  </div>
+                )}
+                {!catalogEntry && (
+                  <Input
+                    label="Dose"
+                    placeholder="e.g. 2mg"
+                    value={p.dose}
+                    onChange={(e) =>
+                      updatePeptide(p.id, { dose: e.target.value })
+                    }
+                  />
+                )}
                 <label className="block space-y-1.5">
                   <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
                     Frequency
@@ -469,7 +582,8 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
 
           <label className="block space-y-1.5 border-t border-slate-800/80 pt-4">
             <span className="text-sm font-medium text-slate-300">

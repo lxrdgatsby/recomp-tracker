@@ -2,7 +2,7 @@ import {
   DEFAULT_BAC_WATER,
   type PeptideSelection,
 } from '../constants/peptideCatalog'
-import { getCatalogEntry } from '../constants/peptideCatalog'
+import { getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
 import { getTitrationPhases } from '../constants/peptideTitration'
 import type { FamiliarityLevel } from '../types/auth'
 import { getDaysIntoCycle } from './calculations'
@@ -130,7 +130,7 @@ export function buildPeptideWithProtocol(
   return {
     id: entry.id,
     name: entry.name,
-    dose: selection.dose,
+    dose: starting.doseLabel,
     vialSize: selection.dose,
     frequency: entry.frequency,
     timing: entry.timing,
@@ -290,14 +290,67 @@ export function formatProtocolContextForAI(
     .join('\n\n')
 }
 
+export function rebuildPeptideForVialSize(
+  peptide: Peptide,
+  vialSize: string,
+  familiarity: FamiliarityLevel
+): Peptide {
+  const entry = getCatalogEntry(peptide.id) ?? getCatalogEntryByName(peptide.name)
+  if (!entry) {
+    return { ...peptide, vialSize }
+  }
+
+  const built = buildPeptideWithProtocol(
+    {
+      catalogId: entry.id,
+      dose: vialSize,
+      status: 'using',
+      bacWaterUnits: peptide.protocol?.bacWaterUnits ?? DEFAULT_BAC_WATER,
+      reconstituted: peptide.protocol?.reconstituted ?? false,
+    },
+    familiarity
+  )
+
+  if (!built) return { ...peptide, vialSize }
+
+  return {
+    ...built,
+    id: peptide.id,
+    timing: peptide.timing ?? built.timing,
+    notes: peptide.notes ?? built.notes,
+    vialSize,
+  }
+}
+
+export function getCurrentInjectionDose(
+  peptide: Peptide,
+  startDate: string
+): { doseLabel: string; syringeUnits?: number } {
+  const dayInCycle = Math.max(0, getDaysIntoCycle(startDate) - 1)
+  const tier = getTitrationForDay(peptide, dayInCycle)
+  return {
+    doseLabel:
+      tier?.doseLabel ??
+      peptide.protocol?.startingDoseLabel ??
+      peptide.dose,
+    syringeUnits:
+      tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits,
+  }
+}
+
 export function selectionsFromPeptides(peptides: Peptide[]): PeptideSelection[] {
-  return peptides
-    .filter((p) => p.protocol)
-    .map((p) => ({
-      catalogId: p.id,
+  const selections: PeptideSelection[] = []
+  for (const p of peptides) {
+    if (!p.protocol) continue
+    const entry = getCatalogEntry(p.id) ?? getCatalogEntryByName(p.name)
+    if (!entry) continue
+    selections.push({
+      catalogId: entry.id,
       dose: p.vialSize ?? p.dose,
-      status: 'using' as const,
-      bacWaterUnits: p.protocol!.bacWaterUnits,
-      reconstituted: p.protocol!.reconstituted,
-    }))
+      status: 'using',
+      bacWaterUnits: p.protocol.bacWaterUnits,
+      reconstituted: p.protocol.reconstituted,
+    })
+  }
+  return selections
 }

@@ -211,6 +211,11 @@ export function getCatalogEntry(catalogId: string): PeptideCatalogEntry | undefi
   return PEPTIDE_CATALOG.find((p) => p.id === catalogId)
 }
 
+export function getCatalogEntryByName(name: string): PeptideCatalogEntry | undefined {
+  const normalized = name.trim().toLowerCase()
+  return PEPTIDE_CATALOG.find((p) => p.name.toLowerCase() === normalized)
+}
+
 export function selectionToPeptide(selection: PeptideSelection): Peptide | null {
   const entry = getCatalogEntry(selection.catalogId)
   if (!entry) return null
