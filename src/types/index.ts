@@ -79,6 +79,7 @@ export interface TrackerState {
 
 export type ViewId =
   | 'dashboard'
+  | 'assistant'
   | 'faqs'
   | 'profile'
   | 'peptides'

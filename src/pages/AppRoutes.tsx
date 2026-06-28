@@ -1,10 +1,29 @@
+import { AIChatDashboard } from '../components/dashboard/AIChatDashboard'
+import { DashboardView } from '../components/dashboard/DashboardView'
 import { FAQsView } from '../components/faqs/FAQsView'
 import { ProfileView } from '../components/profile/ProfileView'
 import { PeptidesView } from '../components/peptides/PeptidesView'
 import { PlanView } from '../components/plan/PlanView'
 import { WorkoutsView } from '../components/workouts/WorkoutsView'
 import { ProgressView } from '../components/progress/ProgressView'
+import { useAuth } from '../contexts/AuthContext'
 import { useAppContext } from './AppLayout'
+
+export function DashboardRoute() {
+  const { state, toggleInjection } = useAppContext()
+  const { userProfile } = useAuth()
+  return (
+    <DashboardView
+      state={state}
+      username={userProfile?.username}
+      onToggleInjection={toggleInjection}
+    />
+  )
+}
+
+export function AssistantRoute() {
+  return <AIChatDashboard />
+}
 
 export function FAQsRoute() {
   return <FAQsView />

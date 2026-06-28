@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
-import { AIChatDashboard } from '../components/dashboard/AIChatDashboard'
 import { InstallAppButton } from '../components/layout/InstallAppButton'
 import { MedicalDisclaimer } from '../components/layout/MedicalDisclaimer'
 import { Sidebar } from '../components/layout/Sidebar'
@@ -13,6 +12,7 @@ import { exportState } from '../utils/storage'
 
 const ROUTE_MAP: Record<string, ViewId> = {
   '/app': 'dashboard',
+  '/app/assistant': 'assistant',
   '/app/faqs': 'faqs',
   '/app/profile': 'profile',
   '/app/peptides': 'peptides',
@@ -23,6 +23,7 @@ const ROUTE_MAP: Record<string, ViewId> = {
 
 const VIEW_ROUTES: Record<ViewId, string> = {
   dashboard: '/app',
+  assistant: '/app/assistant',
   faqs: '/app/faqs',
   profile: '/app/profile',
   peptides: '/app/peptides',
@@ -166,13 +167,13 @@ export function AppLayout() {
 
         <main
           className={`flex-1 ${
-            activeView === 'dashboard'
+            activeView === 'assistant'
               ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
               : 'overflow-y-auto px-4 pt-6 pb-[var(--mobile-nav-height)] lg:px-8 lg:pb-8'
           }`}
         >
-          {activeView === 'dashboard' ? (
-            <AIChatDashboard />
+          {activeView === 'assistant' ? (
+            <Outlet context={contextValue} />
           ) : (
             <div className="mx-auto max-w-5xl">
               <Outlet context={contextValue} />

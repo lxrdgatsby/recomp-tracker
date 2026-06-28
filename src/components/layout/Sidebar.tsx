@@ -3,6 +3,7 @@ import {
   Calendar,
   CircleHelp,
   Dumbbell,
+  Home,
   LogOut,
   MessageSquare,
   Syringe,
@@ -12,7 +13,8 @@ import type { ViewId } from '../../types'
 import { InstallAppButton } from './InstallAppButton'
 
 const NAV: { id: ViewId; label: string; icon: typeof MessageSquare }[] = [
-  { id: 'dashboard', label: 'Assistant', icon: MessageSquare },
+  { id: 'dashboard', label: 'Home', icon: Home },
+  { id: 'assistant', label: 'Assistant', icon: MessageSquare },
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'peptides', label: 'Peptides', icon: Syringe },
   { id: 'plan', label: '90-Day Plan', icon: Calendar },
