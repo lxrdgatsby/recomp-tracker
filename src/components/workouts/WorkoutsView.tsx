@@ -100,10 +100,10 @@ export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
                 onClick={() =>
                   onToggleWorkout(date, selectedWeek, day.dayIndex)
                 }
-                className={`flex w-full items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm transition-all sm:w-auto sm:rounded-2xl sm:px-5 ${
+                className={`flex w-full items-center justify-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-medium transition-all sm:w-auto sm:rounded-2xl sm:px-5 ${
                   done
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-white text-black hover:bg-white/90'
+                    ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-400'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/20'
                 }`}
               >
                 {done ? (
