@@ -55,6 +55,6 @@ export function WorkoutsRoute() {
 }
 
 export function ProgressRoute() {
-  const { state } = useAppContext()
-  return <ProgressView state={state} />
+  const { state, logWeight } = useAppContext()
+  return <ProgressView state={state} onLogWeight={logWeight} />
 }
