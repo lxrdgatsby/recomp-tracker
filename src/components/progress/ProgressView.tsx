@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
+import { ProgressCorrelation } from './ProgressCorrelation'
 import type { TrackerState } from '../../types'
 import type { CheckInData } from '../../utils/checkInStorage'
 import { computeAdherence } from '../../utils/adherence'
@@ -143,6 +144,7 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
   const { profile, weightHistory } = state
   const [showLogModal, setShowLogModal] = useState(false)
   const [weightInput, setWeightInput] = useState('')
+  const [checkInVersion, setCheckInVersion] = useState(0)
 
   const adherence = useMemo(() => computeAdherence(state), [state])
   const currentWeight = getLatestWeight(profile, weightHistory)
@@ -186,6 +188,7 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
     if (!isNaN(w) && w > 0) {
       onLogWeight(today, w)
     }
+    setCheckInVersion((v) => v + 1)
   }
 
   return (
@@ -195,11 +198,15 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
         <p className="text-slate-400">Track your recomp journey</p>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-4">
         <SmartCheckIn
           defaultWeight={String(currentWeight)}
           onSubmit={handleCheckIn}
         />
+      </div>
+
+      <div className="mb-8">
+        <ProgressCorrelation refreshKey={checkInVersion} />
       </div>
 
       <div className="mb-8 grid grid-cols-3 gap-3">
