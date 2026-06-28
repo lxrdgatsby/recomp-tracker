@@ -50,15 +50,6 @@ export function DoseCalculator({
   )
 
   useEffect(() => {
-    const stored = readStorage()
-    if (stored) {
-      setVialMg(stored.vialMg)
-      setBacWaterMl(stored.bacWaterMl)
-      setTargetDoseMg(stored.targetDoseMg)
-    }
-  }, [])
-
-  useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ vialMg, bacWaterMl, targetDoseMg })
