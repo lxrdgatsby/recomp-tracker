@@ -158,7 +158,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-navy-950">
+    <div className="flex min-h-screen min-w-0 bg-navy-950">
       <Sidebar
         active={activeView}
         onNavigate={navigateTo}
@@ -167,7 +167,7 @@ export function AppLayout() {
         onSignOut={signOut}
       />
 
-      <div className="flex h-svh min-h-0 flex-1 flex-col lg:min-h-screen lg:h-auto">
+      <div className="flex h-svh min-h-0 min-w-0 flex-1 flex-col lg:min-h-screen lg:h-auto">
         <header className="no-print flex items-center justify-between border-b border-slate-800/80 bg-navy-900/50 px-4 py-3 lg:hidden">
           <div>
             <h1 className="text-lg font-bold text-white">
@@ -194,13 +194,13 @@ export function AppLayout() {
           className={`flex-1 ${
             activeView === 'assistant'
               ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-              : 'overflow-y-auto px-4 pt-6 pb-[var(--mobile-nav-height)] lg:px-8 lg:pb-8'
+              : 'min-w-0 overflow-x-hidden overflow-y-auto px-4 pt-6 pb-[var(--mobile-nav-height)] lg:px-8 lg:pb-8'
           }`}
         >
           {activeView === 'assistant' ? (
             <Outlet context={contextValue} />
           ) : (
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto min-w-0 max-w-5xl">
               <Outlet context={contextValue} />
               <MedicalDisclaimer />
             </div>
