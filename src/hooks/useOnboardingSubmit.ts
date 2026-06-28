@@ -5,6 +5,12 @@ import { formatPeptideSelections } from '../constants/peptideCatalog'
 import { completeOnboarding, isUsernameAvailable } from '../lib/profileService'
 import type { Questionnaire } from '../types/auth'
 import { serializeTrainingActivities } from '../types/auth'
+import {
+  generate90DayPlan,
+  onboardingDataFromComplete,
+  save90DayPlan,
+  saveOnboardingData,
+} from '../utils/onboardingStorage'
 
 export function useOnboardingSubmit() {
   const { user, refreshProfile } = useAuth()
@@ -43,6 +49,10 @@ export function useOnboardingSubmit() {
         questionnaire
       )
       if (err) return { error: err }
+
+      const onboardingData = onboardingDataFromComplete(data)
+      saveOnboardingData(onboardingData)
+      save90DayPlan(generate90DayPlan(onboardingData))
 
       await refreshProfile()
       return { error: null }
