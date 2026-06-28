@@ -23,6 +23,10 @@ export function useTrackerStore() {
     setState((s) => ({ ...s, peptides }))
   }, [])
 
+  const saveProfile = useCallback((profile: Profile, peptides: Peptide[]) => {
+    setState((s) => ({ ...s, profile, peptides }))
+  }, [])
+
   const logWeight = useCallback((date: string, weight: number) => {
     setState((s) => {
       const existing = s.weightHistory.filter((e) => e.date !== date)
@@ -75,6 +79,7 @@ export function useTrackerStore() {
     state,
     updateProfile,
     setPeptides,
+    saveProfile,
     logWeight,
     toggleInjection,
     toggleWorkout,

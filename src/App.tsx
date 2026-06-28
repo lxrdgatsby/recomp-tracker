@@ -25,8 +25,7 @@ export default function App() {
         return (
           <ProfileView
             state={store.state}
-            onUpdateProfile={store.updateProfile}
-            onSetPeptides={store.setPeptides}
+            onSaveProfile={store.saveProfile}
           />
         )
       case 'peptides':
