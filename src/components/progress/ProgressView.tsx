@@ -10,7 +10,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { SmartCheckIn } from '../checkin/SmartCheckIn'
 import type { TrackerState } from '../../types'
+import type { CheckInData } from '../../utils/checkInStorage'
 import { computeAdherence } from '../../utils/adherence'
 import {
   getLatestWeight,
@@ -179,11 +181,25 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
     }
   }
 
+  const handleCheckIn = (data: CheckInData) => {
+    const w = parseFloat(data.weight)
+    if (!isNaN(w) && w > 0) {
+      onLogWeight(today, w)
+    }
+  }
+
   return (
     <div className="pb-8 text-white">
       <div className="pb-6 pt-2">
         <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
         <p className="text-slate-400">Track your recomp journey</p>
+      </div>
+
+      <div className="mb-8">
+        <SmartCheckIn
+          defaultWeight={String(currentWeight)}
+          onSubmit={handleCheckIn}
+        />
       </div>
 
       <div className="mb-8 grid grid-cols-3 gap-3">

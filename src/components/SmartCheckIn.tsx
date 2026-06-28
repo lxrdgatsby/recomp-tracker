@@ -1,0 +1,1 @@
+export { SmartCheckIn as default, SmartCheckIn } from './checkin/SmartCheckIn'
