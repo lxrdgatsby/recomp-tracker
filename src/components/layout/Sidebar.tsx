@@ -1,0 +1,83 @@
+import {
+  Activity,
+  Calendar,
+  Dumbbell,
+  LayoutDashboard,
+  Syringe,
+  User,
+} from 'lucide-react'
+import type { ViewId } from '../../types'
+import { InstallAppButton } from './InstallAppButton'
+
+const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'peptides', label: 'Peptides', icon: Syringe },
+  { id: 'plan', label: '90-Day Plan', icon: Calendar },
+  { id: 'workouts', label: 'Workouts', icon: Dumbbell },
+  { id: 'progress', label: 'Progress', icon: Activity },
+]
+
+interface SidebarProps {
+  active: ViewId
+  onNavigate: (view: ViewId) => void
+  onExport: () => void
+}
+
+export function Sidebar({ active, onNavigate, onExport }: SidebarProps) {
+  return (
+    <>
+      <aside className="no-print hidden w-56 shrink-0 flex-col border-r border-slate-800/80 bg-navy-900/50 lg:flex">
+        <div className="border-b border-slate-800/80 px-5 py-6">
+          <h1 className="text-lg font-bold tracking-tight text-white">
+            Recomp<span className="text-teal-400">Tracker</span>
+          </h1>
+          <p className="mt-1 text-xs text-slate-500">90-day recomp protocol</p>
+        </div>
+        <nav className="flex-1 space-y-1 p-3">
+          {NAV.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onNavigate(id)}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                active === id
+                  ? 'bg-teal-500/10 font-medium text-teal-400'
+                  : 'text-slate-400 hover:bg-navy-800 hover:text-slate-200'
+              }`}
+            >
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="space-y-2 border-t border-slate-800/80 p-3">
+          <InstallAppButton fullWidth />
+          <button
+            type="button"
+            onClick={onExport}
+            className="w-full rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-400 transition-colors hover:border-teal-500/40 hover:text-teal-400"
+          >
+            Export JSON
+          </button>
+        </div>
+      </aside>
+
+      <nav className="no-print fixed right-0 bottom-0 left-0 z-50 flex border-t border-slate-800/80 bg-navy-900/95 backdrop-blur-md lg:hidden">
+        {NAV.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onNavigate(id)}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] ${
+              active === id ? 'text-teal-400' : 'text-slate-500'
+            }`}
+          >
+            <Icon size={18} />
+            <span>{label.split(' ')[0]}</span>
+          </button>
+        ))}
+      </nav>
+    </>
+  )
+}
