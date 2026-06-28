@@ -62,7 +62,7 @@ export default function App() {
         <header className="no-print flex items-center justify-between border-b border-slate-800/80 bg-navy-900/50 px-4 py-4 lg:hidden">
           <div>
             <h1 className="text-lg font-bold text-white">
-              Recomp<span className="text-teal-400">Tracker</span>
+              Peptide<span className="text-teal-400">Tracker</span>
             </h1>
           </div>
           <div className="flex items-center gap-2">

@@ -30,9 +30,9 @@ export function Sidebar({ active, onNavigate, onExport }: SidebarProps) {
       <aside className="no-print hidden w-56 shrink-0 flex-col border-r border-slate-800/80 bg-navy-900/50 lg:flex">
         <div className="border-b border-slate-800/80 px-5 py-6">
           <h1 className="text-lg font-bold tracking-tight text-white">
-            Recomp<span className="text-teal-400">Tracker</span>
+            Peptide<span className="text-teal-400">Tracker</span>
           </h1>
-          <p className="mt-1 text-xs text-slate-500">90-day recomp protocol</p>
+          <p className="mt-1 text-xs text-slate-500">90-day peptide protocol</p>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {NAV.map(({ id, label, icon: Icon }) => (

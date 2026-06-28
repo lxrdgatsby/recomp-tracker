@@ -77,7 +77,7 @@ export function InstallAppButton({
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-500/15 text-xs font-bold text-teal-400">
                   3
                 </span>
-                <span>Tap &ldquo;Add&rdquo; to install Recomp Tracker</span>
+                <span>Tap &ldquo;Add&rdquo; to install Peptide Tracker</span>
               </li>
             </ol>
             <Button

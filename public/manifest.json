@@ -1,6 +1,6 @@
 {
-  "name": "Recomp Tracker",
-  "short_name": "Recomp",
+  "name": "Peptide Tracker",
+  "short_name": "Peptide",
   "description": "90-day body recomposition tracker with peptide scheduling, workouts, and progress charts.",
   "start_url": "/",
   "scope": "/",
