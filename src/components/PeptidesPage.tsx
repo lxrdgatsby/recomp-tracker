@@ -1,0 +1,1 @@
+export { PeptidesView as default, PeptidesView } from './peptides/PeptidesView'

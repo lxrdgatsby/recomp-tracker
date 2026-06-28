@@ -35,12 +35,9 @@ export function ProfileRoute() {
 }
 
 export function PeptidesRoute() {
-  const { state, updateReconstitution } = useAppContext()
+  const { state, toggleInjection } = useAppContext()
   return (
-    <PeptidesView
-      state={state}
-      onUpdateReconstitution={updateReconstitution}
-    />
+    <PeptidesView state={state} onToggleInjection={toggleInjection} />
   )
 }
 
