@@ -1,9 +1,13 @@
 export const CHAT_SUGGESTIONS = [
-  'What are peptides?',
-  'How do peptides work?',
-  'Review my current peptide stack',
-  'Help me plan my 90-day recomp',
+  "Log today's dose",
+  'How am I progressing?',
+  'Suggest titration',
+  'Side effect check-in',
+  'Review my current stack',
 ] as const
+
+export const ASSISTANT_WELCOME =
+  "Hey! I'm your peptide protocol assistant. I can help with dosing, side effects, progress tracking, or adjusting your plan. What's on your mind?"
 
 export const FAQ_QUESTIONS = [
   'Are peptides steroids?',

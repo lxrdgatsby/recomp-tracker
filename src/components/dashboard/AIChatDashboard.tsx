@@ -1,8 +1,7 @@
-import { ArrowUp, History, Sparkles } from 'lucide-react'
+import { History } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useChat } from '../../hooks/useChat'
-import { MedicalDisclaimer } from '../layout/MedicalDisclaimer'
-import { CHAT_SUGGESTIONS } from '../../constants/chatPrompts'
+import { ASSISTANT_WELCOME, CHAT_SUGGESTIONS } from '../../constants/chatPrompts'
 import { ChatHistorySidebar } from './ChatHistorySidebar'
 
 export function AIChatDashboard() {
@@ -20,35 +19,16 @@ export function AIChatDashboard() {
     refreshConversations,
   } = useChat()
 
-  const handleSuggestion = (text: string) => {
-    if (loading) return
-    void sendMessage(text)
-  }
   const [input, setInput] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const showEmptyState = messages.length === 0
-
-  const updateSuggestionVisibility = () => {
-    const el = scrollRef.current
-    if (!el) return
-    const distanceFromBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight
-    setShowSuggestions(distanceFromBottom < 72)
-  }
+  const showWelcome = messages.length === 0 && !loading
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-    requestAnimationFrame(updateSuggestionVisibility)
   }, [messages, loading])
-
-  useEffect(() => {
-    if (showEmptyState) setShowSuggestions(true)
-  }, [showEmptyState])
 
   useEffect(() => {
     if (historyOpen) {
@@ -56,19 +36,10 @@ export function AIChatDashboard() {
     }
   }, [historyOpen, refreshConversations])
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault()
+  const handleSend = () => {
     if (!input.trim() || loading) return
-    sendMessage(input)
+    void sendMessage(input)
     setInput('')
-    if (textareaRef.current) textareaRef.current.style.height = '48px'
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
-    }
   }
 
   const handleSelectConversation = (id: string) => {
@@ -81,10 +52,8 @@ export function AIChatDashboard() {
     setHistoryOpen(false)
   }
 
-  const suggestionsVisible = showEmptyState || showSuggestions
-
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 bg-[#0a0a0a] text-white">
       <ChatHistorySidebar
         conversations={conversations}
         activeConversationId={activeConversationId}
@@ -93,7 +62,7 @@ export function AIChatDashboard() {
         onNewChat={handleNewChat}
         onPin={(id, pinned) => void pinConversation(id, pinned)}
         onDelete={(id) => void removeConversation(id)}
-        className="hidden lg:flex"
+        className="hidden border-white/10 lg:flex"
       />
 
       {historyOpen && (
@@ -112,17 +81,17 @@ export function AIChatDashboard() {
             onPin={(id, pinned) => void pinConversation(id, pinned)}
             onDelete={(id) => void removeConversation(id)}
             onClose={() => setHistoryOpen(false)}
-            className="fixed inset-y-0 left-0 z-50 lg:hidden"
+            className="fixed inset-y-0 left-0 z-50 border-white/10 lg:hidden"
           />
         </>
       )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-800/80 px-4 py-2.5 lg:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2.5 lg:hidden">
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
-            className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-teal-500/30 hover:text-teal-400"
+            className="flex items-center gap-2 rounded-lg border border-white/20 px-3 py-1.5 text-xs text-slate-400 hover:border-emerald-500/40 hover:text-emerald-400"
           >
             <History size={14} />
             History
@@ -130,7 +99,7 @@ export function AIChatDashboard() {
           <button
             type="button"
             onClick={handleNewChat}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-teal-500/30 hover:text-teal-400"
+            className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-slate-400 hover:border-emerald-500/40 hover:text-emerald-400"
           >
             New chat
           </button>
@@ -138,112 +107,84 @@ export function AIChatDashboard() {
 
         <div
           ref={scrollRef}
-          onScroll={updateSuggestionVisibility}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-4 max-lg:pb-[calc(var(--mobile-nav-height)+11rem)] lg:py-6"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 py-4 max-lg:pb-4"
         >
-          <div className="mx-auto max-w-2xl space-y-6">
-            {showEmptyState && (
-              <div className="pt-2 text-center lg:pt-8">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-500/10">
-                  <Sparkles className="text-teal-400" size={24} />
-                </div>
-                <h2 className="text-xl font-semibold text-white">
-                  Peptide Protocol Assistant
-                </h2>
-                <p className="mt-2 text-sm text-slate-400">
-                  Ask anything about peptides, dosing, stacking, or your 90-day
-                  plan. I can update your profile from our conversation.
-                </p>
+          {showWelcome && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-3xl bg-white/10 px-4 py-3 text-[15px] leading-relaxed">
+                {ASSISTANT_WELCOME}
               </div>
-            )}
+            </div>
+          )}
 
-            {messages.map((msg) => (
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`max-w-[80%] rounded-3xl px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-emerald-500 text-black'
+                    : 'bg-white/10 text-slate-100'
+                }`}
               >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'bg-teal-500/15 text-slate-100'
-                      : 'bg-navy-800/80 text-slate-300'
-                  }`}
-                >
-                  {msg.content}
-                </div>
+                {msg.content}
               </div>
-            ))}
+            </div>
+          ))}
 
-            {loading && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl bg-navy-800/80 px-4 py-3">
-                  <div className="flex gap-1">
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-teal-400 [animation-delay:-0.3s]" />
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-teal-400 [animation-delay:-0.15s]" />
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-teal-400" />
-                  </div>
+          {loading && (
+            <div className="flex justify-start">
+              <div className="rounded-3xl bg-white/10 px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-emerald-400 [animation-delay:-0.3s]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-emerald-400 [animation-delay:-0.15s]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-emerald-400" />
                 </div>
               </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
         </div>
 
-        <div className="relative z-[60] shrink-0 border-t border-slate-800/80 bg-navy-950 px-4 pt-2.5 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-[var(--mobile-nav-height)] max-lg:pb-0 lg:relative lg:bottom-auto lg:bg-navy-950/95 lg:py-4 lg:backdrop-blur-md">
-          <div className="mx-auto max-w-2xl">
-            <div
-              className={`overflow-hidden transition-all duration-300 ease-out ${
-                suggestionsVisible
-                  ? 'mb-2 max-h-28 translate-y-0 opacity-100'
-                  : 'pointer-events-none mb-0 max-h-0 translate-y-3 opacity-0'
-              }`}
-              aria-hidden={!suggestionsVisible}
-            >
-              <div className="flex flex-wrap gap-2">
-                {CHAT_SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => handleSuggestion(s)}
-                    tabIndex={suggestionsVisible ? 0 : -1}
-                    className="rounded-full border border-slate-800 bg-navy-900 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:border-teal-500/30 hover:text-teal-400 active:scale-95"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <div className="shrink-0 max-lg:pb-[var(--mobile-nav-height)]">
+          <div className="flex flex-wrap gap-2 px-6 pb-3">
+            {CHAT_SUGGESTIONS.map((action) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => setInput(action)}
+                disabled={loading}
+                className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-white/20 disabled:opacity-40"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="relative z-10 flex items-end gap-2 rounded-2xl border border-slate-700 bg-navy-900 px-3 py-2 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/30"
-            >
-              <textarea
-                ref={textareaRef}
+          <div className="border-t border-white/10 p-4">
+            <div className="mx-auto flex max-w-2xl gap-2">
+              <input
                 value={input}
-                onChange={(e) => {
-                  setInput(e.target.value)
-                  e.target.style.height = '48px'
-                  e.target.style.height = `${Math.max(48, Math.min(e.target.scrollHeight, 120))}px`
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about peptides, dosing, your stack, or training…"
-                rows={2}
-                className="min-h-[48px] max-h-[120px] flex-1 resize-none border-0 bg-transparent py-1 pl-1 text-base leading-[24px] text-slate-100 placeholder:whitespace-normal placeholder:leading-[24px] placeholder:text-slate-500 focus:outline-none"
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Ask anything or log your dose..."
+                disabled={loading}
+                className="flex-1 rounded-2xl border border-white/20 bg-white/5 px-4 py-3 text-base text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
               />
               <button
-                type="submit"
+                type="button"
+                onClick={handleSend}
                 disabled={!input.trim() || loading}
-                className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-500 text-navy-950 transition-colors hover:bg-teal-400 disabled:opacity-40"
-                aria-label="Send message"
+                className="rounded-2xl bg-emerald-500 px-6 py-3 font-medium text-black transition-colors hover:bg-emerald-600 disabled:opacity-40"
               >
-                <ArrowUp size={18} strokeWidth={2.5} />
+                Send
               </button>
-            </form>
-
-            <div className="mt-1.5">
-              <MedicalDisclaimer compact />
             </div>
+            <p className="mx-auto mt-2 max-w-2xl text-center text-[10px] text-slate-500">
+              Not medical advice. Always consult your healthcare provider.
+            </p>
           </div>
         </div>
       </div>

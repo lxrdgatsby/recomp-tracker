@@ -1,0 +1,1 @@
+export { AIChatDashboard as default, AIChatDashboard as EnhancedAssistant } from './dashboard/AIChatDashboard'
