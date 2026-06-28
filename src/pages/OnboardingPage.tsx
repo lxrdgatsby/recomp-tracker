@@ -9,6 +9,7 @@ import {
   DatabaseSetupPanel,
   isDatabaseSetupError,
 } from '../components/onboarding/DatabaseSetupPanel'
+import { OnboardingProgress } from '../components/onboarding/OnboardingProgress'
 import { PeptideSelector } from '../components/onboarding/PeptideSelector'
 import { MedicalDisclaimer } from '../components/layout/MedicalDisclaimer'
 import {
@@ -58,6 +59,8 @@ const STEPS = [
     subtitle: 'This is how you appear in the app',
   },
 ] as const
+
+const STEP_LABELS = ['Experience', 'Goals', 'Peptides', 'Stats', 'About', 'Username']
 
 const GOALS = [
   'Fat loss',
@@ -179,22 +182,12 @@ export function OnboardingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-navy-950">
-      <div className="border-b border-slate-800 px-6 py-4">
-        <div className="mx-auto flex max-w-lg items-center justify-between">
-          <span className="text-sm text-slate-500">
-            Step {step + 1} of {STEPS.length}
-          </span>
-          <div className="flex gap-1">
-            {STEPS.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 w-6 rounded-full transition-colors ${
-                  i <= step ? 'bg-teal-500' : 'bg-navy-800'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
+      <div className="mx-auto w-full max-w-lg border-b border-slate-800">
+        <OnboardingProgress
+          currentStep={step + 1}
+          totalSteps={STEPS.length}
+          stepLabels={STEP_LABELS}
+        />
       </div>
 
       <div className="flex flex-1 flex-col px-6 py-8">
