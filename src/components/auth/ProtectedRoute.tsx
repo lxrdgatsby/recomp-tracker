@@ -26,10 +26,6 @@ export function ProtectedRoute({
 
   if (!user) return <Navigate to="/login" replace />
 
-  if (requireOnboarding && (!userProfile || !userProfile.onboardingCompleted)) {
-    return <Navigate to="/onboarding" replace />
-  }
-
   if (!requireOnboarding && userProfile?.onboardingCompleted) {
     return <Navigate to="/app" replace />
   }

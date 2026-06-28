@@ -15,7 +15,7 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false)
 
   if (!configured) return <Navigate to="/setup" replace />
-  if (user) return <Navigate to="/onboarding" replace />
+  if (user) return <Navigate to="/app" replace />
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,7 +39,7 @@ export function SignupPage() {
       navigate(`/confirm-email?email=${encodeURIComponent(email)}`)
       return
     }
-    navigate('/onboarding')
+    navigate('/app')
   }
 
   return (

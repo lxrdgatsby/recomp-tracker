@@ -1,6 +1,8 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
+import OnboardingWizard from '@/components/OnboardingWizard'
+import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit'
 import { InstallAppButton } from '../components/layout/InstallAppButton'
 import { MedicalDisclaimer } from '../components/layout/MedicalDisclaimer'
 import { Sidebar } from '../components/layout/Sidebar'
@@ -65,6 +67,14 @@ export function AppLayout() {
     useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const submitOnboarding = useOnboardingSubmit()
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !userProfile?.onboardingCompleted
+  )
+
+  useEffect(() => {
+    setShowOnboarding(!userProfile?.onboardingCompleted)
+  }, [userProfile?.onboardingCompleted])
 
   const activeView = ROUTE_MAP[location.pathname] ?? 'dashboard'
 
@@ -130,6 +140,21 @@ export function AppLayout() {
         : [...trackerState.workoutCompletions, { date, week, dayIndex }]
       await persistState({ ...trackerState, workoutCompletions })
     },
+  }
+
+  if (showOnboarding) {
+    return (
+      <OnboardingWizard
+        onComplete={async (userData) => {
+          const { error } = await submitOnboarding(userData)
+          if (!error) {
+            setShowOnboarding(false)
+            navigate('/app', { replace: true })
+          }
+          return { error }
+        }}
+      />
+    )
   }
 
   return (

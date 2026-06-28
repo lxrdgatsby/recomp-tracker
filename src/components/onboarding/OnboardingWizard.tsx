@@ -86,7 +86,7 @@ interface OnboardingWizardProps {
   onComplete: (data: OnboardingCompleteData) => Promise<{ error: string | null }>
 }
 
-export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [showComplete, setShowComplete] = useState(false)
   const [error, setError] = useState('')
@@ -496,3 +496,6 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     </div>
   )
 }
+
+export { OnboardingWizard }
+export default OnboardingWizard

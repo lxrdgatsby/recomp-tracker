@@ -6,7 +6,7 @@ import { Input } from '../components/ui/Input'
 import { MedicalDisclaimer } from '../components/layout/MedicalDisclaimer'
 
 export function LoginPage() {
-  const { signIn, resendConfirmation, user, userProfile, configured } = useAuth()
+  const { signIn, resendConfirmation, user, configured } = useAuth()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const justConfirmed = params.get('confirmed') === '1'
@@ -19,9 +19,7 @@ export function LoginPage() {
   const [resent, setResent] = useState(false)
 
   if (!configured) return <Navigate to="/setup" replace />
-  if (user && userProfile?.onboardingCompleted) return <Navigate to="/app" replace />
-  if (user && userProfile && !userProfile.onboardingCompleted)
-    return <Navigate to="/onboarding" replace />
+  if (user) return <Navigate to="/app" replace />
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,7 +33,7 @@ export function LoginPage() {
       if (err.toLowerCase().includes('confirm')) setShowResend(true)
       return
     }
-    navigate('/onboarding')
+    navigate('/app')
   }
 
   const handleResend = async () => {
