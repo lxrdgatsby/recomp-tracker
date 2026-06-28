@@ -202,7 +202,7 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
                         frequency: e.target.value as PeptideFrequency,
                       })
                     }
-                    className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2 text-sm text-slate-100 focus:border-teal-500/60 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
