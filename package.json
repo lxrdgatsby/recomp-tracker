@@ -12,10 +12,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.0",
     "recharts": "^3.9.0"
   },
   "devDependencies": {
@@ -23,6 +25,7 @@
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vercel/node": "^5.8.22",
     "@vitejs/plugin-react": "^6.0.2",
     "oxlint": "^1.69.0",
     "sharp": "^0.35.2",

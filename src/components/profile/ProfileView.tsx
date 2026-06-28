@@ -1,5 +1,7 @@
 import { Check, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
+import type { FamiliarityLevel } from '../../types/auth'
 import type { Peptide, PeptideFrequency, Profile, TrackerState } from '../../types'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
@@ -7,7 +9,16 @@ import { Input } from '../ui/Input'
 
 interface ProfileViewProps {
   state: TrackerState
-  onSaveProfile: (profile: Profile, peptides: Peptide[]) => void
+  onSaveProfile: (
+    profile: Profile,
+    peptides: Peptide[],
+    extras?: {
+      familiarity?: string | null
+      mainGoal?: string | null
+      interestedPeptides?: string | null
+      additionalInfo?: string | null
+    }
+  ) => void | Promise<void>
 }
 
 function newPeptide(): Peptide {
@@ -71,20 +82,37 @@ function clonePeptides(peptides: Peptide[]): Peptide[] {
 }
 
 export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
+  const { userProfile, refreshProfile } = useAuth()
   const [draftProfile, setDraftProfile] = useState(() =>
     profileToDraft(state.profile)
   )
   const [draftPeptides, setDraftPeptides] = useState(() =>
     clonePeptides(state.peptides)
   )
+  const [familiarity, setFamiliarity] = useState<FamiliarityLevel>(
+    userProfile?.familiarity ?? 'beginner'
+  )
+  const [mainGoal, setMainGoal] = useState(userProfile?.mainGoal ?? '')
+  const [interestedPeptides, setInterestedPeptides] = useState(
+    userProfile?.interestedPeptides ?? ''
+  )
+  const [additionalInfo, setAdditionalInfo] = useState(
+    userProfile?.additionalInfo ?? ''
+  )
   const [justSaved, setJustSaved] = useState(false)
+  const [saving, setLoading] = useState(false)
 
   const profileDirty = isDraftDirty(draftProfile, state.profile)
   const peptidesDirty = useMemo(
     () => JSON.stringify(draftPeptides) !== JSON.stringify(state.peptides),
     [draftPeptides, state.peptides]
   )
-  const isDirty = profileDirty || peptidesDirty
+  const questionnaireDirty =
+    familiarity !== (userProfile?.familiarity ?? 'beginner') ||
+    mainGoal !== (userProfile?.mainGoal ?? '') ||
+    interestedPeptides !== (userProfile?.interestedPeptides ?? '') ||
+    additionalInfo !== (userProfile?.additionalInfo ?? '')
+  const isDirty = profileDirty || peptidesDirty || questionnaireDirty
   const isValid = draftToProfile(draftProfile) !== null
 
   const updatePeptide = (id: string, patch: Partial<Peptide>) => {
@@ -97,10 +125,18 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
     setDraftPeptides((prev) => prev.filter((p) => p.id !== id))
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const profile = draftToProfile(draftProfile)
     if (!profile) return
-    onSaveProfile(profile, draftPeptides)
+    setLoading(true)
+    await onSaveProfile(profile, draftPeptides, {
+      familiarity,
+      mainGoal,
+      interestedPeptides,
+      additionalInfo,
+    })
+    await refreshProfile()
+    setLoading(false)
     setJustSaved(true)
     setTimeout(() => setJustSaved(false), 2500)
   }
@@ -120,6 +156,60 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
           </span>
         )}
       </div>
+
+      <Card title="Goals & Background">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block space-y-1.5 sm:col-span-2">
+            <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+              Peptide familiarity
+            </span>
+            <select
+              value={familiarity}
+              onChange={(e) =>
+                setFamiliarity(e.target.value as FamiliarityLevel)
+              }
+              className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </label>
+          <div className="sm:col-span-2">
+            <Input
+              label="Main goal"
+              value={mainGoal}
+              onChange={(e) => setMainGoal(e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+                Peptides of interest
+              </span>
+              <textarea
+                className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
+                rows={2}
+                value={interestedPeptides}
+                onChange={(e) => setInterestedPeptides(e.target.value)}
+              />
+            </label>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
+                Additional info
+              </span>
+              <textarea
+                className="w-full rounded-lg border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none"
+                rows={2}
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+              />
+            </label>
+          </div>
+        </div>
+      </Card>
 
       <Card title="Body Stats">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -292,10 +382,10 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
             )}
             <Button
               onClick={handleSave}
-              disabled={!isDirty || !isValid}
+              disabled={!isDirty || !isValid || saving}
               className="w-full sm:w-auto"
             >
-              Save Profile
+              {saving ? 'Saving…' : 'Save Profile'}
             </Button>
           </div>
         </div>
