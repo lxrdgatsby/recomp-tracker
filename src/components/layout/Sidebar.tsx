@@ -10,6 +10,7 @@ import {
   User,
 } from 'lucide-react'
 import type { ViewId } from '../../types'
+import { BottomNav } from './BottomNav'
 import { InstallAppButton } from './InstallAppButton'
 
 const NAV: { id: ViewId; label: string; icon: typeof MessageSquare }[] = [
@@ -90,23 +91,7 @@ export function Sidebar({
         </div>
       </aside>
 
-      <nav className="no-print fixed right-0 bottom-0 left-0 z-50 border-t border-slate-800/80 bg-navy-900/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md lg:hidden">
-        <div className="flex h-12">
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onNavigate(id)}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] ${
-                active === id ? 'text-teal-400' : 'text-slate-500'
-              }`}
-            >
-              <Icon size={18} />
-              <span>{label.split(' ')[0]}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      <BottomNav />
     </>
   )
 }

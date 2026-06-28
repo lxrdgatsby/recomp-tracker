@@ -1,0 +1,1 @@
+export { BottomNav as default, BottomNav } from './layout/BottomNav'

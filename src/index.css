@@ -12,7 +12,7 @@
 }
 
 :root {
-  --mobile-nav-height: calc(3rem + env(safe-area-inset-bottom, 0px));
+  --mobile-nav-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 html {
