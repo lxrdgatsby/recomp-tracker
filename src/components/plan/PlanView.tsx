@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { Check, Flag, Printer } from 'lucide-react'
+import { Check, Download, Flag, Printer } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { CYCLE_DAYS } from '../../constants/defaults'
@@ -16,6 +16,7 @@ import {
   getScheduleDates,
   isInjectionDone,
 } from '../../utils/peptideSchedule'
+import { getCheckInHistory } from '../../utils/checkInStorage'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { ProgressBar } from '../ui/ProgressBar'
@@ -43,6 +44,12 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
   )
 
   const handlePrint = () => window.print()
+  const handleExportPdf = async () => {
+    const { export90DayPlan, getPlanForExport } = await import(
+      '../../utils/export90DayPlan'
+    )
+    export90DayPlan(getPlanForExport(state), getCheckInHistory())
+  }
   const current = getLatestWeight(profile, weightHistory)
   const start = getStartWeight(profile, weightHistory)
   const daysIn = getDaysIntoCycle(profile.startDate)
@@ -63,12 +70,23 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
 
   return (
     <div className="space-y-6 pb-4">
-      <div>
-        <h2 className="text-2xl font-bold text-white">90-Day Recomp Plan</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Tailored from your onboarding profile
-          {userProfile?.username ? ` (@${userProfile.username})` : ''}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">90-Day Recomp Plan</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Tailored from your onboarding profile
+            {userProfile?.username ? ` (@${userProfile.username})` : ''}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="no-print shrink-0"
+          onClick={handleExportPdf}
+        >
+          <Download size={14} />
+          Export PDF
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
