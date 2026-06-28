@@ -83,15 +83,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadUserData])
 
   const signUp = useCallback(async (email: string, password: string) => {
-    if (!supabase) return { error: 'Supabase not configured' }
-    const { error } = await supabase.auth.signUp({ email, password })
-    return { error: error?.message ?? null }
+    if (!supabase) {
+      return {
+        error:
+          'Supabase not configured. Replace placeholder keys in .env.local or Vercel env vars.',
+      }
+    }
+    try {
+      const { error } = await supabase.auth.signUp({ email, password })
+      return { error: error?.message ?? null }
+    } catch {
+      return {
+        error:
+          'Failed to reach Supabase. Check your Project URL and anon key, then redeploy.',
+      }
+    }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabase) return { error: 'Supabase not configured' }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    if (!supabase) {
+      return {
+        error:
+          'Supabase not configured. Replace placeholder keys in .env.local or Vercel env vars.',
+      }
+    }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      return { error: error?.message ?? null }
+    } catch {
+      return {
+        error:
+          'Failed to reach Supabase. Check your Project URL and anon key, then redeploy.',
+      }
+    }
   }, [])
 
   const signOut = useCallback(async () => {
