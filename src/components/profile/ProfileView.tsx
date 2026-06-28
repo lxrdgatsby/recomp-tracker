@@ -21,8 +21,49 @@ function newPeptide(): Peptide {
   }
 }
 
-function cloneProfile(profile: Profile): Profile {
-  return { ...profile }
+type DraftProfile = Omit<
+  Profile,
+  'currentWeight' | 'goalWeight' | 'weeklyLossTarget'
+> & {
+  currentWeight: string
+  goalWeight: string
+  weeklyLossTarget: string
+}
+
+function profileToDraft(profile: Profile): DraftProfile {
+  return {
+    ...profile,
+    currentWeight: String(profile.currentWeight),
+    goalWeight: String(profile.goalWeight),
+    weeklyLossTarget: String(profile.weeklyLossTarget),
+  }
+}
+
+function draftToProfile(draft: DraftProfile): Profile | null {
+  const currentWeight = parseFloat(draft.currentWeight)
+  const goalWeight = parseFloat(draft.goalWeight)
+  const weeklyLossTarget = parseFloat(draft.weeklyLossTarget)
+
+  if (isNaN(currentWeight) || isNaN(goalWeight) || isNaN(weeklyLossTarget)) {
+    return null
+  }
+
+  return {
+    ...draft,
+    currentWeight,
+    goalWeight,
+    weeklyLossTarget,
+  }
+}
+
+function isDraftDirty(draft: DraftProfile, saved: Profile): boolean {
+  return (
+    draft.currentWeight !== String(saved.currentWeight) ||
+    draft.goalWeight !== String(saved.goalWeight) ||
+    draft.weeklyLossTarget !== String(saved.weeklyLossTarget) ||
+    draft.height !== saved.height ||
+    draft.startDate !== saved.startDate
+  )
 }
 
 function clonePeptides(peptides: Peptide[]): Peptide[] {
@@ -31,19 +72,20 @@ function clonePeptides(peptides: Peptide[]): Peptide[] {
 
 export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   const [draftProfile, setDraftProfile] = useState(() =>
-    cloneProfile(state.profile)
+    profileToDraft(state.profile)
   )
   const [draftPeptides, setDraftPeptides] = useState(() =>
     clonePeptides(state.peptides)
   )
   const [justSaved, setJustSaved] = useState(false)
 
-  const isDirty = useMemo(
-    () =>
-      JSON.stringify(draftProfile) !== JSON.stringify(state.profile) ||
-      JSON.stringify(draftPeptides) !== JSON.stringify(state.peptides),
-    [draftProfile, draftPeptides, state.profile, state.peptides]
+  const profileDirty = isDraftDirty(draftProfile, state.profile)
+  const peptidesDirty = useMemo(
+    () => JSON.stringify(draftPeptides) !== JSON.stringify(state.peptides),
+    [draftPeptides, state.peptides]
   )
+  const isDirty = profileDirty || peptidesDirty
+  const isValid = draftToProfile(draftProfile) !== null
 
   const updatePeptide = (id: string, patch: Partial<Peptide>) => {
     setDraftPeptides((prev) =>
@@ -56,7 +98,9 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   }
 
   const handleSave = () => {
-    onSaveProfile(draftProfile, draftPeptides)
+    const profile = draftToProfile(draftProfile)
+    if (!profile) return
+    onSaveProfile(profile, draftPeptides)
     setJustSaved(true)
     setTimeout(() => setJustSaved(false), 2500)
   }
@@ -81,25 +125,27 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Current Weight (lbs)"
-            type="number"
-            step="0.1"
+            type="text"
+            inputMode="decimal"
+            placeholder="e.g. 195"
             value={draftProfile.currentWeight}
             onChange={(e) =>
               setDraftProfile((p) => ({
                 ...p,
-                currentWeight: parseFloat(e.target.value) || 0,
+                currentWeight: e.target.value,
               }))
             }
           />
           <Input
             label="Goal Weight (lbs)"
-            type="number"
-            step="0.1"
+            type="text"
+            inputMode="decimal"
+            placeholder="e.g. 175"
             value={draftProfile.goalWeight}
             onChange={(e) =>
               setDraftProfile((p) => ({
                 ...p,
-                goalWeight: parseFloat(e.target.value) || 0,
+                goalWeight: e.target.value,
               }))
             }
           />
@@ -121,15 +167,14 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
           />
           <Input
             label="Expected Weekly Loss (lbs)"
-            type="number"
-            step="0.05"
-            min="0.25"
-            max="2"
+            type="text"
+            inputMode="decimal"
+            placeholder="e.g. 0.875"
             value={draftProfile.weeklyLossTarget}
             onChange={(e) =>
               setDraftProfile((p) => ({
                 ...p,
-                weeklyLossTarget: parseFloat(e.target.value) || 0.875,
+                weeklyLossTarget: e.target.value,
               }))
             }
           />
@@ -247,7 +292,7 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
             )}
             <Button
               onClick={handleSave}
-              disabled={!isDirty}
+              disabled={!isDirty || !isValid}
               className="w-full sm:w-auto"
             >
               Save Profile
