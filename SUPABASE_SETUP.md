@@ -21,7 +21,7 @@ This creates `profiles` and `chat_messages` tables, RLS policies, and an auto-pr
 
 1. Go to **Authentication** → **Providers**
 2. Ensure **Email** is enabled
-3. (Optional) Disable "Confirm email" under **Authentication** → **Settings** for faster testing
+3. **Disable "Confirm email"** under **Authentication** → **Providers** → **Email** → turn off **Confirm email** (signup goes straight to onboarding)
 
 ## 4. Get your API keys
 

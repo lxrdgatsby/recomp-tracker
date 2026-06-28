@@ -15,7 +15,7 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false)
 
   if (!configured) return <Navigate to="/setup" replace />
-  if (user?.email_confirmed_at) return <Navigate to="/onboarding" replace />
+  if (user) return <Navigate to="/onboarding" replace />
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,10 +83,6 @@ export function SignupPage() {
               onChange={(e) => setConfirm(e.target.value)}
               required
             />
-            <p className="text-xs text-slate-500">
-              After signing up, you&apos;ll receive a confirmation email before
-              you can log in.
-            </p>
             {error && <p className="text-sm text-red-400">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Creating account…' : 'Create Account'}

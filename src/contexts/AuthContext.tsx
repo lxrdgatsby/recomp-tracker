@@ -99,10 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     if (error) return { error: error.message, needsConfirmation: false }
 
-    // Sign out so user isn't stuck in a half-logged-in state before confirming
-    await supabase.auth.signOut()
-
     const needsConfirmation = !data.session && !!data.user
+
+    // Only sign out when email confirmation is required (no session yet)
+    if (needsConfirmation) {
+      await supabase.auth.signOut()
+    }
+
     return { error: null, needsConfirmation }
   }, [])
 
