@@ -107,6 +107,36 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         <ProgressBar value={cycleProgress} label="Days elapsed" />
       </Card>
 
+      <div className="mt-8">
+        <h2 className="mb-4 font-medium text-white">This Week&apos;s Focus</h2>
+
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div className="mb-3 flex justify-between gap-4 text-sm">
+            <div className="text-slate-300">Nutrition Target</div>
+            <div className="text-right text-emerald-400">
+              High Protein (~1g per lb goal weight)
+              <span className="block text-xs text-slate-500">
+                ~{profile.goalWeight}g daily
+              </span>
+            </div>
+          </div>
+          <div className="mb-3 flex justify-between gap-4 text-sm">
+            <div className="text-slate-300">Steps Goal</div>
+            <div className="text-emerald-400">10,000+ daily</div>
+          </div>
+          <div className="flex justify-between gap-4 text-sm">
+            <div className="text-slate-300">Weekly Weigh-in</div>
+            <div className="text-emerald-400">
+              {recompPlan?.checkInCadence?.toLowerCase().includes('sunday')
+                ? 'Every Sunday'
+                : recompPlan?.checkInCadence?.includes('7 days')
+                  ? 'Every 7 days'
+                  : 'Every Sunday'}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Card title="Key Milestones">
         <div className="space-y-3">
           {milestones.map((m) => (
