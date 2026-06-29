@@ -32,9 +32,7 @@ export function AIChatDashboard() {
   const [input, setInput] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
 
-  const showWelcome = messages.length === 0 && !loading
   const showInstall = !isInstalled && (canInstall || canShowIOSGuide)
 
   useEffect(() => {
@@ -167,92 +165,81 @@ export function AIChatDashboard() {
           </button>
         </div>
 
-        <div
-          ref={scrollRef}
-          className={`min-h-0 flex-1 overscroll-contain ${
-            showWelcome
-              ? 'flex flex-col items-center justify-center p-6 text-center'
-              : 'space-y-4 overflow-y-auto px-6 py-4'
-          }`}
-        >
-          {showWelcome ? (
-            <>
-              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
-                <Star className="text-emerald-400" size={32} />
-              </div>
-              <h2 className="mb-2 text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
-              <p className="max-w-xs text-slate-400">{ASSISTANT_WELCOME}</p>
-            </>
-          ) : (
-            <>
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                      msg.role === 'user'
-                        ? 'bg-emerald-500 text-black'
-                        : 'bg-white/10 text-slate-100'
-                    }`}
-                  >
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
-                    Thinking...
-                  </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </>
-          )}
+        <div className="flex shrink-0 flex-col items-center px-6 pt-6 pb-4 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-500/10">
+            <Star className="text-emerald-400" size={32} />
+          </div>
+          <h2 className="mb-1 text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
+          <p className="max-w-xs text-sm leading-snug text-slate-400">
+            {ASSISTANT_WELCOME}
+          </p>
         </div>
 
-        <div className="shrink-0 max-lg:pb-[var(--mobile-nav-height)]">
-          <div className="flex flex-wrap gap-2 px-6 pb-4">
-            {CHAT_SUGGESTIONS.map((action) => (
-              <button
-                key={action}
-                type="button"
-                onClick={() => setInput(action)}
-                disabled={loading}
-                className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
-              >
-                {action}
-              </button>
-            ))}
-          </div>
+        <div className="flex shrink-0 flex-wrap gap-2 px-6 pb-4">
+          {CHAT_SUGGESTIONS.map((action) => (
+            <button
+              key={action}
+              type="button"
+              onClick={() => setInput(action)}
+              disabled={loading}
+              className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
+            >
+              {action}
+            </button>
+          ))}
+        </div>
 
-          <div className="border-t border-white/10 px-6 pb-6 pt-4">
-            <div className="mx-auto flex max-w-2xl items-center gap-3 rounded-3xl border border-white/20 bg-white/5 px-4 py-2">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={ASSISTANT_INPUT_PLACEHOLDER}
-                disabled={loading}
-                className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500 disabled:opacity-50"
-              />
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={!input.trim() || loading}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-black transition-colors hover:bg-emerald-600 disabled:opacity-40"
-                aria-label="Send message"
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-4">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-emerald-500 text-black'
+                    : 'bg-white/10 text-slate-100'
+                }`}
               >
-                <ArrowUp size={16} strokeWidth={2.5} />
-              </button>
+                {msg.content}
+              </div>
             </div>
-            <p className="mx-auto mt-2 max-w-2xl text-center text-[10px] text-slate-500">
-              Not medical advice. Always consult your healthcare provider.
-            </p>
+          ))}
+
+          {loading && (
+            <div className="flex justify-start">
+              <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
+                Thinking...
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="shrink-0 border-t border-white/10 px-6 pb-6 pt-2 max-lg:pb-[calc(var(--mobile-nav-height)+1.5rem)]">
+          <div className="flex items-center gap-3 rounded-3xl border border-white/20 bg-white/5 px-4 py-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder={ASSISTANT_INPUT_PLACEHOLDER}
+              disabled={loading}
+              className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!input.trim() || loading}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-black transition-colors hover:bg-emerald-600 disabled:opacity-40"
+              aria-label="Send message"
+            >
+              <ArrowUp size={16} strokeWidth={2.5} />
+            </button>
           </div>
+          <p className="mt-2 text-center text-[10px] text-slate-500">
+            Not medical advice. Always consult your healthcare provider.
+          </p>
         </div>
       </div>
     </div>
