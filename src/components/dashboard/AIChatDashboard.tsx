@@ -1,10 +1,9 @@
-import { ArrowUp, History, Share2, Star } from 'lucide-react'
+import { ArrowUp, History, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   ASSISTANT_INPUT_PLACEHOLDER,
-  ASSISTANT_INTRO,
   ASSISTANT_TITLE,
   ASSISTANT_WELCOME,
   CHAT_SUGGESTIONS,
@@ -68,21 +67,6 @@ export function AIChatDashboard() {
     setHistoryOpen(false)
   }
 
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'PeptideTracker',
-          url: window.location.href,
-        })
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(window.location.href)
-      }
-    } catch {
-      // user cancelled or unsupported
-    }
-  }
-
   return (
     <div className="flex h-full min-h-0 bg-[#0a0a0a] text-white">
       <ChatHistorySidebar
@@ -118,7 +102,7 @@ export function AIChatDashboard() {
       )}
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-3 lg:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-2 lg:hidden">
           <Link
             to="/app"
             className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
@@ -133,25 +117,15 @@ export function AIChatDashboard() {
               </div>
             )}
           </Link>
-          <div className="flex items-center gap-3">
-            {showInstall && (
-              <button
-                type="button"
-                onClick={install}
-                className="flex items-center gap-1 rounded-full bg-white/10 px-4 py-1.5 text-sm transition-colors hover:bg-white/15"
-              >
-                <span aria-hidden>↓</span> Install App
-              </button>
-            )}
+          {showInstall && (
             <button
               type="button"
-              onClick={handleShare}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition-colors hover:bg-white/15"
-              aria-label="Share"
+              onClick={install}
+              className="flex items-center gap-1 rounded-full bg-white/10 px-4 py-1.5 text-sm transition-colors hover:bg-white/15"
             >
-              <Share2 size={16} />
+              <span aria-hidden>↓</span> Install App
             </button>
-          </div>
+          )}
         </div>
 
         <div className="flex shrink-0 gap-3 border-b border-white/10 px-6 py-3 lg:hidden">
@@ -172,53 +146,53 @@ export function AIChatDashboard() {
           </button>
         </div>
 
+        <div className="flex shrink-0 justify-center pt-6 pb-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
+            <Star className="text-emerald-400" size={36} />
+          </div>
+        </div>
+
+        <div className="shrink-0 px-6 pb-6 text-center">
+          <h2 className="text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
+        </div>
+
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[15.5rem] lg:pb-4"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-32 lg:pb-4"
         >
-          <div className="flex flex-col items-center px-6 pt-8 pb-6 text-center">
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
-              <Star className="text-emerald-400" size={36} />
+          {showIntro && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] rounded-3xl bg-white/10 px-4 py-3 text-sm leading-relaxed text-slate-100">
+                {ASSISTANT_WELCOME}
+              </div>
             </div>
-            <h2 className="mb-2 text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
-            <p className="max-w-xs text-sm text-slate-400">{ASSISTANT_WELCOME}</p>
-          </div>
+          )}
 
-          <div className="space-y-4 px-6">
-            {showIntro && (
-              <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-3xl bg-white/10 px-4 py-3 text-sm leading-relaxed text-slate-100">
-                  {ASSISTANT_INTRO}
-                </div>
-              </div>
-            )}
-
-            {messages.map((msg) => (
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
-                key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-emerald-500 text-black'
+                    : 'bg-white/10 text-slate-100'
+                }`}
               >
-                <div
-                  className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'bg-emerald-500 text-black'
-                      : 'bg-white/10 text-slate-100'
-                  }`}
-                >
-                  {msg.content}
-                </div>
+                {msg.content}
               </div>
-            ))}
+            </div>
+          ))}
 
-            {loading && (
-              <div className="flex justify-start">
-                <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
-                  Thinking...
-                </div>
+          {loading && (
+            <div className="flex justify-start">
+              <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
+                Thinking...
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
         <div className="fixed inset-x-0 bottom-[var(--mobile-nav-height)] z-30 border-t border-white/10 bg-[#0a0a0a] px-6 pt-4 pb-6 lg:relative lg:inset-x-auto lg:bottom-auto lg:z-auto lg:shrink-0">
