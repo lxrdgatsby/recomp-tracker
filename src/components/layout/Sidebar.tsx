@@ -11,6 +11,7 @@ import {
   Syringe,
   User,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type { ViewId } from '../../types'
 import { BottomNav } from './BottomNav'
 import { InstallAppButton } from './InstallAppButton'
@@ -47,14 +48,20 @@ export function Sidebar({
     <>
       <aside className="no-print hidden w-56 shrink-0 flex-col border-r border-slate-800/80 bg-navy-900/50 lg:flex">
         <div className="border-b border-slate-800/80 px-5 py-6">
-          <h1 className="text-lg font-bold tracking-tight text-white">
-            Peptide<span className="text-teal-400">Tracker</span>
-          </h1>
-          {username ? (
-            <p className="mt-1 text-xs text-teal-400/80">@{username}</p>
-          ) : (
-            <p className="mt-1 text-xs text-slate-500">90-day peptide protocol</p>
-          )}
+          <Link
+            to="/app"
+            className="block cursor-pointer rounded-lg transition-opacity hover:opacity-90"
+            aria-label="Back to home"
+          >
+            <h1 className="text-lg font-bold tracking-tight text-white">
+              Peptide<span className="text-teal-400">Tracker</span>
+            </h1>
+            {username ? (
+              <p className="mt-1 text-xs text-teal-400/80">@{username}</p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-500">90-day peptide protocol</p>
+            )}
+          </Link>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {NAV.map(({ id, label, icon: Icon }) => (

@@ -10,6 +10,7 @@ import {
 import type { Session, User } from '@supabase/supabase-js'
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth'
 import { fetchProfile, profileToTrackerState } from '../lib/profileService'
+import { getAuthCallbackUrl } from '../lib/authRedirect'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import type { TrackerState } from '../types'
 import type { UserProfile } from '../types/auth'
@@ -77,8 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loading = !sessionReady || profileLoading
 
-  const getEmailRedirectTo = () =>
-    `${window.location.origin}/login?confirmed=1`
+  const getEmailRedirectTo = () => getAuthCallbackUrl()
 
   const signUp = useCallback(async (email: string, password: string) => {
     if (!supabase)
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/app`,
+        emailRedirectTo: getAuthCallbackUrl(),
       },
     })
     return { error: error?.message ?? null }

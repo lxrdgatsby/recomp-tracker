@@ -1,5 +1,6 @@
 import { ArrowUp, History, Share2, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   ASSISTANT_INPUT_PLACEHOLDER,
@@ -113,7 +114,11 @@ export function AIChatDashboard() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-4 lg:hidden">
-          <div>
+          <Link
+            to="/app"
+            className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
+            aria-label="Back to home"
+          >
             <div className="text-xl font-semibold tracking-tight">
               PeptideTracker
             </div>
@@ -122,7 +127,7 @@ export function AIChatDashboard() {
                 @{userProfile.username}
               </div>
             )}
-          </div>
+          </Link>
           <div className="flex items-center gap-3">
             {showInstall && (
               <button

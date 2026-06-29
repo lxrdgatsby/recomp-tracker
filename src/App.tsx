@@ -17,6 +17,7 @@ import {
 import { LoginPage } from './pages/LoginPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { SetupPage } from './pages/SetupPage'
+import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { ConfirmEmailPage } from './pages/ConfirmEmailPage'
 import { SignupPage } from './pages/SignupPage'
 
@@ -27,6 +28,7 @@ export default function App() {
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/confirm-email" element={<ConfirmEmailPage />} />
           <Route

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import OnboardingWizard from '@/components/OnboardingWizard'
 import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit'
@@ -185,14 +185,18 @@ export function AppLayout() {
             activeView === 'assistant' ? 'hidden' : ''
           }`}
         >
-          <div>
+          <Link
+            to="/app"
+            className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
+            aria-label="Back to home"
+          >
             <h1 className="text-lg font-bold text-white">
               Peptide<span className="text-teal-400">Tracker</span>
             </h1>
             {userProfile?.username && (
               <p className="text-[10px] text-slate-500">@{userProfile.username}</p>
             )}
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
             <InstallAppButton />
             <button

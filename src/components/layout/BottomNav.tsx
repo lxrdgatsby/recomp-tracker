@@ -2,6 +2,7 @@ import {
   Calendar,
   Dumbbell,
   HelpCircle,
+  Home,
   MessageCircle,
   Syringe,
   TrendingUp,
@@ -10,6 +11,7 @@ import {
 import { Link, useLocation } from 'react-router-dom'
 
 const NAV_ITEMS = [
+  { href: '/app', icon: Home, label: 'Home' },
   { href: '/app/assistant', icon: MessageCircle, label: 'Assistant' },
   { href: '/app/profile', icon: User, label: 'Profile' },
   { href: '/app/peptides', icon: Syringe, label: 'Peptides' },
@@ -24,9 +26,10 @@ export function BottomNav() {
 
   return (
     <nav className="no-print fixed right-0 bottom-0 left-0 z-50 border-t border-white/10 bg-[#0a0a0a] px-2 py-1 pb-[env(safe-area-inset-bottom,0px)] lg:hidden">
-      <div className="mx-auto flex max-w-md items-center justify-around">
+      <div className="mx-auto flex max-w-lg items-center justify-around gap-0.5 overflow-x-auto">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
-          const isActive = pathname === href
+          const isActive =
+            href === '/app' ? pathname === '/app' : pathname === href
           return (
             <Link
               key={href}

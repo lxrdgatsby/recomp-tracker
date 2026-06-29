@@ -17,11 +17,18 @@ Follow these steps to enable authentication, cloud profiles, and the built-in AI
 
 This creates `profiles` and `chat_messages` tables, RLS policies, and an auto-profile trigger on signup.
 
-## 3. Enable email auth
+## 3. Enable email auth + redirect URLs
 
 1. Go to **Authentication** → **Providers**
 2. Ensure **Email** is enabled
 3. **Disable "Confirm email"** under **Authentication** → **Providers** → **Email** → turn off **Confirm email** (signup goes straight to onboarding)
+4. Go to **Authentication** → **URL Configuration** and set:
+   - **Site URL:** your production URL (e.g. `https://your-app.vercel.app`) or `http://localhost:5174` for local dev
+   - **Redirect URLs** — add **all** of these (magic links fail with `requested path is invalid` if missing):
+     - `http://localhost:5174/auth/callback`
+     - `http://localhost:5174/**` (covers other Vite ports during dev)
+     - `https://your-app.vercel.app/auth/callback`
+     - `https://your-app.vercel.app/**` (Vercel preview deploys)
 
 ## 4. Get your API keys
 
@@ -87,6 +94,7 @@ Redeploy after adding variables.
 
 | Issue | Fix |
 |-------|-----|
+| Magic link shows `{"error":"requested path is invalid"}` | In Supabase **Authentication → URL Configuration**, add `http://localhost:5174/auth/callback` and your production `https://…/auth/callback` to **Redirect URLs** (see step 3). Request a **new** magic link after saving. |
 | Redirects to `/setup` | Add `VITE_SUPABASE_*` env vars and redeploy |
 | "AI assistant not configured" | Add `OPENAI_API_KEY` in Vercel env vars |
 | Username taken | Pick a different username during onboarding |

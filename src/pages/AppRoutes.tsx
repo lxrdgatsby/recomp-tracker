@@ -1,5 +1,5 @@
 import { AIChatDashboard } from '../components/dashboard/AIChatDashboard'
-import { MasterDashboard } from '../components/dashboard/MasterDashboard'
+import { DashboardView } from '../components/dashboard/DashboardView'
 import { FAQsView } from '../components/faqs/FAQsView'
 import { ProfileView } from '../components/profile/ProfileView'
 import { CompanyDashboard } from '../components/company/CompanyDashboard'
@@ -8,11 +8,19 @@ import { PeptidesView } from '../components/peptides/PeptidesView'
 import { PlanView } from '../components/plan/PlanView'
 import { WorkoutsView } from '../components/workouts/WorkoutsView'
 import { ProgressView } from '../components/progress/ProgressView'
+import { useAuth } from '../contexts/AuthContext'
 import { useAppContext } from './AppLayout'
 
 export function DashboardRoute() {
-  const { state, logWeight } = useAppContext()
-  return <MasterDashboard state={state} onLogWeight={logWeight} />
+  const { state, toggleInjection } = useAppContext()
+  const { userProfile } = useAuth()
+  return (
+    <DashboardView
+      state={state}
+      username={userProfile?.username}
+      onToggleInjection={toggleInjection}
+    />
+  )
 }
 
 export function AssistantRoute() {

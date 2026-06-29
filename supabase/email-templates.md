@@ -4,7 +4,11 @@ Customize verification emails in **Supabase Dashboard → Authentication → Ema
 
 Also set **Site URL** and **Redirect URLs** under **Authentication → URL Configuration**:
 - Site URL: `https://your-app.vercel.app` (or `http://localhost:5174` for dev)
-- Redirect URLs: add both production and `http://localhost:5174/**`
+- Redirect URLs (required for magic links):
+  - `http://localhost:5174/auth/callback`
+  - `http://localhost:5174/**`
+  - `https://your-app.vercel.app/auth/callback`
+  - `https://your-app.vercel.app/**`
 
 ---
 
