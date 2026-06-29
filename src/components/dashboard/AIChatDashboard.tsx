@@ -102,7 +102,7 @@ export function AIChatDashboard() {
       )}
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-2 lg:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-1 lg:hidden">
           <Link
             to="/app"
             className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
@@ -146,7 +146,7 @@ export function AIChatDashboard() {
           </button>
         </div>
 
-        <div className="flex shrink-0 justify-center pt-6 pb-4">
+        <div className="flex shrink-0 justify-center pt-5 pb-3">
           <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
             <Star className="text-emerald-400" size={36} />
           </div>
