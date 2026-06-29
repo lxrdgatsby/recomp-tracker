@@ -6,6 +6,7 @@ import {
   Syringe,
   Target,
   TrendingUp,
+  User,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { TrackerState } from '../../types'
@@ -46,12 +47,20 @@ export function DashboardView({
     <div className="pb-6 text-white">
       <div className="pt-2 pb-4">
         <div className="flex items-start justify-between">
-          <div>
+          <Link
+            to="/app/profile"
+            className="rounded-xl transition-opacity hover:opacity-90"
+          >
             <p className="text-sm text-slate-400">{getGreeting()},</p>
             <h1 className="text-3xl font-semibold tracking-tight">
               {displayName} ♠️
             </h1>
-          </div>
+            {username && (
+              <p className="mt-0.5 text-xs text-emerald-400/80">
+                @{username} · Edit profile
+              </p>
+            )}
+          </Link>
           <div className="text-right">
             <div className="text-xs text-slate-400">
               DAY {dayInCycle} / {totalDays}
@@ -185,6 +194,13 @@ export function DashboardView({
           Quick Access
         </h2>
         <div className="grid grid-cols-2 gap-3">
+          <Link
+            to="/app/profile"
+            className="flex items-center gap-3 rounded-2xl bg-white/5 p-4 transition-colors hover:bg-white/10"
+          >
+            <User size={20} className="text-emerald-400" />
+            <span>My Profile</span>
+          </Link>
           <Link
             to="/app/peptides"
             className="flex items-center gap-3 rounded-2xl bg-white/5 p-4 transition-colors hover:bg-white/10"

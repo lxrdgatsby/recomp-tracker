@@ -267,6 +267,12 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
       <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
+          <Link
+            to="/app"
+            className="mb-2 inline-flex items-center text-xs text-slate-500 transition-colors hover:text-emerald-400 lg:hidden"
+          >
+            ← Home
+          </Link>
           <h2 className="text-2xl font-bold text-white">Profile & Stack</h2>
           <p className="mt-1 text-sm text-slate-400">
             Configure your stats and peptide protocol
