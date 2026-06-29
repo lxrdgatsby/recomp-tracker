@@ -1,10 +1,12 @@
-import { ArrowUp, History, Share2 } from 'lucide-react'
+import { ArrowUp, History, Share2, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   ASSISTANT_INPUT_PLACEHOLDER,
   ASSISTANT_INTRO,
+  ASSISTANT_TITLE,
+  ASSISTANT_WELCOME,
   CHAT_SUGGESTIONS,
 } from '../../constants/chatPrompts'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
@@ -30,7 +32,6 @@ export function AIChatDashboard() {
 
   const [input, setInput] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [showQuickActions, setShowQuickActions] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -48,15 +49,8 @@ export function AIChatDashboard() {
   }, [historyOpen, refreshConversations])
 
   useEffect(() => {
-    setShowQuickActions(true)
     scrollRef.current?.scrollTo({ top: 0 })
   }, [activeConversationId, isDraft])
-
-  const handleMessagesScroll = () => {
-    const el = scrollRef.current
-    if (!el) return
-    setShowQuickActions(el.scrollTop < 100)
-  }
 
   const handleSend = () => {
     if (!input.trim() || loading) return
@@ -123,14 +117,14 @@ export function AIChatDashboard() {
         </>
       )}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-3 lg:hidden">
           <Link
             to="/app"
             className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
             aria-label="Back to home"
           >
-            <div className="text-xl font-semibold tracking-tight">
+            <div className="text-xl font-semibold tracking-tight text-white">
               PeptideTracker
             </div>
             {userProfile?.username && (
@@ -152,7 +146,7 @@ export function AIChatDashboard() {
             <button
               type="button"
               onClick={handleShare}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition-colors hover:bg-white/15 lg:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition-colors hover:bg-white/15"
               aria-label="Share"
             >
               <Share2 size={16} />
@@ -180,60 +174,67 @@ export function AIChatDashboard() {
 
         <div
           ref={scrollRef}
-          onScroll={handleMessagesScroll}
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 py-4"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[15.5rem] lg:pb-4"
         >
-          {showIntro && (
-            <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-3xl bg-white/10 px-4 py-3 text-sm leading-relaxed text-slate-100">
-                {ASSISTANT_INTRO}
-              </div>
+          <div className="flex flex-col items-center px-6 pt-8 pb-6 text-center">
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
+              <Star className="text-emerald-400" size={36} />
             </div>
-          )}
+            <h2 className="mb-2 text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
+            <p className="max-w-xs text-sm text-slate-400">{ASSISTANT_WELCOME}</p>
+          </div>
 
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+          <div className="space-y-4 px-6">
+            {showIntro && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-3xl bg-white/10 px-4 py-3 text-sm leading-relaxed text-slate-100">
+                  {ASSISTANT_INTRO}
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg) => (
               <div
-                className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                  msg.role === 'user'
-                    ? 'bg-emerald-500 text-black'
-                    : 'bg-white/10 text-slate-100'
-                }`}
+                key={msg.id}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {msg.content}
+                <div
+                  className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                    msg.role === 'user'
+                      ? 'bg-emerald-500 text-black'
+                      : 'bg-white/10 text-slate-100'
+                  }`}
+                >
+                  {msg.content}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {loading && (
-            <div className="flex justify-start">
-              <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
-                Thinking...
+            {loading && (
+              <div className="flex justify-start">
+                <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
+                  Thinking...
+                </div>
               </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
-        <div className="shrink-0 border-t border-white/10 bg-[#0a0a0a] px-6 pb-6 pt-2 max-lg:pb-[calc(var(--mobile-nav-height)+1.5rem)]">
-          {showQuickActions && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {CHAT_SUGGESTIONS.map((action) => (
-                <button
-                  key={action}
-                  type="button"
-                  onClick={() => setInput(action)}
-                  disabled={loading}
-                  className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
-                >
-                  {action}
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="fixed inset-x-0 bottom-[var(--mobile-nav-height)] z-30 border-t border-white/10 bg-[#0a0a0a] px-6 pt-4 pb-6 lg:relative lg:inset-x-auto lg:bottom-auto lg:z-auto lg:shrink-0">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {CHAT_SUGGESTIONS.map((action) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => setInput(action)}
+                disabled={loading}
+                className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
 
           <div className="flex items-center gap-3 rounded-3xl border border-white/20 bg-white/5 px-4 py-3">
             <input
@@ -254,7 +255,8 @@ export function AIChatDashboard() {
               <ArrowUp size={18} strokeWidth={2.5} />
             </button>
           </div>
-          <p className="mt-2 text-center text-[10px] text-slate-500">
+
+          <p className="mt-3 text-center text-[10px] text-slate-500">
             Not medical advice. Always consult your healthcare provider.
           </p>
         </div>
