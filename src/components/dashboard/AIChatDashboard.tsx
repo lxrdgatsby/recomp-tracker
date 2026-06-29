@@ -1,11 +1,10 @@
-import { ArrowUp, History, Share2, Star } from 'lucide-react'
+import { ArrowUp, History, Share2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   ASSISTANT_INPUT_PLACEHOLDER,
-  ASSISTANT_TITLE,
-  ASSISTANT_WELCOME,
+  ASSISTANT_INTRO,
   CHAT_SUGGESTIONS,
 } from '../../constants/chatPrompts'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
@@ -31,12 +30,15 @@ export function AIChatDashboard() {
 
   const [input, setInput] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [showQuickActions, setShowQuickActions] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const showInstall = !isInstalled && (canInstall || canShowIOSGuide)
+  const showIntro = messages.length === 0 && !loading
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
   useEffect(() => {
@@ -44,6 +46,17 @@ export function AIChatDashboard() {
       void refreshConversations()
     }
   }, [historyOpen, refreshConversations])
+
+  useEffect(() => {
+    setShowQuickActions(true)
+    scrollRef.current?.scrollTo({ top: 0 })
+  }, [activeConversationId, isDraft])
+
+  const handleMessagesScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    setShowQuickActions(el.scrollTop < 100)
+  }
 
   const handleSend = () => {
     if (!input.trim() || loading) return
@@ -111,7 +124,7 @@ export function AIChatDashboard() {
       )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-4 lg:hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-3 lg:hidden">
           <Link
             to="/app"
             className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
@@ -139,7 +152,7 @@ export function AIChatDashboard() {
             <button
               type="button"
               onClick={handleShare}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition-colors hover:bg-white/15"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 transition-colors hover:bg-white/15 lg:hidden"
               aria-label="Share"
             >
               <Share2 size={16} />
@@ -165,31 +178,19 @@ export function AIChatDashboard() {
           </button>
         </div>
 
-        <div className="flex shrink-0 flex-col items-center px-6 pt-6 pb-4 text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-500/10">
-            <Star className="text-emerald-400" size={32} />
-          </div>
-          <h2 className="mb-1 text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
-          <p className="max-w-xs text-sm leading-snug text-slate-400">
-            {ASSISTANT_WELCOME}
-          </p>
-        </div>
+        <div
+          ref={scrollRef}
+          onScroll={handleMessagesScroll}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 py-4"
+        >
+          {showIntro && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] rounded-3xl bg-white/10 px-4 py-3 text-sm leading-relaxed text-slate-100">
+                {ASSISTANT_INTRO}
+              </div>
+            </div>
+          )}
 
-        <div className="flex shrink-0 flex-wrap gap-2 px-6 pb-4">
-          {CHAT_SUGGESTIONS.map((action) => (
-            <button
-              key={action}
-              type="button"
-              onClick={() => setInput(action)}
-              disabled={loading}
-              className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
-            >
-              {action}
-            </button>
-          ))}
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-4">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -214,11 +215,27 @@ export function AIChatDashboard() {
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
+          <div ref={messagesEndRef} />
         </div>
 
-        <div className="shrink-0 border-t border-white/10 px-6 pb-6 pt-2 max-lg:pb-[calc(var(--mobile-nav-height)+1.5rem)]">
-          <div className="flex items-center gap-3 rounded-3xl border border-white/20 bg-white/5 px-4 py-2">
+        <div className="shrink-0 border-t border-white/10 bg-[#0a0a0a] px-6 pb-6 pt-2 max-lg:pb-[calc(var(--mobile-nav-height)+1.5rem)]">
+          {showQuickActions && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {CHAT_SUGGESTIONS.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  onClick={() => setInput(action)}
+                  disabled={loading}
+                  className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
+                >
+                  {action}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 rounded-3xl border border-white/20 bg-white/5 px-4 py-3">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -231,10 +248,10 @@ export function AIChatDashboard() {
               type="button"
               onClick={handleSend}
               disabled={!input.trim() || loading}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-black transition-colors hover:bg-emerald-600 disabled:opacity-40"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-black transition-colors hover:bg-emerald-600 disabled:opacity-40"
               aria-label="Send message"
             >
-              <ArrowUp size={16} strokeWidth={2.5} />
+              <ArrowUp size={18} strokeWidth={2.5} />
             </button>
           </div>
           <p className="mt-2 text-center text-[10px] text-slate-500">

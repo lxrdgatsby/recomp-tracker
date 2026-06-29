@@ -10,6 +10,9 @@ export const ASSISTANT_TITLE = 'Peptide Protocol Assistant'
 export const ASSISTANT_WELCOME =
   'Ask anything about peptides, dosing, stacking, or your 90-day plan.'
 
+export const ASSISTANT_INTRO =
+  'Ask anything about peptides, dosing, stacking, or your 90-day plan. I can update your profile from our conversation.'
+
 export const ASSISTANT_INPUT_PLACEHOLDER =
   'Ask about peptides, dosing, your stack...'
 
