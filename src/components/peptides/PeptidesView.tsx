@@ -1,13 +1,15 @@
 import { format, parseISO, differenceInDays } from 'date-fns'
-import {
-  CheckCircle,
-  Clock,
-  Plus,
-  Syringe,
-} from 'lucide-react'
+import { Plus, Syringe } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+import {
+  getCatalogEntry,
+  getCatalogEntryByName,
+  type PeptideSelection,
+} from '../../constants/peptideCatalog'
 import type { Peptide, TrackerState } from '../../types'
+import { generateRecompPlan, normalizeSelection } from '../../utils/recompProtocol'
 import {
   getInjectionsForDate,
   isInjectionDone,
@@ -19,6 +21,10 @@ import { InjectionSiteMap } from './InjectionSiteMap'
 interface PeptidesViewProps {
   state: TrackerState
   onToggleInjection: (date: string, peptideId: string) => void
+  onUpdateReconstitution: (
+    state: TrackerState,
+    selections: PeptideSelection[]
+  ) => void | Promise<void>
 }
 
 interface StackCard {
@@ -68,13 +74,60 @@ function buildStackCards(state: TrackerState, today: string): StackCard[] {
   })
 }
 
-export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
+export function PeptidesView({
+  state,
+  onToggleInjection,
+  onUpdateReconstitution,
+}: PeptidesViewProps) {
+  const { userProfile } = useAuth()
   const { peptides } = state
   const today = format(new Date(), 'yyyy-MM-dd')
   const [showSites, setShowSites] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
 
   const stackCards = useMemo(() => buildStackCards(state, today), [state, today])
+
+  const selections = useMemo(
+    () => (userProfile?.peptideSelections ?? []).map(normalizeSelection),
+    [userProfile?.peptideSelections]
+  )
+
+  const findSelection = (peptide: Peptide) =>
+    selections.find((s) => s.catalogId === peptide.id) ??
+    selections.find(
+      (s) => getCatalogEntry(s.catalogId)?.name === peptide.name
+    ) ??
+    selections.find(
+      (s) => getCatalogEntryByName(peptide.name)?.id === s.catalogId
+    )
+
+  const toggleReconstituted = (peptide: Peptide, checked: boolean) => {
+    if (!userProfile) return
+    const match = findSelection(peptide)
+    if (!match) return
+
+    const updated = selections.map((s) =>
+      s.catalogId === match.catalogId ? { ...s, reconstituted: checked } : s
+    )
+
+    const { peptides: nextPeptides, recompPlan } = generateRecompPlan({
+      familiarity: userProfile.familiarity ?? 'beginner',
+      mainGoal: userProfile.mainGoal ?? '',
+      gender: userProfile.gender,
+      age: userProfile.age,
+      trainingActivities: userProfile.trainingActivities,
+      additionalInfo: userProfile.additionalInfo,
+      currentWeight: state.profile.currentWeight,
+      goalWeight: state.profile.goalWeight,
+      weeklyLossTarget: state.profile.weeklyLossTarget,
+      peptideSelections: updated,
+    })
+
+    void onUpdateReconstitution(
+      { ...state, peptides: nextPeptides, recompPlan },
+      updated
+    )
+  }
 
   const calculatorPeptide = peptides.find((p) => p.protocol)
   const calculatorDefaults = useMemo(() => {
@@ -157,34 +210,47 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
             const vial = peptide.vialSize ?? peptide.dose
             const concentration = protocol?.concentrationLabel ?? '—'
             const reconstituted = protocol?.reconstituted ?? false
+            const hasSelection = Boolean(findSelection(peptide))
 
             return (
               <div
                 key={peptide.id}
                 className="mb-4 rounded-3xl border border-white/10 bg-white/5 p-6"
               >
-                <div className="flex items-start justify-between">
-                  <div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
                     <div className="text-xl font-semibold">{peptide.name}</div>
                     <div className="text-sm text-slate-400">
                       {vial} vial • {concentration}
                     </div>
                   </div>
-                  <div
-                    className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs ${
-                      reconstituted
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-amber-500/20 text-amber-400'
-                    }`}
-                  >
-                    {reconstituted ? (
-                      <CheckCircle size={14} />
-                    ) : (
-                      <Clock size={14} />
-                    )}
-                    {reconstituted ? 'Reconstituted' : 'Not mixed'}
-                  </div>
+                  <label className="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={reconstituted}
+                      disabled={!hasSelection}
+                      onChange={(e) =>
+                        toggleReconstituted(peptide, e.target.checked)
+                      }
+                      className="h-4 w-4 rounded border-white/20 bg-transparent text-emerald-500 focus:ring-emerald-500/40 disabled:opacity-40"
+                      aria-label={`${peptide.name} reconstituted`}
+                    />
+                    <span
+                      className={`text-sm font-medium ${
+                        reconstituted ? 'text-emerald-400' : 'text-slate-400'
+                      }`}
+                    >
+                      Reconstituted
+                    </span>
+                  </label>
                 </div>
+
+                {!reconstituted && (
+                  <p className="mt-3 text-xs text-amber-400/90">
+                    Not activated — check the box once you&apos;ve mixed with BAC
+                    per protocol. Your injection schedule unlocks when reconstituted.
+                  </p>
+                )}
 
                 <div className="mt-6 grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -200,7 +266,9 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
                 <button
                   type="button"
                   onClick={() => onToggleInjection(today, peptide.id)}
-                  disabled={!scheduledToday && !doneToday}
+                  disabled={
+                    !reconstituted || (!scheduledToday && !doneToday)
+                  }
                   className={`mt-6 w-full rounded-2xl py-3.5 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
                     doneToday
                       ? 'bg-emerald-500/20 text-emerald-400'
@@ -209,9 +277,11 @@ export function PeptidesView({ state, onToggleInjection }: PeptidesViewProps) {
                 >
                   {doneToday
                     ? '✓ Logged Today'
-                    : scheduledToday
-                      ? 'Log Injection'
-                      : 'Not scheduled today'}
+                    : !reconstituted
+                      ? 'Reconstitute vial first'
+                      : scheduledToday
+                        ? 'Log Injection'
+                        : 'Not scheduled today'}
                 </button>
               </div>
             )

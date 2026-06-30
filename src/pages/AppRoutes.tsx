@@ -45,9 +45,13 @@ export function CompanyRoute() {
 }
 
 export function PeptidesRoute() {
-  const { state, toggleInjection } = useAppContext()
+  const { state, toggleInjection, updateReconstitution } = useAppContext()
   return (
-    <PeptidesView state={state} onToggleInjection={toggleInjection} />
+    <PeptidesView
+      state={state}
+      onToggleInjection={toggleInjection}
+      onUpdateReconstitution={updateReconstitution}
+    />
   )
 }
 
