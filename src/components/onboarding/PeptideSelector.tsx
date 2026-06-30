@@ -22,13 +22,25 @@ interface PeptideSelectorProps {
   selections: PeptideSelection[]
   onChange: (selections: PeptideSelection[]) => void
   familiarity?: FamiliarityLevel
+  variant?: 'default' | 'onboarding'
 }
 
 export function PeptideSelector({
   selections,
   onChange,
   familiarity = 'beginner',
+  variant = 'default',
 }: PeptideSelectorProps) {
+  const isOnboarding = variant === 'onboarding'
+  const fieldClass = isOnboarding
+    ? 'w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-base text-white focus:border-emerald-500/50 focus:outline-none'
+    : SELECT_CLASS
+  const doseClass = isOnboarding
+    ? 'min-w-[5.5rem] rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none'
+    : DOSE_SELECT_CLASS
+  const cardClass = isOnboarding
+    ? 'rounded-2xl border border-white/10 bg-white/5 p-3'
+    : 'rounded-xl border border-slate-800 bg-navy-900 p-3'
   const selectedIds = new Set(selections.map((s) => s.catalogId))
   const available = PEPTIDE_CATALOG.filter((p) => !selectedIds.has(p.id))
 
@@ -59,12 +71,14 @@ export function PeptideSelector({
 
   return (
     <div className="space-y-4">
-      <ReconstitutionGuide />
+      {!isOnboarding && <ReconstitutionGuide />}
 
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-slate-300">Add your peptides</span>
+        <span className={`text-sm font-medium ${isOnboarding ? 'text-slate-300' : 'text-slate-300'}`}>
+          Add your peptides
+        </span>
         <select
-          className={SELECT_CLASS}
+          className={fieldClass}
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) {
@@ -85,7 +99,11 @@ export function PeptideSelector({
       </label>
 
       {selections.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-800 px-4 py-6 text-center text-sm text-slate-500">
+        <p
+          className={`rounded-xl border border-dashed px-4 py-6 text-center text-sm text-slate-500 ${
+            isOnboarding ? 'border-white/10' : 'border-slate-800'
+          }`}
+        >
           Add at least one peptide to continue. You can select as many as you
           like from the dropdown.
         </p>
@@ -103,7 +121,7 @@ export function PeptideSelector({
             return (
               <div
                 key={selection.catalogId}
-                className="rounded-xl border border-slate-800 bg-navy-900 p-3"
+                className={cardClass}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -128,7 +146,7 @@ export function PeptideSelector({
                       onChange={(e) =>
                         updateSelection(selection.catalogId, { dose: e.target.value })
                       }
-                      className={DOSE_SELECT_CLASS}
+                      className={doseClass}
                       aria-label={`${entry.name} vial size`}
                     >
                       {entry.doseOptions.map((dose) => (
@@ -155,8 +173,10 @@ export function PeptideSelector({
                           }
                           className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
                             selection.bacWaterUnits === units
-                              ? 'border-teal-500/50 bg-teal-500/10 text-teal-400'
-                              : 'border-slate-700 bg-navy-950 text-slate-300 hover:border-slate-600'
+                              ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                              : isOnboarding
+                                ? 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                                : 'border-slate-700 bg-navy-950 text-slate-300 hover:border-slate-600'
                           }`}
                         >
                           {units} units ({units / 100}ml)

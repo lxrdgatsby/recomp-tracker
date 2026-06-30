@@ -30,6 +30,18 @@ export function useOnboardingSubmit() {
         ...(data.customGoal.trim() ? [data.customGoal.trim()] : []),
       ]
 
+      const extraNotes = [
+        data.additionalInfo,
+        data.reconstitutionEducated
+          ? 'Completed reconstitution education during onboarding.'
+          : null,
+        data.advancedYearsOnPeptides
+          ? `Peptide experience: ${data.advancedYearsOnPeptides}.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' ')
+
       const questionnaire: Questionnaire = {
         familiarity: data.familiarity,
         mainGoal: goals.join(', '),
@@ -40,7 +52,7 @@ export function useOnboardingSubmit() {
         gender: data.gender,
         age: data.age,
         trainingActivities: serializeTrainingActivities(data.selectedTraining),
-        additionalInfo: data.additionalInfo,
+        additionalInfo: extraNotes,
       }
 
       const { error: err } = await completeOnboarding(

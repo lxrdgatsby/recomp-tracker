@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import {
   DEFAULT_BAC_WATER,
   getCatalogEntry,
-  PEPTIDE_CATALOG,
   type PeptideSelection,
 } from '../../constants/peptideCatalog'
+import {
+  getRecommendedPeptideIds,
+  inferWeightGoalMode,
+  ONBOARDING_GOALS,
+} from '../../constants/onboardingGoals'
 import {
   AGE_OPTIONS,
   GENDER_OPTIONS,
@@ -18,7 +22,10 @@ import {
   isDatabaseSetupError,
 } from './DatabaseSetupPanel'
 import { MedicalDisclaimer } from '../layout/MedicalDisclaimer'
+import { OnboardingGeneratingScreen } from './OnboardingGeneratingScreen'
 import { OnboardingProgress } from './OnboardingProgress'
+import { PeptideSelector } from './PeptideSelector'
+import { ReconstitutionQuiz } from './ReconstitutionQuiz'
 
 const STEPS = [
   { id: 1, label: 'Experience' },
@@ -28,14 +35,16 @@ const STEPS = [
   { id: 5, label: 'About You' },
 ] as const
 
-const GOALS = [
-  'Fat loss',
-  'Muscle gain',
-  'Body recomposition',
-  'Recovery & healing',
-  'Performance',
-  'Longevity',
-]
+type Phase =
+  | 'experience'
+  | 'reconstitution_gate'
+  | 'reconstitution_quiz'
+  | 'advanced_protocol'
+  | 'goals'
+  | 'peptides'
+  | 'body_stats'
+  | 'about'
+  | 'generating'
 
 const EXPERIENCE_LEVELS: { label: string; value: FamiliarityLevel }[] = [
   { label: 'Beginner', value: 'beginner' },
@@ -43,18 +52,15 @@ const EXPERIENCE_LEVELS: { label: string; value: FamiliarityLevel }[] = [
   { label: 'Advanced', value: 'advanced' },
 ]
 
-const QUICK_PEPTIDE_IDS = [
-  'retatrutide',
-  'tesamorelin',
-  'bpc157',
-  'aod9604',
-  'semaglutide',
-  'tirzepatide',
+const ADVANCED_YEARS = [
+  'Less than 1 year',
+  '1 year',
+  '2 years',
+  '3 years',
+  '4–5 years',
+  '6–10 years',
+  '10+ years',
 ]
-
-const QUICK_PEPTIDES = QUICK_PEPTIDE_IDS.map((id) => getCatalogEntry(id)).filter(
-  (entry): entry is NonNullable<typeof entry> => entry != null
-)
 
 const FIELD_CLASS =
   'mt-1 w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-base text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none'
@@ -68,6 +74,27 @@ const CHOICE_CLASS = (selected: boolean) =>
       : 'border-white/10 hover:border-white/30'
   }`
 
+function phaseToStep(phase: Phase): number {
+  switch (phase) {
+    case 'experience':
+    case 'reconstitution_gate':
+    case 'reconstitution_quiz':
+    case 'advanced_protocol':
+      return 1
+    case 'goals':
+      return 2
+    case 'peptides':
+      return 3
+    case 'body_stats':
+      return 4
+    case 'about':
+    case 'generating':
+      return 5
+    default:
+      return 1
+  }
+}
+
 export interface OnboardingCompleteData {
   familiarity: FamiliarityLevel
   selectedGoals: string[]
@@ -80,6 +107,8 @@ export interface OnboardingCompleteData {
   selectedTraining: string[]
   additionalInfo: string
   username: string
+  reconstitutionEducated?: boolean
+  advancedYearsOnPeptides?: string | null
 }
 
 interface OnboardingWizardProps {
@@ -87,15 +116,21 @@ interface OnboardingWizardProps {
 }
 
 function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
-  const [currentStep, setCurrentStep] = useState(1)
-  const [showComplete, setShowComplete] = useState(false)
+  const [phase, setPhase] = useState<Phase>('experience')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const [familiarity, setFamiliarity] = useState<FamiliarityLevel | ''>('')
-  const [selectedGoals, setSelectedGoals] = useState<string[]>(['Body recomposition'])
+  const [knowsReconstitution, setKnowsReconstitution] = useState<boolean | null>(
+    null
+  )
+  const [reconstitutionEducated, setReconstitutionEducated] = useState(false)
+  const [advancedYears, setAdvancedYears] = useState('')
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([])
   const [customGoal, setCustomGoal] = useState('')
-  const [peptideSelections, setPeptideSelections] = useState<PeptideSelection[]>([])
+  const [peptideSelections, setPeptideSelections] = useState<PeptideSelection[]>(
+    []
+  )
   const [currentWeight, setCurrentWeight] = useState('')
   const [goalWeight, setGoalWeight] = useState('')
   const [gender, setGender] = useState<Gender | ''>('')
@@ -105,6 +140,27 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [username, setUsername] = useState('')
 
   const totalSteps = STEPS.length
+  const progressStep = phaseToStep(phase)
+
+  const allGoals = useMemo(
+    () => [
+      ...selectedGoals,
+      ...(customGoal.trim() ? [customGoal.trim()] : []),
+    ],
+    [selectedGoals, customGoal]
+  )
+
+  const recommendedIds = useMemo(
+    () => getRecommendedPeptideIds(allGoals),
+    [allGoals]
+  )
+
+  const weightMode = useMemo(() => {
+    const current = parseFloat(currentWeight)
+    const goal = parseFloat(goalWeight)
+    if (isNaN(current) || isNaN(goal)) return 'maintain' as const
+    return inferWeightGoalMode(allGoals, current, goal)
+  }, [allGoals, currentWeight, goalWeight])
 
   const toggleGoal = (goal: string) => {
     setSelectedGoals((prev) =>
@@ -125,12 +181,8 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     })
   }
 
-  const togglePeptide = (catalogId: string) => {
-    const exists = peptideSelections.some((p) => p.catalogId === catalogId)
-    if (exists) {
-      setPeptideSelections((prev) => prev.filter((p) => p.catalogId !== catalogId))
-      return
-    }
+  const addRecommendedPeptide = (catalogId: string) => {
+    if (peptideSelections.some((p) => p.catalogId === catalogId)) return
     const entry = getCatalogEntry(catalogId)
     if (!entry) return
     setPeptideSelections((prev) => [
@@ -146,21 +198,27 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }
 
   const canContinue = () => {
-    switch (currentStep) {
-      case 1:
+    switch (phase) {
+      case 'experience':
         return familiarity !== ''
-      case 2:
+      case 'reconstitution_gate':
+        return knowsReconstitution !== null
+      case 'reconstitution_quiz':
+        return false
+      case 'advanced_protocol':
+        return advancedYears !== ''
+      case 'goals':
         return selectedGoals.length > 0 || customGoal.trim().length > 0
-      case 3:
+      case 'peptides':
         return peptideSelections.length > 0
-      case 4:
+      case 'body_stats':
         return (
           currentWeight !== '' &&
           goalWeight !== '' &&
           !isNaN(parseFloat(currentWeight)) &&
           !isNaN(parseFloat(goalWeight))
         )
-      case 5:
+      case 'about':
         return (
           gender !== '' &&
           age !== '' &&
@@ -168,35 +226,96 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           username.trim().length >= 3
         )
       default:
-        return true
+        return false
     }
   }
 
   const back = () => {
-    if (showComplete) {
-      setShowComplete(false)
-      return
+    setError('')
+    switch (phase) {
+      case 'reconstitution_gate':
+        setPhase('experience')
+        break
+      case 'reconstitution_quiz':
+        setPhase('reconstitution_gate')
+        break
+      case 'advanced_protocol':
+        setPhase('experience')
+        break
+      case 'goals':
+        if (familiarity === 'beginner') {
+          setPhase(
+            knowsReconstitution ? 'reconstitution_gate' : 'reconstitution_quiz'
+          )
+        } else if (familiarity === 'advanced') {
+          setPhase('advanced_protocol')
+        } else {
+          setPhase('experience')
+        }
+        break
+      case 'peptides':
+        setPhase('goals')
+        break
+      case 'body_stats':
+        setPhase('peptides')
+        break
+      case 'about':
+        setPhase('body_stats')
+        break
+      default:
+        break
     }
-    if (currentStep > 1) setCurrentStep((s) => s - 1)
   }
 
   const next = () => {
     if (!canContinue()) return
     setError('')
 
-    if (currentStep < totalSteps) {
-      setCurrentStep((s) => s + 1)
+    if (phase === 'experience') {
+      if (familiarity === 'beginner') setPhase('reconstitution_gate')
+      else if (familiarity === 'advanced') setPhase('advanced_protocol')
+      else setPhase('goals')
       return
     }
 
-    setShowComplete(true)
+    if (phase === 'reconstitution_gate') {
+      if (knowsReconstitution) setPhase('goals')
+      else setPhase('reconstitution_quiz')
+      return
+    }
+
+    if (phase === 'advanced_protocol') {
+      setPhase('goals')
+      return
+    }
+
+    if (phase === 'goals') {
+      setPhase('peptides')
+      return
+    }
+
+    if (phase === 'peptides') {
+      setPhase('body_stats')
+      return
+    }
+
+    if (phase === 'body_stats') {
+      setPhase('about')
+      return
+    }
+
+    if (phase === 'about') {
+      void finishOnboarding()
+    }
   }
 
-  const handleEnterApp = async () => {
+  const finishOnboarding = async () => {
     if (familiarity === '' || gender === '' || age === '') return
-
+    setPhase('generating')
     setError('')
     setLoading(true)
+
+    await new Promise((r) => setTimeout(r, 2200))
 
     const { error: err } = await onComplete({
       familiarity,
@@ -210,30 +329,38 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       selectedTraining,
       additionalInfo,
       username: username.trim().toLowerCase(),
+      reconstitutionEducated:
+        reconstitutionEducated || knowsReconstitution === true,
+      advancedYearsOnPeptides:
+        familiarity === 'advanced' ? advancedYears : null,
     })
 
     setLoading(false)
-    if (err) setError(err)
+    if (err) {
+      setPhase('about')
+      setError(err)
+    }
   }
+
+  const showNav = phase !== 'generating' && phase !== 'reconstitution_quiz'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <div className="mx-auto w-full max-w-lg">
         <OnboardingProgress
-          currentStep={showComplete ? totalSteps : currentStep}
+          currentStep={progressStep}
           totalSteps={totalSteps}
           stepLabels={STEPS.map((s) => s.label)}
         />
       </div>
 
       <div className="mx-auto w-full max-w-lg px-6 pt-6 pb-32">
-        {!showComplete && currentStep === 1 && (
+        {phase === 'experience' && (
           <div>
             <h2 className="mb-2 text-2xl font-semibold">Peptide experience</h2>
             <p className="mb-6 text-slate-400">
               How familiar are you with peptides?
             </p>
-
             {EXPERIENCE_LEVELS.map(({ label, value }) => (
               <button
                 key={value}
@@ -247,12 +374,88 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           </div>
         )}
 
-        {!showComplete && currentStep === 2 && (
+        {phase === 'reconstitution_gate' && (
+          <div>
+            <h2 className="mb-2 text-2xl font-semibold">Reconstitution basics</h2>
+            <p className="mb-6 text-slate-400">
+              Are you familiar with how to reconstitute your peptide vial with
+              bacteriostatic water?
+            </p>
+            <button
+              type="button"
+              onClick={() => setKnowsReconstitution(true)}
+              className={`mb-3 ${CHOICE_CLASS(knowsReconstitution === true)}`}
+            >
+              Yes — I know how to reconstitute
+            </button>
+            <button
+              type="button"
+              onClick={() => setKnowsReconstitution(false)}
+              className={CHOICE_CLASS(knowsReconstitution === false)}
+            >
+              No — teach me the basics
+            </button>
+          </div>
+        )}
+
+        {phase === 'reconstitution_quiz' && (
+          <ReconstitutionQuiz
+            onComplete={() => {
+              setReconstitutionEducated(true)
+              setPhase('goals')
+            }}
+          />
+        )}
+
+        {phase === 'advanced_protocol' && (
+          <div>
+            <h2 className="mb-2 text-2xl font-semibold">Your current protocol</h2>
+            <p className="mb-4 text-slate-400">
+              Tell us where you are in your peptide journey so we can tailor your
+              tracker.
+            </p>
+
+            <label className="mb-6 block text-sm text-slate-400">
+              How long have you been running peptides?
+              <select
+                className={SELECT_CLASS}
+                value={advancedYears}
+                onChange={(e) => setAdvancedYears(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select experience length
+                </option>
+                {ADVANCED_YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p className="mb-3 text-sm text-slate-400">
+              Which peptides are you currently on? (optional — you can add more on
+              the next step)
+            </p>
+            <PeptideSelector
+              selections={peptideSelections}
+              onChange={setPeptideSelections}
+              familiarity="advanced"
+              variant="onboarding"
+            />
+          </div>
+        )}
+
+        {phase === 'goals' && (
           <div>
             <h2 className="mb-2 text-2xl font-semibold">Your goals</h2>
-            <p className="mb-6 text-slate-400">Select all that apply</p>
+            <p className="mb-2 text-slate-400">Select all that apply</p>
+            <p className="mb-6 text-xs text-slate-500">
+              Your 90-day plan and peptide recommendations will be tailored to these
+              goals.
+            </p>
 
-            {GOALS.map((goal) => (
+            {ONBOARDING_GOALS.map((goal) => (
               <button
                 key={goal}
                 type="button"
@@ -277,41 +480,66 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           </div>
         )}
 
-        {!showComplete && currentStep === 3 && (
+        {phase === 'peptides' && (
           <div>
             <h2 className="mb-2 text-2xl font-semibold">Your peptides</h2>
-            <p className="mb-6 text-slate-400">
-              Select peptides you&apos;re using or interested in
+            <p className="mb-4 text-slate-400">
+              Pick peptides aligned with your goals. Set vial size and BAC water for
+              proper reconstitution.
             </p>
 
-            {QUICK_PEPTIDES.map((entry) => {
-              const selected = peptideSelections.some(
-                (p) => p.catalogId === entry.id
-              )
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => togglePeptide(entry.id)}
-                  className={`mb-3 flex w-full items-center justify-between ${CHOICE_CLASS(selected)}`}
-                >
-                  <span>{entry.name}</span>
-                  {selected && <Check className="text-emerald-400" size={18} />}
-                </button>
-              )
-            })}
+            {recommendedIds.length > 0 && (
+              <div className="mb-5">
+                <p className="mb-2 text-xs font-medium tracking-wide text-emerald-400/90 uppercase">
+                  Recommended for your goals
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {recommendedIds.map((id) => {
+                    const entry = getCatalogEntry(id)
+                    if (!entry) return null
+                    const added = peptideSelections.some(
+                      (p) => p.catalogId === id
+                    )
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => addRecommendedPeptide(id)}
+                        disabled={added}
+                        className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                          added
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                            : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
+                        }`}
+                      >
+                        {added ? '✓ ' : '+ '}
+                        {entry.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
-            <p className="mt-4 text-xs text-slate-500">
-              You can add doses and reconstitution details after onboarding.
-              {PEPTIDE_CATALOG.length > QUICK_PEPTIDES.length &&
-                ' More peptides are available in your profile later.'}
-            </p>
+            <PeptideSelector
+              selections={peptideSelections}
+              onChange={setPeptideSelections}
+              familiarity={familiarity || 'beginner'}
+              variant="onboarding"
+            />
           </div>
         )}
 
-        {!showComplete && currentStep === 4 && (
+        {phase === 'body_stats' && (
           <div>
-            <h2 className="mb-6 text-2xl font-semibold">Body stats</h2>
+            <h2 className="mb-2 text-2xl font-semibold">Body stats</h2>
+            <p className="mb-6 text-sm text-slate-400">
+              {weightMode === 'gain'
+                ? 'Enter your current and target weight — we will track lean gain progress.'
+                : weightMode === 'wellness'
+                  ? 'Enter your weight for personalized tracking (goals are wellness-focused).'
+                  : 'Enter your current and goal weight for your tailored protocol.'}
+            </p>
 
             <div className="space-y-4">
               <div>
@@ -322,7 +550,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   type="text"
                   inputMode="decimal"
                   className={`${FIELD_CLASS} text-xl tabular-nums`}
-                  placeholder="176"
+                  placeholder="Enter current weight"
                   value={currentWeight}
                   onChange={(e) => setCurrentWeight(e.target.value)}
                 />
@@ -333,7 +561,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   type="text"
                   inputMode="decimal"
                   className={`${FIELD_CLASS} text-xl tabular-nums`}
-                  placeholder="160"
+                  placeholder="Enter goal weight"
                   value={goalWeight}
                   onChange={(e) => setGoalWeight(e.target.value)}
                 />
@@ -342,10 +570,9 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           </div>
         )}
 
-        {!showComplete && currentStep === 5 && (
+        {phase === 'about' && (
           <div>
             <h2 className="mb-6 text-2xl font-semibold">About you</h2>
-
             <div className="space-y-4">
               <div>
                 <label className="text-sm text-slate-400">Gender</label>
@@ -438,26 +665,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           </div>
         )}
 
-        {showComplete && (
-          <div className="py-8 text-center">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-              <Check className="text-emerald-400" size={32} />
-            </div>
-            <h2 className="mb-3 text-3xl font-semibold">You&apos;re all set!</h2>
-            <p className="mx-auto mb-8 max-w-xs text-slate-400">
-              Your personalized 90-day recomp plan is ready. Let&apos;s get started.
-            </p>
-
-            <button
-              type="button"
-              onClick={handleEnterApp}
-              disabled={loading}
-              className="w-full rounded-2xl bg-emerald-500 py-4 text-lg font-medium text-black transition-colors hover:bg-emerald-600 disabled:opacity-60"
-            >
-              {loading ? 'Saving…' : 'Enter PeptideTracker'}
-            </button>
-          </div>
-        )}
+        {phase === 'generating' && <OnboardingGeneratingScreen />}
 
         {error && (
           <div className="mt-6 space-y-3">
@@ -467,7 +675,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         )}
       </div>
 
-      {!showComplete && (
+      {showNav && (
         <div className="fixed right-0 bottom-0 left-0 border-t border-white/10 bg-[#0a0a0a] px-6 pt-3 pb-4">
           <div className="mx-auto mb-3 max-w-lg">
             <MedicalDisclaimer compact />
@@ -476,7 +684,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             <button
               type="button"
               onClick={back}
-              disabled={currentStep === 1}
+              disabled={phase === 'experience'}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/20 py-3.5 transition-colors disabled:opacity-40"
             >
               <ArrowLeft size={18} /> Back
@@ -484,11 +692,22 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             <button
               type="button"
               onClick={next}
-              disabled={!canContinue()}
+              disabled={!canContinue() || loading}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-3.5 font-medium text-black transition-colors disabled:opacity-40"
             >
-              {currentStep === totalSteps ? 'Finish Setup' : 'Continue'}{' '}
-              <ArrowRight size={18} />
+              {phase === 'about' ? (
+                loading ? (
+                  'Saving…'
+                ) : (
+                  <>
+                    Finish Setup <Check size={18} />
+                  </>
+                )
+              ) : (
+                <>
+                  Continue <ArrowRight size={18} />
+                </>
+              )}
             </button>
           </div>
         </div>

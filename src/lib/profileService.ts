@@ -1,3 +1,7 @@
+import {
+  computeWeeklyWeightTarget,
+  inferWeightGoalMode,
+} from '../constants/onboardingGoals'
 import { DEFAULT_PEPTIDES, DEFAULT_PROFILE } from '../constants/defaults'
 import {
   formatPeptideSelections,
@@ -133,6 +137,18 @@ export async function completeOnboarding(
     questionnaire.interestedPeptides ||
     formatPeptideSelections(questionnaire.peptideSelections)
 
+  const goals = questionnaire.mainGoal.split(',').map((g) => g.trim()).filter(Boolean)
+  const weightMode = inferWeightGoalMode(
+    goals,
+    questionnaire.currentWeight,
+    questionnaire.goalWeight
+  )
+  const weeklyTarget = computeWeeklyWeightTarget(
+    weightMode,
+    questionnaire.currentWeight,
+    questionnaire.goalWeight
+  )
+
   const { peptides: peptideStack, recompPlan } = generateRecompPlan({
     familiarity: questionnaire.familiarity,
     mainGoal: questionnaire.mainGoal,
@@ -142,7 +158,7 @@ export async function completeOnboarding(
     additionalInfo: questionnaire.additionalInfo,
     currentWeight: questionnaire.currentWeight,
     goalWeight: questionnaire.goalWeight,
-    weeklyLossTarget: DEFAULT_PROFILE.weeklyLossTarget,
+    weeklyLossTarget: weeklyTarget,
     peptideSelections: questionnaire.peptideSelections,
   })
 
@@ -152,7 +168,7 @@ export async function completeOnboarding(
       goalWeight: questionnaire.goalWeight,
       height: '',
       startDate: new Date().toISOString().slice(0, 10),
-      weeklyLossTarget: DEFAULT_PROFILE.weeklyLossTarget,
+      weeklyLossTarget: weeklyTarget,
     },
     peptides: peptideStack,
     recompPlan,
@@ -175,6 +191,7 @@ export async function completeOnboarding(
       training_activities: questionnaire.trainingActivities,
       current_weight: questionnaire.currentWeight,
       goal_weight: questionnaire.goalWeight,
+      weekly_loss_target: weeklyTarget,
       start_date: trackerState.profile.startDate,
       peptide_stack: peptideStack,
       tracker_data: trackerState,

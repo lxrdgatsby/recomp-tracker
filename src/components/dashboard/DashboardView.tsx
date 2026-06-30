@@ -9,11 +9,14 @@ import {
   User,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+import { inferWeightGoalMode } from '../../constants/onboardingGoals'
 import type { TrackerState } from '../../types'
 import {
   getLatestWeight,
   getWeightToLose,
 } from '../../utils/calculations'
+import { getOnboardingData } from '../../utils/onboardingStorage'
 import { getGreeting, getTodayDashboardData } from '../../utils/todayActions'
 
 interface DashboardViewProps {
@@ -28,9 +31,11 @@ export function DashboardView({
   onToggleInjection,
 }: DashboardViewProps) {
   const navigate = useNavigate()
+  const { userProfile } = useAuth()
   const { profile } = state
   const today = format(new Date(), 'yyyy-MM-dd')
   const currentWeight = getLatestWeight(profile, state.weightHistory)
+  const weightDelta = Math.abs(currentWeight - profile.goalWeight)
   const weightToLose = getWeightToLose(currentWeight, profile.goalWeight)
   const { dayInCycle, totalDays, primaryInjection, workout } =
     getTodayDashboardData(state)
@@ -40,8 +45,40 @@ export function DashboardView({
     ? username.charAt(0).toUpperCase() + username.slice(1)
     : 'Gatsby'
 
-  const weeklyTarget =
-    Math.round(profile.weeklyLossTarget * 10) / 10
+  const goals =
+    getOnboardingData()?.goals ??
+    userProfile?.mainGoal?.split(',').map((g) => g.trim()).filter(Boolean) ??
+    []
+
+  const weightMode = inferWeightGoalMode(
+    goals,
+    currentWeight,
+    profile.goalWeight
+  )
+
+  const weeklyTarget = Math.round(profile.weeklyLossTarget * 10) / 10
+
+  const goalWeightSubtext =
+    weightMode === 'gain'
+      ? `+${weightDelta.toFixed(1)} lbs to go`
+      : weightMode === 'wellness' || weightMode === 'maintain'
+        ? goals[0] ?? 'Personalized protocol'
+        : `-${weightToLose} lbs remaining`
+
+  const weekCardLabel =
+    weightMode === 'gain'
+      ? 'Target gain'
+      : weightMode === 'wellness' || weightMode === 'maintain'
+        ? 'Protocol focus'
+        : 'Target loss'
+
+  const weekCardValue =
+    weightMode === 'wellness' || weightMode === 'maintain'
+      ? goals.slice(0, 2).join(' · ') || 'Your goals'
+      : `${weeklyTarget}`
+
+  const weekCardUnit =
+    weightMode === 'wellness' || weightMode === 'maintain' ? '' : 'lbs'
 
   return (
     <div className="pb-6 text-white">
@@ -89,9 +126,7 @@ export function DashboardView({
             {profile.goalWeight}{' '}
             <span className="text-base font-normal text-slate-400">lbs</span>
           </div>
-          <div className="mt-1 text-xs text-slate-400">
-            -{weightToLose} lbs remaining
-          </div>
+          <div className="mt-1 text-xs text-slate-400">{goalWeightSubtext}</div>
         </div>
 
         <div className="rounded-2xl bg-white/5 p-4">
@@ -99,11 +134,22 @@ export function DashboardView({
             <TrendingUp size={16} />
             <span className="text-xs tracking-widest uppercase">This Week</span>
           </div>
-          <div className="text-3xl font-semibold tabular-nums">
-            {weeklyTarget}{' '}
-            <span className="text-base font-normal text-slate-400">lbs</span>
+          <div
+            className={`font-semibold tabular-nums ${
+              weightMode === 'wellness' || weightMode === 'maintain'
+                ? 'text-lg leading-snug'
+                : 'text-3xl'
+            }`}
+          >
+            {weekCardValue}
+            {weekCardUnit && (
+              <span className="text-base font-normal text-slate-400">
+                {' '}
+                {weekCardUnit}
+              </span>
+            )}
           </div>
-          <div className="mt-1 text-xs text-slate-400">Target loss</div>
+          <div className="mt-1 text-xs text-slate-400">{weekCardLabel}</div>
         </div>
       </div>
 

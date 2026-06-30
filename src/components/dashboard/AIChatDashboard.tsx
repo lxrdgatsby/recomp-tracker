@@ -31,6 +31,7 @@ export function AIChatDashboard() {
 
   const [input, setInput] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [showQuickActions, setShowQuickActions] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -49,7 +50,14 @@ export function AIChatDashboard() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 })
+    setShowQuickActions(true)
   }, [activeConversationId, isDraft])
+
+  const handleMessagesScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    setShowQuickActions(el.scrollTop < 80)
+  }
 
   const handleSend = () => {
     if (!input.trim() || loading) return
@@ -158,6 +166,7 @@ export function AIChatDashboard() {
 
         <div
           ref={scrollRef}
+          onScroll={handleMessagesScroll}
           className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-32 lg:pb-4"
         >
           {showIntro && (
@@ -196,7 +205,13 @@ export function AIChatDashboard() {
         </div>
 
         <div className="fixed inset-x-0 bottom-[var(--mobile-nav-height)] z-30 border-t border-white/10 bg-[#0a0a0a] px-6 pt-4 pb-6 lg:relative lg:inset-x-auto lg:bottom-auto lg:z-auto lg:shrink-0">
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div
+            className={`mb-4 flex flex-wrap gap-2 transition-all duration-300 ${
+              showQuickActions
+                ? 'max-h-40 opacity-100'
+                : 'max-h-0 overflow-hidden opacity-0'
+            }`}
+          >
             {CHAT_SUGGESTIONS.map((action) => (
               <button
                 key={action}
