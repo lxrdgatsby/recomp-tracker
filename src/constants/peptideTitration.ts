@@ -148,6 +148,28 @@ export const PEPTIDE_TITRATION: Record<string, TitrationMap> = {
       { weeks: '5-13', doseMg: 5, notes: '1× weekly maintenance' },
     ],
   },
+  selank: {
+    beginner: [
+      { weeks: '1-13', doseMg: 0.25, notes: 'Daily AM SubQ or intranasal (250mcg)' },
+    ],
+    intermediate: [
+      { weeks: '1-13', doseMg: 0.4, notes: 'Daily AM SubQ or intranasal (400mcg)' },
+    ],
+    advanced: [
+      { weeks: '1-13', doseMg: 0.5, notes: 'Daily AM SubQ or intranasal (500mcg)' },
+    ],
+  },
+  semax: {
+    beginner: [
+      { weeks: '1-13', doseMg: 0.2, notes: 'Daily AM SubQ or intranasal (200mcg)' },
+    ],
+    intermediate: [
+      { weeks: '1-13', doseMg: 0.4, notes: 'Daily AM SubQ or intranasal (400mcg)' },
+    ],
+    advanced: [
+      { weeks: '1-13', doseMg: 0.6, notes: 'Daily AM SubQ or intranasal (600mcg)' },
+    ],
+  },
 }
 
 export function getTitrationPhases(

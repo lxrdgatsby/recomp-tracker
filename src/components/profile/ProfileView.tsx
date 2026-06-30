@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
-  DEFAULT_BAC_WATER,
+  recommendedBacWaterForVial,
   PEPTIDE_CATALOG,
   getCatalogEntry,
   getCatalogEntryByName,
@@ -67,7 +67,7 @@ function peptideFromCatalog(
       catalogId: entry.id,
       dose: entry.defaultDose,
       status: 'using',
-      bacWaterUnits: DEFAULT_BAC_WATER,
+      bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
       reconstituted: false,
     },
     familiarity

@@ -1,5 +1,6 @@
 import {
   DEFAULT_BAC_WATER,
+  recommendedBacWaterForVial,
   type PeptideSelection,
 } from '../constants/peptideCatalog'
 import { getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
@@ -24,11 +25,21 @@ export interface ProtocolInput {
 export function normalizeSelection(
   raw: Partial<PeptideSelection> & Pick<PeptideSelection, 'catalogId' | 'dose'>
 ): PeptideSelection {
+  let dose = raw.dose
+  let bacWaterUnits =
+    raw.bacWaterUnits ?? recommendedBacWaterForVial(dose)
+
+  // Selank is standardized as a 10mg vial reconstituted with 200u BAC.
+  if (raw.catalogId === 'selank') {
+    if (dose === '5mg') dose = '10mg'
+    if (dose === '10mg') bacWaterUnits = 200
+  }
+
   return {
     catalogId: raw.catalogId,
-    dose: raw.dose,
+    dose,
     status: raw.status ?? 'interested',
-    bacWaterUnits: raw.bacWaterUnits ?? DEFAULT_BAC_WATER,
+    bacWaterUnits,
     reconstituted: raw.reconstituted ?? false,
   }
 }

@@ -1,8 +1,8 @@
 import { X } from 'lucide-react'
 import {
   BAC_WATER_OPTIONS,
-  DEFAULT_BAC_WATER,
   PEPTIDE_CATALOG,
+  recommendedBacWaterForVial,
   getCatalogEntry,
   type PeptideSelection,
   type PeptideUsageStatus,
@@ -53,7 +53,7 @@ export function PeptideSelector({
         catalogId,
         dose: entry.defaultDose,
         status: 'interested',
-        bacWaterUnits: DEFAULT_BAC_WATER,
+        bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
         reconstituted: false,
       },
     ])
@@ -143,9 +143,13 @@ export function PeptideSelector({
                     <label className="text-xs text-slate-500">Vial size</label>
                     <select
                       value={selection.dose}
-                      onChange={(e) =>
-                        updateSelection(selection.catalogId, { dose: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const dose = e.target.value
+                        updateSelection(selection.catalogId, {
+                          dose,
+                          bacWaterUnits: recommendedBacWaterForVial(dose),
+                        })
+                      }}
                       className={doseClass}
                       aria-label={`${entry.name} vial size`}
                     >

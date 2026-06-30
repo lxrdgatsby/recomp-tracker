@@ -3,6 +3,16 @@ import type { BacWaterUnits, Peptide, PeptideFrequency } from '../types'
 export const BAC_WATER_OPTIONS: BacWaterUnits[] = [100, 200, 300]
 export const DEFAULT_BAC_WATER: BacWaterUnits = 200
 
+/** Standard BAC pairing: 5mg→100u, 10mg→200u, 15mg+→300u (U-100 syringe). */
+export function recommendedBacWaterForVial(dose: string): BacWaterUnits {
+  const match = dose.trim().toLowerCase().match(/^([\d.]+)\s*mg$/)
+  const mg = match ? parseFloat(match[1]) : parseFloat(dose)
+  if (!mg || isNaN(mg)) return DEFAULT_BAC_WATER
+  if (mg <= 5) return 100
+  if (mg <= 10) return 200
+  return 300
+}
+
 export type PeptideUsageStatus = 'using' | 'interested'
 
 export interface PeptideCatalogEntry {
@@ -200,7 +210,7 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     name: 'Selank',
     tagline: 'Anxiolytic nootropic — stress & calm',
     doseOptions: ['5mg', '10mg'],
-    defaultDose: '5mg',
+    defaultDose: '10mg',
     frequency: 'daily',
     timing: 'Morning intranasal or SubQ',
     notes: 'Often stacked with Semax. Non-sedating anxiolytic.',
