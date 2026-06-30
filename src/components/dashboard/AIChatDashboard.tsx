@@ -58,13 +58,21 @@ export function AIChatDashboard() {
   const handleMessagesScroll = () => {
     const el = scrollRef.current
     if (!el) return
-    setShowQuickActions(el.scrollTop < 80)
+    const nearTop = el.scrollTop < 48
+    setShowQuickActions(!hasUserMessage || nearTop)
   }
 
   const handleSend = () => {
     if (!input.trim() || loading) return
     void sendMessage(input)
     setInput('')
+    setShowQuickActions(false)
+  }
+
+  const handleQuickPrompt = (action: string) => {
+    if (loading) return
+    void sendMessage(action)
+    setShowQuickActions(false)
   }
 
   const handleSelectConversation = (id: string) => {
@@ -213,17 +221,17 @@ export function AIChatDashboard() {
 
         <div className="fixed inset-x-0 bottom-[var(--mobile-nav-height)] z-30 border-t border-white/10 bg-[#0a0a0a] px-6 pt-4 pb-6 lg:relative lg:inset-x-auto lg:bottom-auto lg:z-auto lg:shrink-0">
           <div
-            className={`mb-4 flex flex-wrap gap-2 transition-all duration-300 ${
+            className={`mb-4 flex flex-wrap gap-2 overflow-hidden transition-all duration-300 ease-out ${
               showQuickActions
-                ? 'max-h-40 opacity-100'
-                : 'max-h-0 overflow-hidden opacity-0'
+                ? 'max-h-40 translate-y-0 opacity-100'
+                : 'pointer-events-none max-h-0 translate-y-3 opacity-0'
             }`}
           >
             {CHAT_SUGGESTIONS.map((action) => (
               <button
                 key={action}
                 type="button"
-                onClick={() => setInput(action)}
+                onClick={() => handleQuickPrompt(action)}
                 disabled={loading}
                 className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
               >

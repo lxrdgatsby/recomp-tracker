@@ -135,7 +135,7 @@ export function PeptidesView({
     if (!protocol) return {}
     return {
       initialVialMg: protocol.vialMg,
-      initialBacWaterMl: protocol.bacWaterMl,
+      initialBacWaterUnits: protocol.bacWaterUnits,
       initialTargetDoseMg: protocol.startingDoseMg,
     }
   }, [calculatorPeptide])

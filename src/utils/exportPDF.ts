@@ -185,19 +185,24 @@ function addDoseCalculatorSection(doc: jsPDF, startY: number): number {
     if (!raw) return startY
     const data = JSON.parse(raw) as {
       vialMg?: number
+      bacWaterUnits?: number
       bacWaterMl?: number
       targetDoseMg?: number
     }
-    if (!data.vialMg && !data.bacWaterMl && !data.targetDoseMg) return startY
+    const bacWaterMl =
+      data.bacWaterUnits != null
+        ? data.bacWaterUnits / 100
+        : data.bacWaterMl
+    if (!data.vialMg && !bacWaterMl && !data.targetDoseMg) return startY
 
     let y = sectionTitle(doc, 'Dose Calculator', startY)
     const concentration =
-      data.vialMg && data.bacWaterMl
-        ? (data.vialMg / data.bacWaterMl).toFixed(2)
+      data.vialMg && bacWaterMl
+        ? (data.vialMg / bacWaterMl).toFixed(2)
         : '—'
     const units =
-      data.targetDoseMg && data.vialMg && data.bacWaterMl
-        ? Math.round((data.targetDoseMg / data.vialMg) * data.bacWaterMl * 100)
+      data.targetDoseMg && data.vialMg && bacWaterMl
+        ? Math.round((data.targetDoseMg / data.vialMg) * bacWaterMl * 100)
         : '—'
 
     y = ensureSpace(doc, y, 40)
@@ -206,7 +211,14 @@ function addDoseCalculatorSection(doc: jsPDF, startY: number): number {
       head: [['Setting', 'Value']],
       body: [
         ['Vial size', data.vialMg != null ? `${data.vialMg} mg` : '—'],
-        ['BAC water', data.bacWaterMl != null ? `${data.bacWaterMl} ml` : '—'],
+        [
+          'BAC water',
+          data.bacWaterUnits != null
+            ? `${data.bacWaterUnits} units (${bacWaterMl} ml)`
+            : bacWaterMl != null
+              ? `${bacWaterMl} ml`
+              : '—',
+        ],
         ['Target dose', data.targetDoseMg != null ? `${data.targetDoseMg} mg` : '—'],
         ['Concentration', concentration !== '—' ? `${concentration} mg/ml` : '—'],
         ['Syringe units (U-100)', units !== '—' ? `${units} units` : '—'],
