@@ -14,7 +14,7 @@ import {
   getInjectionsForDate,
   isInjectionDone,
 } from '../../utils/peptideSchedule'
-import { getTitrationForDay } from '../../utils/recompProtocol'
+import { formatSyringeUnits, getTitrationForDay } from '../../utils/recompProtocol'
 import { DoseCalculator } from './DoseCalculator'
 import { InjectionSiteMap } from './InjectionSiteMap'
 
@@ -52,10 +52,10 @@ function buildStackCards(state: TrackerState, today: string): StackCard[] {
       differenceInDays(todayDate, parseISO(profile.startDate))
     )
     const tier = getTitrationForDay(peptide, dayInCycle)
-    const doseLabel = tier?.doseLabel ?? peptide.protocol?.startingDoseLabel ?? peptide.dose
     const units =
       tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
-    const nextDose = units != null ? `${doseLabel} (${units} units)` : doseLabel
+    const nextDose =
+      units != null ? formatSyringeUnits(units) : 'Check protocol'
 
     const frequency =
       peptide.frequency === 'weekly'
@@ -207,7 +207,11 @@ export function PeptidesView({
         ) : (
           stackCards.map(({ peptide, nextDose, frequency, doneToday, scheduledToday }) => {
             const protocol = peptide.protocol
-            const vial = peptide.vialSize ?? peptide.dose
+            const vial =
+              peptide.vialSize ??
+              (peptide.protocol?.vialMg != null
+                ? `${peptide.protocol.vialMg}mg`
+                : '—')
             const concentration = protocol?.concentrationLabel ?? '—'
             const reconstituted = protocol?.reconstituted ?? false
             const hasSelection = Boolean(findSelection(peptide))

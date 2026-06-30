@@ -21,7 +21,8 @@ export function PeptideProtocolCard({ peptide }: { peptide: Peptide }) {
             )}
           </div>
           <p className="text-sm text-slate-400">
-            {peptide.vialSize ?? peptide.dose} vial · {peptide.frequency} ·{' '}
+            {peptide.vialSize ?? `${peptide.protocol?.vialMg ?? ''}mg`} vial ·{' '}
+            {peptide.frequency} ·{' '}
             {peptide.timing}
           </p>
         </div>
@@ -37,7 +38,7 @@ export function PeptideProtocolCard({ peptide }: { peptide: Peptide }) {
         {protocol.calculationSummary}
       </p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-slate-800 bg-navy-900/60 px-3 py-2">
           <p className="text-xs text-slate-500">BAC water added</p>
           <p className="font-medium text-white">
@@ -45,13 +46,9 @@ export function PeptideProtocolCard({ peptide }: { peptide: Peptide }) {
           </p>
         </div>
         <div className="rounded-lg border border-slate-800 bg-navy-900/60 px-3 py-2">
-          <p className="text-xs text-slate-500">Week 1 dose</p>
-          <p className="font-medium text-white">{protocol.startingDoseLabel}</p>
-        </div>
-        <div className="rounded-lg border border-slate-800 bg-navy-900/60 px-3 py-2">
-          <p className="text-xs text-slate-500">Draw on U-100 syringe</p>
+          <p className="text-xs text-slate-500">Week 1 injection dose</p>
           <p className="font-medium text-teal-400">
-            {protocol.startingSyringeUnits} units
+            {protocol.startingSyringeUnits} units on U-100 syringe
           </p>
         </div>
       </div>
@@ -70,14 +67,13 @@ export function PeptideProtocolCard({ peptide }: { peptide: Peptide }) {
       {protocol.titration.length > 0 && (
         <div className="mt-4 overflow-x-auto">
           <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
-            90-day titration — dose & syringe units
+            90-day titration — U-100 syringe units
           </p>
-          <table className="mt-2 w-full min-w-[320px] text-left text-sm">
+          <table className="mt-2 w-full min-w-[280px] text-left text-sm">
             <thead>
               <tr className="border-b border-slate-800 text-xs text-slate-500">
                 <th className="py-2 pr-3">Weeks</th>
-                <th className="py-2 pr-3">Injection dose</th>
-                <th className="py-2 pr-3">U-100 syringe</th>
+                <th className="py-2 pr-3">Draw (U-100)</th>
                 <th className="py-2">Schedule</th>
               </tr>
             </thead>
@@ -85,9 +81,6 @@ export function PeptideProtocolCard({ peptide }: { peptide: Peptide }) {
               {protocol.titration.map((tier) => (
                 <tr key={tier.weeks} className="border-b border-slate-800/60">
                   <td className="py-2 pr-3 text-slate-300">{tier.weeks}</td>
-                  <td className="py-2 pr-3 font-medium text-white">
-                    {tier.doseLabel}
-                  </td>
                   <td className="py-2 pr-3 font-semibold text-teal-400">
                     {tier.syringeUnits} units
                   </td>

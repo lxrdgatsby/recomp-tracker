@@ -256,15 +256,7 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
                   <div>
                     <p className="font-medium text-white">{inj.peptideName}</p>
                     <p className="text-sm text-teal-400">
-                      {inj.dose}
-                      {inj.syringeUnits != null && (
-                        <span className="text-slate-400">
-                          {' '}
-                          · draw {inj.syringeUnits} units
-                        </span>
-                      )}
-                      {' '}
-                      · {inj.timing}
+                      {inj.dose} · {inj.timing}
                     </p>
                     {inj.notes && (
                       <p className="mt-1 text-xs text-slate-500">{inj.notes}</p>
@@ -340,11 +332,6 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
                         <div>
                           <span className="text-slate-200">{inj.peptideName}</span>
                           <span className="ml-2 text-teal-400/80">{inj.dose}</span>
-                          {inj.syringeUnits != null && (
-                            <span className="ml-2 text-slate-400">
-                              ({inj.syringeUnits}u)
-                            </span>
-                          )}
                           <span className="ml-2 text-slate-500">{inj.timing}</span>
                         </div>
                       </div>

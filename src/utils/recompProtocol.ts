@@ -64,6 +64,10 @@ export function mgToSyringeUnits(mg: number, concentrationMgPerMl: number): numb
   return Math.round(ml * 100)
 }
 
+export function formatSyringeUnits(units: number): string {
+  return `${units} units on U-100 syringe`
+}
+
 export function formatMg(mg: number): string {
   if (mg < 1) return `${Math.round(mg * 1000)}mcg`
   const rounded = Math.round(mg * 1000) / 1000
@@ -81,7 +85,7 @@ export function buildCalculationSummary(
   const units = mgToSyringeUnits(doseMg, conc)
   return (
     `${formatMg(vialMg)} vial ÷ ${bacWaterUnits} units (${ml}ml BAC water) = ` +
-    `${formatMg(conc)}/ml → ${formatMg(doseMg)} dose = ${units} units on a U-100 insulin syringe`
+    `${formatMg(conc)}/ml → draw ${units} units on U-100 syringe`
   )
 }
 
@@ -89,13 +93,16 @@ function buildTitrationFromPhases(
   phases: ReturnType<typeof getTitrationPhases>,
   concentrationMgPerMl: number
 ): TitrationWeek[] {
-  return phases.map((phase) => ({
-    weeks: phase.weeks,
-    doseMg: phase.doseMg,
-    doseLabel: formatMg(phase.doseMg),
-    syringeUnits: mgToSyringeUnits(phase.doseMg, concentrationMgPerMl),
-    notes: phase.notes,
-  }))
+  return phases.map((phase) => {
+    const syringeUnits = mgToSyringeUnits(phase.doseMg, concentrationMgPerMl)
+    return {
+      weeks: phase.weeks,
+      doseMg: phase.doseMg,
+      doseLabel: formatSyringeUnits(syringeUnits),
+      syringeUnits,
+      notes: phase.notes,
+    }
+  })
 }
 
 function buildReconstitutionSteps(
@@ -281,7 +288,7 @@ export function formatProtocolContextForAI(
       const titrationLines = proto.titration
         .map(
           (t) =>
-            `    Weeks ${t.weeks}: inject ${t.doseLabel} → draw ${t.syringeUnits} units (${t.notes ?? schedule})`
+            `    Weeks ${t.weeks}: draw ${t.syringeUnits} units on U-100 syringe (${t.notes ?? schedule})`
         )
         .join('\n')
 
@@ -290,9 +297,9 @@ export function formatProtocolContextForAI(
         `  VIAL SIZE (total in vial, NOT per injection): ${formatMg(proto.vialMg)}`,
         `  Reconstitution: ${proto.bacWaterUnits} units BAC water (${proto.bacWaterMl}ml) → ${proto.concentrationLabel}`,
         `  Reconstituted: ${proto.reconstituted ? 'yes' : 'not yet'}`,
-        `  CURRENT (week ${week} of 90-day plan): inject ${current.doseLabel} → draw ${current.syringeUnits} units on U-100 syringe, ${schedule}`,
-        `  CORRECT way to describe to user: "${pep.name} (${current.syringeUnits} units, ${schedule})"`,
-        `  WRONG — never say "${pep.dose} weekly/daily" as injection dose; ${pep.dose} is only the vial size.`,
+        `  CURRENT (week ${week} of 90-day plan): draw ${current.syringeUnits} units on U-100 syringe, ${schedule}`,
+        `  CORRECT way to describe to user: "${pep.name} — draw ${current.syringeUnits} units on U-100 syringe (${schedule})"`,
+        `  WRONG — never say "${pep.vialSize ?? formatMg(proto.vialMg)}" as the injection dose; always give U-100 syringe units.`,
         `  90-day titration schedule:`,
         titrationLines,
         `  Timing: ${pep.timing ?? schedule}`,
@@ -339,13 +346,16 @@ export function getCurrentInjectionDose(
 ): { doseLabel: string; syringeUnits?: number } {
   const dayInCycle = Math.max(0, getDaysIntoCycle(startDate) - 1)
   const tier = getTitrationForDay(peptide, dayInCycle)
+  const syringeUnits =
+    tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
   return {
     doseLabel:
-      tier?.doseLabel ??
-      peptide.protocol?.startingDoseLabel ??
-      peptide.dose,
-    syringeUnits:
-      tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits,
+      syringeUnits != null
+        ? formatSyringeUnits(syringeUnits)
+        : tier?.doseLabel ??
+          peptide.protocol?.startingDoseLabel ??
+          peptide.dose,
+    syringeUnits,
   }
 }
 

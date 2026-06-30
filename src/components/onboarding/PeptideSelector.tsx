@@ -199,8 +199,8 @@ export function PeptideSelector({
                   {preview && (
                     <div className="rounded-lg border border-teal-500/20 bg-teal-500/5 px-3 py-2 text-xs">
                       <p className="font-medium text-teal-300">
-                        Week 1 starting dose: {preview.doseLabel} → draw{' '}
-                        {preview.syringeUnits} units
+                        Week 1 starting dose: draw {preview.syringeUnits} units
+                        on U-100 syringe
                       </p>
                       <p className="mt-1 text-slate-400">{preview.summary}</p>
                     </div>

@@ -1,6 +1,6 @@
 import { addDays, differenceInDays, format, parseISO } from 'date-fns'
 import type { InjectionLog, Peptide } from '../types'
-import { getTitrationForDay } from './recompProtocol'
+import { formatSyringeUnits, getTitrationForDay } from './recompProtocol'
 
 export interface ScheduledInjection {
   peptideId: string
@@ -27,8 +27,11 @@ export function getInjectionsForDate(
     })
     .map((p) => {
       const tier = getTitrationForDay(p, dayInCycle)
-      const dose = tier?.doseLabel ?? p.dose
       const syringeUnits = tier?.syringeUnits ?? p.protocol?.startingSyringeUnits
+      const dose =
+        syringeUnits != null
+          ? formatSyringeUnits(syringeUnits)
+          : tier?.doseLabel ?? p.dose
       const titrationNote = tier?.notes
 
       return {

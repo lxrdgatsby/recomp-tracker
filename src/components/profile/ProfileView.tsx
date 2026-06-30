@@ -536,19 +536,11 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
                   />
                 )}
                 <Input
-                  label="Injection dose"
+                  label="Injection dose (U-100 syringe)"
                   value={injection.doseLabel}
                   readOnly
-                  className="opacity-90"
+                  className="opacity-90 sm:col-span-2"
                 />
-                {injection.syringeUnits != null && (
-                  <div className="flex items-end sm:col-span-1">
-                    <p className="rounded-lg border border-teal-500/20 bg-teal-500/5 px-3 py-2.5 text-sm text-teal-300">
-                      Draw <strong>{injection.syringeUnits}</strong> units on
-                      U-100 syringe
-                    </p>
-                  </div>
-                )}
                 {!catalogEntry && (
                   <Input
                     label="Dose"

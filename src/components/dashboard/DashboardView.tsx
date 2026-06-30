@@ -166,9 +166,9 @@ export function DashboardView({
                   <Syringe className="text-emerald-400" size={18} />
                 </div>
                 <div>
-                  <div className="font-medium">Peptide Dose</div>
-                  <div className="text-sm text-slate-400">
-                    {primaryInjection.peptideName} • {primaryInjection.dose}
+                  <div className="font-medium">{primaryInjection.peptideName}</div>
+                  <div className="text-sm text-emerald-400">
+                    {primaryInjection.dose}
                   </div>
                 </div>
               </div>
@@ -186,13 +186,7 @@ export function DashboardView({
                 {primaryInjection.done ? 'Done' : 'Mark Done'}
               </button>
             </div>
-            <div className="text-xs text-slate-400">
-              {primaryInjection.syringeUnits != null
-                ? `Draw ${primaryInjection.syringeUnits} units on U-100 syringe`
-                : 'Check syringe units on Peptides tab'}
-              {' • '}
-              {primaryInjection.timing}
-            </div>
+            <div className="text-xs text-slate-400">{primaryInjection.timing}</div>
           </div>
         ) : (
           <div className="mb-3 rounded-2xl border border-white/10 bg-white/5 p-5">
