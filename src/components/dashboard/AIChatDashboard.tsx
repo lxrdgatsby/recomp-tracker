@@ -36,6 +36,8 @@ export function AIChatDashboard() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const showInstall = !isInstalled && (canInstall || canShowIOSGuide)
+  const hasUserMessage = messages.some((m) => m.role === 'user')
+  const showHero = !hasUserMessage
   const showIntro = messages.length === 0 && !loading
 
   useEffect(() => {
@@ -154,20 +156,25 @@ export function AIChatDashboard() {
           </button>
         </div>
 
-        <div className="flex shrink-0 justify-center pt-5 pb-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
-            <Star className="text-emerald-400" size={36} />
-          </div>
-        </div>
-
-        <div className="shrink-0 px-6 pb-6 text-center">
-          <h2 className="text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
-        </div>
+        {showHero && (
+          <>
+            <div className="flex shrink-0 justify-center pt-5 pb-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
+                <Star className="text-emerald-400" size={36} />
+              </div>
+            </div>
+            <div className="shrink-0 px-6 pb-6 text-center">
+              <h2 className="text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
+            </div>
+          </>
+        )}
 
         <div
           ref={scrollRef}
           onScroll={handleMessagesScroll}
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-32 lg:pb-4"
+          className={`min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-32 lg:pb-4 ${
+            showHero ? '' : 'pt-3'
+          }`}
         >
           {showIntro && (
             <div className="flex justify-start">
