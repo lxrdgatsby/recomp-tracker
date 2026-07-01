@@ -136,13 +136,16 @@ export function AppLayout() {
 
   const updateReconstitutionHandler = useCallback(
     async (state: TrackerState, selections: PeptideSelection[]) => {
+      setTrackerState(state)
       if (user) {
         const { error } = await saveReconstitutionPlan(user.id, selections, state)
-        if (error) throw new Error(error)
+        if (error) {
+          await refreshProfile()
+          throw new Error(error)
+        }
         await refreshProfile()
         return
       }
-      setTrackerState(state)
     },
     [user, refreshProfile, setTrackerState]
   )

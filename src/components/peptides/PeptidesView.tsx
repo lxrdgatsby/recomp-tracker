@@ -11,7 +11,11 @@ import {
   type PeptideSelection,
 } from '../../constants/peptideCatalog'
 import type { Peptide, TrackerState } from '../../types'
-import { generateRecompPlan, normalizeSelection } from '../../utils/recompProtocol'
+import {
+  generateRecompPlan,
+  normalizeSelection,
+  syncSelectionsFromPeptides,
+} from '../../utils/recompProtocol'
 import {
   getInjectionsForDate,
   isInjectionDone,
@@ -81,28 +85,39 @@ export function PeptidesView({
   onToggleInjection,
   onUpdateReconstitution,
 }: PeptidesViewProps) {
-  const { userProfile } = useAuth()
+  const { userProfile, setTrackerState } = useAuth()
   const { peptides } = state
   const today = format(new Date(), 'yyyy-MM-dd')
   const [showSites, setShowSites] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
-  const [peptidePicker, setPeptidePicker] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
-  const [addingPeptide, setAddingPeptide] = useState(false)
-
-  const availableCatalogPeptides = useMemo(() => {
-    const addedNames = new Set(peptides.map((p) => p.name.trim().toLowerCase()))
-    return PEPTIDE_CATALOG.filter(
-      (entry) => !addedNames.has(entry.name.toLowerCase())
-    )
-  }, [peptides])
-
-  const stackCards = useMemo(() => buildStackCards(state, today), [state, today])
+  const [addSuccess, setAddSuccess] = useState<string | null>(null)
+  const [addingPeptideId, setAddingPeptideId] = useState<string | null>(null)
 
   const selections = useMemo(
     () => (userProfile?.peptideSelections ?? []).map(normalizeSelection),
     [userProfile?.peptideSelections]
   )
+
+  const stackCatalogIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const peptide of peptides) {
+      const entry =
+        getCatalogEntry(peptide.id) ?? getCatalogEntryByName(peptide.name)
+      if (entry) ids.add(entry.id)
+    }
+    for (const selection of selections) {
+      if (selection.status === 'using') ids.add(selection.catalogId)
+    }
+    return ids
+  }, [peptides, selections])
+
+  const availableCatalogPeptides = useMemo(
+    () => PEPTIDE_CATALOG.filter((entry) => !stackCatalogIds.has(entry.id)),
+    [stackCatalogIds]
+  )
+
+  const stackCards = useMemo(() => buildStackCards(state, today), [state, today])
 
   const findSelection = (peptide: Peptide) =>
     selections.find((s) => s.catalogId === peptide.id) ??
@@ -143,22 +158,42 @@ export function PeptidesView({
 
   const addPeptideFromCatalog = async (catalogId: string) => {
     const entry = getCatalogEntry(catalogId)
-    if (!entry || !userProfile) {
+    if (!entry) return
+
+    if (!userProfile) {
       setAddError('Sign in to add peptides to your stack.')
+      setAddSuccess(null)
       return
     }
-    if (selections.some((s) => s.catalogId === catalogId)) return
 
-    const updated = [
-      ...selections,
-      {
-        catalogId: entry.id,
-        dose: entry.defaultDose,
-        status: 'using' as const,
-        bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
-        reconstituted: false,
-      },
-    ]
+    const baseSelections = syncSelectionsFromPeptides(state.peptides, selections)
+    const existing = baseSelections.find((s) => s.catalogId === catalogId)
+
+    let updated: PeptideSelection[]
+    if (existing?.status === 'using') {
+      setAddError(`${entry.name} is already in your stack.`)
+      setAddSuccess(null)
+      return
+    }
+
+    if (existing) {
+      updated = baseSelections.map((selection) =>
+        selection.catalogId === catalogId
+          ? { ...selection, status: 'using' as const }
+          : selection
+      )
+    } else {
+      updated = [
+        ...baseSelections,
+        {
+          catalogId: entry.id,
+          dose: entry.defaultDose,
+          status: 'using' as const,
+          bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
+          reconstituted: false,
+        },
+      ]
+    }
 
     const { peptides: nextPeptides, recompPlan } = generateRecompPlan({
       familiarity: userProfile.familiarity ?? 'beginner',
@@ -173,19 +208,23 @@ export function PeptidesView({
       peptideSelections: updated,
     })
 
-    setAddingPeptide(true)
+    const nextState = { ...state, peptides: nextPeptides, recompPlan }
+
+    setAddingPeptideId(catalogId)
     setAddError(null)
+    setAddSuccess(null)
+    setTrackerState(nextState)
+
     try {
-      await onUpdateReconstitution(
-        { ...state, peptides: nextPeptides, recompPlan },
-        updated
-      )
+      await onUpdateReconstitution(nextState, updated)
+      setAddSuccess(`${entry.name} added to your stack.`)
+      setTimeout(() => setAddSuccess(null), 3000)
     } catch (err) {
       setAddError(
         err instanceof Error ? err.message : 'Could not save peptide. Try again.'
       )
     } finally {
-      setAddingPeptide(false)
+      setAddingPeptideId(null)
     }
   }
 
@@ -341,37 +380,44 @@ export function PeptidesView({
 
       <div className="mb-8">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <label className="block space-y-2">
-            <span className="flex items-center gap-1.5 text-sm font-medium text-slate-200">
-              <Plus size={16} className="text-emerald-400" />
-              Add another peptide
-            </span>
-            <select
-              className="w-full appearance-none rounded-2xl border border-white/20 bg-black/40 px-4 py-3 text-base text-white focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
-              value={peptidePicker}
-              disabled={addingPeptide}
-              onChange={(e) => {
-                const catalogId = e.target.value
-                if (!catalogId) return
-                void addPeptideFromCatalog(catalogId)
-                setPeptidePicker('')
-              }}
-            >
-              <option value="">
-                {availableCatalogPeptides.length > 0
-                  ? 'Choose your peptides…'
-                  : 'All catalog peptides added'}
-              </option>
-              {availableCatalogPeptides.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name} — {entry.tagline}
-                </option>
-              ))}
-            </select>
-            {addError && (
-              <p className="text-sm text-red-400">{addError}</p>
-            )}
-          </label>
+          <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-slate-200">
+            <Plus size={16} className="text-emerald-400" />
+            Add another peptide
+          </div>
+
+          {availableCatalogPeptides.length === 0 ? (
+            <p className="text-sm text-slate-400">All catalog peptides added.</p>
+          ) : (
+            <div className="max-h-56 space-y-2 overflow-y-auto">
+              {availableCatalogPeptides.map((entry) => {
+                const isAdding = addingPeptideId === entry.id
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    disabled={addingPeptideId != null}
+                    onClick={() => void addPeptideFromCatalog(entry.id)}
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-left transition-colors hover:border-emerald-500/30 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium text-white">{entry.name}</div>
+                      <div className="truncate text-xs text-slate-400">
+                        {entry.tagline}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-sm font-medium text-emerald-400">
+                      {isAdding ? 'Adding…' : 'Add'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {addError && <p className="mt-3 text-sm text-red-400">{addError}</p>}
+          {addSuccess && (
+            <p className="mt-3 text-sm text-emerald-400">{addSuccess}</p>
+          )}
         </div>
       </div>
 
