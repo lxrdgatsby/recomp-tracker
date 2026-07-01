@@ -23,7 +23,7 @@ import {
 } from '../constants/peptideCatalog'
 import type { FamiliarityLevel } from '../types/auth'
 import type { BacWaterUnits, Peptide, TitrationWeek } from '../types'
-import { InjectionSiteMap } from './peptides/InjectionSiteMap'
+import { InjectionSiteMap } from './InjectionSiteMap'
 import { buildPeptideWithProtocol } from '../utils/recompProtocol'
 
 const VIAL_OPTIONS = [5, 10, 15, 30] as const
