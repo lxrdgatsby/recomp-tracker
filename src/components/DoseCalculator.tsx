@@ -24,7 +24,10 @@ import {
 import type { FamiliarityLevel } from '../types/auth'
 import type { BacWaterUnits, Peptide, TitrationWeek } from '../types'
 import { InjectionSiteMap } from './InjectionSiteMap'
-import { buildPeptideWithProtocol } from '../utils/recompProtocol'
+import {
+  buildPeptideWithProtocol,
+  buildReconstitutionSteps,
+} from '../utils/recompProtocol'
 
 const VIAL_OPTIONS = [5, 10, 15, 30] as const
 const STORAGE_KEY = 'doseCalculator'
@@ -449,11 +452,11 @@ export function DoseCalculator({
     alert(`✅ Protocol for ${selectedPeptide.name} has been saved to your plan!`)
   }
 
-  const reconstitutionSteps = selectedPeptide?.protocol?.reconstitutionSteps ?? [
-    `Add ${bacWaterMl}mL bacteriostatic water slowly to the ${vialMg}mg vial.`,
-    'Gently swirl (do not shake vigorously) until fully dissolved.',
-    'Refrigerate and use within recommended period.',
-  ]
+  const reconstitutionSteps = useMemo(() => {
+    const peptideName = selectedPeptide?.name ?? 'peptide'
+    const bacWaterUnits = normalizeBacUnits(Math.round(bacWaterMl * 100))
+    return buildReconstitutionSteps(vialMg, bacWaterUnits, peptideName)
+  }, [selectedPeptide?.name, vialMg, bacWaterMl])
 
   const exportToPDF = () => {
     if (!selectedPeptide) return
@@ -821,7 +824,7 @@ export function DoseCalculator({
         </div>
         <ol className="space-y-2 text-sm text-zinc-300">
           {reconstitutionSteps.map((step, index) => (
-            <li key={index} className="flex gap-3">
+            <li key={`${selectedPeptide?.id ?? 'peptide'}-step-${index}`} className="flex gap-3">
               <span className="w-5 font-mono font-semibold text-emerald-400">
                 {index + 1}.
               </span>

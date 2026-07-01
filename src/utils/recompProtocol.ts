@@ -105,7 +105,7 @@ function buildTitrationFromPhases(
   })
 }
 
-function buildReconstitutionSteps(
+export function buildReconstitutionSteps(
   vialMg: number,
   bacWaterUnits: BacWaterUnits,
   peptideName: string
