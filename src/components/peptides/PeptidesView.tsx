@@ -432,10 +432,7 @@ export function PeptidesView({
             <DoseCalculator
               key={calculatorPeptide?.id ?? 'default'}
               peptides={peptides}
-              onLogDose={async (log) => {
-                await addInjectionLog({ ...log })
-                alert(`✅ Successfully logged dose for ${log.peptideName}`)
-              }}
+              onLogDose={(log) => addInjectionLog({ ...log })}
               onSaveProtocol={(protocol) => saveActiveProtocol({ ...protocol })}
               {...calculatorDefaults}
             />

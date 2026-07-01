@@ -83,10 +83,7 @@ export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <DoseCalculator
             peptides={state.peptides}
-            onLogDose={async (log) => {
-              await addInjectionLog({ ...log })
-              alert(`✅ Successfully logged dose for ${log.peptideName}`)
-            }}
+            onLogDose={(log) => addInjectionLog({ ...log })}
             onSaveProtocol={(protocol) => saveActiveProtocol({ ...protocol })}
           />
           <InjectionSiteMap />

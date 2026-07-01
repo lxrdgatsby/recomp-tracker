@@ -7,8 +7,10 @@ import {
   Copy,
   Droplet,
   FileText,
+  Package,
   Plus,
   Syringe,
+  Trash2,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import {
@@ -37,6 +39,14 @@ export interface DoseLog {
   doseMg: number
   units: number
   date: string
+}
+
+export interface Vial {
+  id: string
+  peptideId: string
+  vialMg: number
+  remainingMg: number
+  dateAdded: string
 }
 
 export interface SavedProtocolData {
@@ -100,6 +110,16 @@ function normalizeBacUnits(value: number): BacWaterUnits {
   return 200
 }
 
+function createVial(peptideId: string, sizeMg: number): Vial {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    peptideId,
+    vialMg: sizeMg,
+    remainingMg: sizeMg,
+    dateAdded: new Date().toISOString(),
+  }
+}
+
 export function DoseCalculator({
   peptides = [],
   initialPeptideId,
@@ -131,7 +151,8 @@ export function DoseCalculator({
   const [targetDoseMg, setTargetDoseMg] = useState(initialTargetDoseMg)
   const [syringeType, setSyringeType] = useState<'30' | '50' | '100'>('100')
   const [isCopied, setIsCopied] = useState(false)
-  const [vialsUsed, setVialsUsed] = useState(1)
+  const [vials, setVials] = useState<Vial[]>([])
+  const [activeVialId, setActiveVialId] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
   const selectedPeptide = useMemo(
@@ -153,6 +174,34 @@ export function DoseCalculator({
     return selectedPeptide?.protocol?.titration?.[0] ?? null
   }, [selectedPeptide])
 
+  const peptideVials = useMemo(
+    () =>
+      selectedPeptide
+        ? vials.filter((v) => v.peptideId === selectedPeptide.id)
+        : [],
+    [vials, selectedPeptide]
+  )
+
+  const activeVial = useMemo(
+    () => peptideVials.find((v) => v.id === activeVialId) ?? null,
+    [peptideVials, activeVialId]
+  )
+
+  useEffect(() => {
+    if (!selectedPeptide || !ready) return
+
+    if (peptideVials.length === 0) {
+      const newVial = createVial(selectedPeptide.id, vialMg)
+      setVials((prev) => [...prev, newVial])
+      setActiveVialId(newVial.id)
+      return
+    }
+
+    if (!activeVialId || !peptideVials.some((v) => v.id === activeVialId)) {
+      setActiveVialId(peptideVials[0].id)
+    }
+  }, [selectedPeptide, ready, vialMg, peptideVials, activeVialId])
+
   const calculations = useMemo(() => {
     if (bacWaterMl <= 0 || vialMg <= 0) {
       return {
@@ -168,7 +217,9 @@ export function DoseCalculator({
     const volumePerDoseMl = targetDoseMg / concentrationMgPerMl
     const unitsPerMl = parseInt(syringeType, 10)
     const syringeUnits = Math.max(0, Math.round(volumePerDoseMl * unitsPerMl))
-    const dosesRemaining = Math.max(0, Math.floor(vialMg / targetDoseMg))
+    const remainingMg = activeVial?.remainingMg ?? vialMg
+    const dosesRemaining =
+      targetDoseMg > 0 ? Math.max(0, Math.floor(remainingMg / targetDoseMg)) : 0
 
     return {
       concentrationMgPerMl: Math.round(concentrationMgPerMl * 100) / 100,
@@ -177,7 +228,7 @@ export function DoseCalculator({
       dosesRemaining,
       concentrationLabel: `${Math.round(concentrationMgPerMl * 100) / 100} mg/mL`,
     }
-  }, [vialMg, bacWaterMl, targetDoseMg, syringeType])
+  }, [vialMg, bacWaterMl, targetDoseMg, syringeType, activeVial?.remainingMg])
 
   const applyVialSelection = (nextVialMg: (typeof VIAL_OPTIONS)[number]) => {
     const nextBac = recommendedBacWaterForVialMg(nextVialMg)
@@ -201,7 +252,8 @@ export function DoseCalculator({
           bacWaterMl?: number
           targetDoseMg?: number
           syringeType?: '30' | '50' | '100'
-          vialsUsed?: number
+          vials?: Vial[]
+          activeVialId?: string | null
         }
 
         if (
@@ -233,8 +285,12 @@ export function DoseCalculator({
           setSyringeType(data.syringeType)
         }
 
-        if (typeof data.vialsUsed === 'number' && data.vialsUsed >= 1) {
-          setVialsUsed(data.vialsUsed)
+        if (Array.isArray(data.vials)) {
+          setVials(data.vials)
+        }
+
+        if (typeof data.activeVialId === 'string') {
+          setActiveVialId(data.activeVialId)
         }
       } catch {
         // ignore invalid storage
@@ -254,7 +310,8 @@ export function DoseCalculator({
         bacWaterMl,
         targetDoseMg,
         syringeType,
-        vialsUsed,
+        vials,
+        activeVialId,
       })
     )
   }, [
@@ -262,7 +319,8 @@ export function DoseCalculator({
     bacWaterMl,
     targetDoseMg,
     syringeType,
-    vialsUsed,
+    vials,
+    activeVialId,
     selectedPeptide?.id,
     selectedPeptideId,
     ready,
@@ -293,10 +351,42 @@ export function DoseCalculator({
       onLogDose(logData)
     } else {
       console.log('Dose logged:', logData)
-      alert(
-        `✅ Logged ${targetDoseMg}mg (${calculations.syringeUnits} units) of ${selectedPeptide.name}`
+    }
+
+    if (activeVialId) {
+      setVials((prev) =>
+        prev.map((vial) =>
+          vial.id === activeVialId
+            ? {
+                ...vial,
+                remainingMg: Math.max(0, vial.remainingMg - targetDoseMg),
+              }
+            : vial
+        )
       )
     }
+
+    alert(`✅ Logged ${targetDoseMg}mg for ${selectedPeptide.name}`)
+  }
+
+  const addNewVial = () => {
+    if (!selectedPeptide) return
+    const newVial = createVial(selectedPeptide.id, vialMg)
+    setVials((prev) => [...prev, newVial])
+    setActiveVialId(newVial.id)
+  }
+
+  const deleteVial = (id: string) => {
+    setVials((prev) => {
+      const next = prev.filter((v) => v.id !== id)
+      if (activeVialId === id) {
+        const remainingForPeptide = next.filter(
+          (v) => v.peptideId === selectedPeptide?.id
+        )
+        setActiveVialId(remainingForPeptide[0]?.id ?? null)
+      }
+      return next
+    })
   }
 
   const handleSaveToProtocol = () => {
@@ -344,17 +434,25 @@ export function DoseCalculator({
     )
     doc.text(`Concentration: ${calculations.concentrationLabel}`, 20, 80)
     doc.text(`Syringe Type: U-${syringeType}`, 20, 90)
-    doc.text(`Vials on hand: ${vialsUsed}`, 20, 100)
-
-    if (currentTitration) {
+    doc.text(`Tracked vials: ${peptideVials.length}`, 20, 100)
+    if (activeVial) {
       doc.text(
-        `Titration: ${currentTitration.doseLabel}${currentTitration.notes ? ` (${currentTitration.notes})` : ''}`,
+        `Active vial: ${activeVial.remainingMg.toFixed(1)}mg / ${activeVial.vialMg}mg remaining`,
         20,
         110
       )
     }
 
-    const stepsStartY = currentTitration ? 125 : 115
+    const titrationY = activeVial ? 120 : 110
+    if (currentTitration) {
+      doc.text(
+        `Titration: ${currentTitration.doseLabel}${currentTitration.notes ? ` (${currentTitration.notes})` : ''}`,
+        20,
+        titrationY
+      )
+    }
+
+    const stepsStartY = currentTitration ? titrationY + 15 : activeVial ? 125 : 115
     doc.text('Reconstitution Steps:', 20, stepsStartY)
     reconstitutionSteps.forEach((step, i) => {
       const lines = doc.splitTextToSize(`${i + 1}. ${step}`, 170)
@@ -486,6 +584,78 @@ export function DoseCalculator({
         </div>
       )}
 
+      <div className="mb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-emerald-400" />
+            <h3 className="font-semibold">Vial Inventory</h3>
+          </div>
+          <button
+            type="button"
+            onClick={addNewVial}
+            className="flex items-center gap-1 text-sm text-emerald-400 transition-colors hover:text-emerald-300"
+          >
+            <Plus size={16} />
+            Add New Vial
+          </button>
+        </div>
+
+        {peptideVials.length > 0 ? (
+          <div className="space-y-2">
+            {peptideVials.map((vial) => {
+              const percentLeft = Math.round((vial.remainingMg / vial.vialMg) * 100)
+              const isActive = vial.id === activeVialId
+              return (
+                <div
+                  key={vial.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setActiveVialId(vial.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') setActiveVialId(vial.id)
+                  }}
+                  className={`cursor-pointer rounded-2xl border p-4 transition-all ${
+                    isActive
+                      ? 'border-emerald-500 bg-emerald-950/30'
+                      : 'border-zinc-700 bg-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{vial.vialMg}mg vial</div>
+                      <div className="text-sm text-zinc-400">
+                        {vial.remainingMg.toFixed(1)}mg remaining ({percentLeft}%)
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteVial(vial.id)
+                      }}
+                      className="p-1 text-red-400 transition-colors hover:text-red-500"
+                      aria-label="Delete vial"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-700">
+                    <div
+                      className="h-2 rounded-full bg-emerald-500 transition-all"
+                      style={{ width: `${percentLeft}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="py-6 text-center text-zinc-400">
+            No vials tracked yet. Add one above.
+          </div>
+        )}
+      </div>
+
       <div className="mb-8 rounded-3xl border border-emerald-500/30 bg-zinc-800 p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -529,45 +699,17 @@ export function DoseCalculator({
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl bg-zinc-900 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-xs text-zinc-400">Vials on hand</div>
-              <div className="mt-1 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setVialsUsed((v) => Math.max(1, v - 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-300 transition-colors hover:bg-zinc-800"
-                  aria-label="Decrease vials"
-                >
-                  −
-                </button>
-                <span className="min-w-[2ch] text-center text-xl font-semibold tabular-nums text-white">
-                  {vialsUsed}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setVialsUsed((v) => v + 1)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-300 transition-colors hover:bg-zinc-800"
-                  aria-label="Increase vials"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            {calculations.dosesRemaining > 0 && (
-              <div className="text-sm text-emerald-400">
-                ≈ {calculations.dosesRemaining} doses left per vial
-                {vialsUsed > 1 && (
-                  <span className="block text-zinc-400">
-                    ~{calculations.dosesRemaining * vialsUsed} total across {vialsUsed}{' '}
-                    vials
-                  </span>
-                )}
-              </div>
+        {calculations.dosesRemaining > 0 && (
+          <p className="mt-4 text-center text-sm text-emerald-400">
+            ≈ {calculations.dosesRemaining} doses left
+            {activeVial ? ' in active vial' : ' in this vial'}
+            {peptideVials.length > 1 && (
+              <span className="block text-zinc-400">
+                {peptideVials.length} vials tracked for {selectedPeptide?.name}
+              </span>
             )}
-          </div>
-        </div>
+          </p>
+        )}
       </div>
 
       <div className="mb-8">
