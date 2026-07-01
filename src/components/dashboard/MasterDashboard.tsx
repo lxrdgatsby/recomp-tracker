@@ -1,7 +1,8 @@
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
-import { DoseCalculator, type DoseLog } from '../DoseCalculator'
+import { useTrackerStore } from '../../hooks/useTrackerStore'
+import { DoseCalculator } from '../DoseCalculator'
 import { InjectionSiteMap } from '../peptides/InjectionSiteMap'
 import { AdvancedAnalytics } from '../progress/AdvancedAnalytics'
 import { ProgressCorrelation } from '../progress/ProgressCorrelation'
@@ -19,16 +20,10 @@ import {
 interface MasterDashboardProps {
   state: TrackerState
   onLogWeight: (date: string, weight: number) => void
-  onToggleInjection?: (date: string, peptideId: string) => void
-  addInjectionLog?: (log: DoseLog) => void | Promise<void>
 }
 
-export function MasterDashboard({
-  state,
-  onLogWeight,
-  onToggleInjection,
-  addInjectionLog,
-}: MasterDashboardProps) {
+export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
+  const addInjectionLog = useTrackerStore((store) => store.addInjectionLog)
   const [plan, setPlan] = useState<Generated90DayPlan | null>(null)
   const [checkInVersion, setCheckInVersion] = useState(0)
 
@@ -87,7 +82,10 @@ export function MasterDashboard({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <DoseCalculator
             peptides={state.peptides}
-            onLogDose={addInjectionLog}
+            onLogDose={async (log) => {
+              await addInjectionLog({ ...log })
+              alert(`✅ Successfully logged dose for ${log.peptideName}`)
+            }}
           />
           <InjectionSiteMap />
         </div>

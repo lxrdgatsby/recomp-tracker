@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo } from 'react'
+import type { DoseLog } from '../components/DoseCalculator'
 import type {
   InjectionLog,
   Peptide,
@@ -6,90 +7,135 @@ import type {
   TrackerState,
   WorkoutCompletion,
 } from '../types'
-import type { DoseLog } from '../components/DoseCalculator'
 import { addInjectionLogToState } from '../utils/injectionLogs'
-import { exportState, loadState, saveState } from '../utils/storage'
+import { exportState } from '../utils/storage'
+import { usePersistTrackerState } from './usePersistTrackerState'
 
-export function useTrackerStore() {
-  const [state, setState] = useState<TrackerState>(loadState)
+export interface TrackerStoreApi {
+  state: TrackerState
+  updateProfile: (profile: Partial<Profile>) => Promise<void>
+  setPeptides: (peptides: Peptide[]) => Promise<void>
+  saveProfile: (profile: Profile, peptides: Peptide[]) => Promise<void>
+  logWeight: (date: string, weight: number) => Promise<void>
+  addInjectionLog: (log: DoseLog) => Promise<void>
+  toggleInjection: (date: string, peptideId: string) => Promise<void>
+  toggleWorkout: (date: string, week: number, dayIndex: number) => Promise<void>
+  exportData: () => void
+}
 
-  useEffect(() => {
-    saveState(state)
-  }, [state])
+function useTrackerStoreApi(): TrackerStoreApi {
+  const { trackerState, persistState } = usePersistTrackerState()
 
-  const updateProfile = useCallback((profile: Partial<Profile>) => {
-    setState((s) => ({ ...s, profile: { ...s.profile, ...profile } }))
-  }, [])
+  const updateProfile = useCallback(
+    async (profile: Partial<Profile>) => {
+      await persistState({
+        ...trackerState,
+        profile: { ...trackerState.profile, ...profile },
+      })
+    },
+    [trackerState, persistState]
+  )
 
-  const setPeptides = useCallback((peptides: Peptide[]) => {
-    setState((s) => ({ ...s, peptides }))
-  }, [])
+  const setPeptides = useCallback(
+    async (peptides: Peptide[]) => {
+      await persistState({ ...trackerState, peptides })
+    },
+    [trackerState, persistState]
+  )
 
-  const saveProfile = useCallback((profile: Profile, peptides: Peptide[]) => {
-    setState((s) => ({ ...s, profile, peptides }))
-  }, [])
+  const saveProfile = useCallback(
+    async (profile: Profile, peptides: Peptide[]) => {
+      await persistState({ ...trackerState, profile, peptides })
+    },
+    [trackerState, persistState]
+  )
 
-  const logWeight = useCallback((date: string, weight: number) => {
-    setState((s) => {
-      const existing = s.weightHistory.filter((e) => e.date !== date)
+  const logWeight = useCallback(
+    async (date: string, weight: number) => {
+      const existing = trackerState.weightHistory.filter((e) => e.date !== date)
       const weightHistory = [...existing, { date, weight }].sort((a, b) =>
         a.date.localeCompare(b.date)
       )
-      return {
-        ...s,
+      await persistState({
+        ...trackerState,
         weightHistory,
-        profile: { ...s.profile, currentWeight: weight },
-      }
-    })
-  }, [])
+        profile: { ...trackerState.profile, currentWeight: weight },
+      })
+    },
+    [trackerState, persistState]
+  )
 
-  const addInjectionLog = useCallback((log: DoseLog) => {
-    setState((s) => addInjectionLogToState(s, log))
-  }, [])
+  const addInjectionLog = useCallback(
+    async (log: DoseLog) => {
+      await persistState(addInjectionLogToState(trackerState, log))
+    },
+    [trackerState, persistState]
+  )
 
-  const toggleInjection = useCallback((date: string, peptideId: string) => {
-    setState((s) => {
-      const exists = s.injectionLogs.some(
+  const toggleInjection = useCallback(
+    async (date: string, peptideId: string) => {
+      const exists = trackerState.injectionLogs.some(
         (l) => l.date === date && l.peptideId === peptideId
       )
       const injectionLogs: InjectionLog[] = exists
-        ? s.injectionLogs.filter(
+        ? trackerState.injectionLogs.filter(
             (l) => !(l.date === date && l.peptideId === peptideId)
           )
-        : [...s.injectionLogs, { date, peptideId }]
-      return { ...s, injectionLogs }
-    })
-  }, [])
-
-  const toggleWorkout = useCallback(
-    (date: string, week: number, dayIndex: number) => {
-      setState((s) => {
-        const exists = s.workoutCompletions.some(
-          (c) => c.date === date && c.week === week && c.dayIndex === dayIndex
-        )
-        const workoutCompletions: WorkoutCompletion[] = exists
-          ? s.workoutCompletions.filter(
-              (c) =>
-                !(c.date === date && c.week === week && c.dayIndex === dayIndex)
-            )
-          : [...s.workoutCompletions, { date, week, dayIndex }]
-        return { ...s, workoutCompletions }
-      })
+        : [...trackerState.injectionLogs, { date, peptideId }]
+      await persistState({ ...trackerState, injectionLogs })
     },
-    []
+    [trackerState, persistState]
   )
 
-  const exportData = useCallback(() => exportState(state), [state])
+  const toggleWorkout = useCallback(
+    async (date: string, week: number, dayIndex: number) => {
+      const exists = trackerState.workoutCompletions.some(
+        (c) => c.date === date && c.week === week && c.dayIndex === dayIndex
+      )
+      const workoutCompletions: WorkoutCompletion[] = exists
+        ? trackerState.workoutCompletions.filter(
+            (c) =>
+              !(c.date === date && c.week === week && c.dayIndex === dayIndex)
+          )
+        : [...trackerState.workoutCompletions, { date, week, dayIndex }]
+      await persistState({ ...trackerState, workoutCompletions })
+    },
+    [trackerState, persistState]
+  )
 
-  return {
-    state,
-    updateProfile,
-    setPeptides,
-    saveProfile,
-    logWeight,
-    addInjectionLog,
-    toggleInjection,
-    toggleWorkout,
-    exportData,
-  }
+  const exportData = useCallback(() => exportState(trackerState), [trackerState])
+
+  return useMemo(
+    () => ({
+      state: trackerState,
+      updateProfile,
+      setPeptides,
+      saveProfile,
+      logWeight,
+      addInjectionLog,
+      toggleInjection,
+      toggleWorkout,
+      exportData,
+    }),
+    [
+      trackerState,
+      updateProfile,
+      setPeptides,
+      saveProfile,
+      logWeight,
+      addInjectionLog,
+      toggleInjection,
+      toggleWorkout,
+      exportData,
+    ]
+  )
+}
+
+export function useTrackerStore(): TrackerStoreApi
+export function useTrackerStore<T>(selector: (store: TrackerStoreApi) => T): T
+export function useTrackerStore<T>(
+  selector?: (store: TrackerStoreApi) => T
+): TrackerStoreApi | T {
+  const api = useTrackerStoreApi()
+  return selector ? selector(api) : api
 }

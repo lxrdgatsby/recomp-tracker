@@ -12,6 +12,7 @@ import type { PeptideSelection } from '../constants/peptideCatalog'
 import type { Peptide, Profile, TrackerState, ViewId } from '../types'
 import { requestNotificationPermission } from '../utils/notifications'
 import type { DoseLog } from '../components/DoseCalculator'
+import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
 
@@ -75,6 +76,7 @@ export function useAppContext() {
 export function AppLayout() {
   const { user, userProfile, trackerState, setTrackerState, signOut, refreshProfile } =
     useAuth()
+  const { persistState } = usePersistTrackerState()
   const location = useLocation()
   const navigate = useNavigate()
   const submitOnboarding = useOnboardingSubmit()
@@ -96,26 +98,6 @@ export function AppLayout() {
   const activeView = ROUTE_MAP[location.pathname] ?? 'dashboard'
 
   const navigateTo = (view: ViewId) => navigate(VIEW_ROUTES[view])
-
-  const persistState = useCallback(
-    async (state: TrackerState) => {
-      if (user) {
-        const { error } = await saveProfileToDb(
-          user.id,
-          state.profile,
-          state.peptides,
-          state,
-          undefined,
-          userProfile?.peptideSelections ?? []
-        )
-        if (error) throw new Error(error)
-        await refreshProfile()
-        return
-      }
-      setTrackerState(state)
-    },
-    [user, userProfile?.peptideSelections, refreshProfile, setTrackerState]
-  )
 
   const saveProfileHandler = useCallback(
     async (profile: Profile, peptides: Peptide[], extras?: SaveProfileExtras) => {
