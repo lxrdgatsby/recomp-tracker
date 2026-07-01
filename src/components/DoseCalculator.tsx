@@ -745,7 +745,10 @@ export function DoseCalculator({
           </h3>
           <button
             type="button"
-            className="text-xs text-emerald-400 transition-colors hover:text-emerald-300"
+            onClick={() => {
+              alert('Opening full injection site map...')
+            }}
+            className="flex items-center gap-1 text-sm text-emerald-400 hover:underline"
           >
             View Full Map →
           </button>
