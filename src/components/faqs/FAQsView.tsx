@@ -1,6 +1,8 @@
 import { ChevronDown, HelpCircle, Sparkles } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { FAQ_QUESTIONS, getFaqGuidance } from '../../constants/chatPrompts'
+import { RECONSTITUTION_FAQ_QUESTION } from '../../constants/reconstitutionGuide'
+import { ReconstitutionGuide } from '../peptides/ReconstitutionGuide'
 import { useAuth } from '../../contexts/AuthContext'
 import { askAssistant } from '../../lib/askAssistant'
 import { buildUserContextForChat } from '../../utils/buildUserContext'
@@ -58,6 +60,8 @@ export function FAQsView() {
     }
 
     setExpanded(question)
+    if (question === RECONSTITUTION_FAQ_QUESTION) return
+
     const entry = entries[question]
     const hasAuthoritativeGuidance = Boolean(getFaqGuidance(question))
     if (
@@ -118,7 +122,11 @@ export function FAQsView() {
 
               {isOpen && (
                 <div className="mt-1 rounded-xl border border-slate-800/80 bg-navy-900/40 px-4 py-4">
-                  {isLoading && (
+                  {question === RECONSTITUTION_FAQ_QUESTION && (
+                    <ReconstitutionGuide variant="content" />
+                  )}
+
+                  {question !== RECONSTITUTION_FAQ_QUESTION && isLoading && (
                     <div className="flex items-center gap-3">
                       <Sparkles
                         size={16}
@@ -132,15 +140,18 @@ export function FAQsView() {
                     </div>
                   )}
 
-                  {entry?.state === 'error' && (
-                    <p className="text-sm text-red-400">{entry.error}</p>
-                  )}
+                  {question !== RECONSTITUTION_FAQ_QUESTION &&
+                    entry?.state === 'error' && (
+                      <p className="text-sm text-red-400">{entry.error}</p>
+                    )}
 
-                  {entry?.state === 'done' && entry.answer && (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
-                      {entry.answer}
-                    </p>
-                  )}
+                  {question !== RECONSTITUTION_FAQ_QUESTION &&
+                    entry?.state === 'done' &&
+                    entry.answer && (
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-300">
+                        {entry.answer}
+                      </p>
+                    )}
                 </div>
               )}
             </li>

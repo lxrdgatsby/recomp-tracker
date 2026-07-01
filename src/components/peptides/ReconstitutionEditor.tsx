@@ -40,7 +40,7 @@ export function ReconstitutionEditor({ state, onUpdate }: ReconstitutionEditorPr
 
   return (
     <div className="space-y-4">
-      <ReconstitutionGuide />
+      <ReconstitutionGuide variant="content" />
       <div className="space-y-3">
         {selections.map((sel) => {
           const peptide = state.peptides.find((p) => p.id === sel.catalogId)

@@ -71,7 +71,7 @@ export function PeptideSelector({
 
   return (
     <div className="space-y-4">
-      {!isOnboarding && <ReconstitutionGuide />}
+      {!isOnboarding && <ReconstitutionGuide variant="content" />}
 
       <label className="block space-y-1.5">
         <span className={`text-sm font-medium ${isOnboarding ? 'text-slate-300' : 'text-slate-300'}`}>
