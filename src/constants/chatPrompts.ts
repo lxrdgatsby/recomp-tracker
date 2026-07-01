@@ -1,3 +1,5 @@
+import { getCatalogEntry, getCatalogEntryByName } from './peptideCatalog'
+
 export const CHAT_SUGGESTIONS = [
   'What are peptides?',
   'How do peptides work?',
@@ -54,4 +56,25 @@ Step 2 MUST use this EXACT wording — do not paraphrase or substitute different
 
 export function getFaqGuidance(question: string): string | undefined {
   return FAQ_GUIDANCE[question as FaqQuestion]
+}
+
+export function getPeptideBenefitsQuestion(peptideName: string): string {
+  return `Benefits of ${peptideName}?`
+}
+
+export function getPeptideBenefitsGuidance(
+  peptideName: string,
+  catalogId?: string
+): string {
+  const entry =
+    (catalogId ? getCatalogEntry(catalogId) : undefined) ??
+    getCatalogEntryByName(peptideName)
+
+  if (!entry) {
+    return `Give a brief, educational summary (3–5 sentences) of commonly discussed benefits of ${peptideName}. Not medical advice. Do not provide dosing instructions.`
+  }
+
+  return `Give a brief, educational summary (3–5 sentences) of the benefits of ${entry.name} specifically.
+Peptide context: ${entry.tagline}. ${entry.notes}
+Explain why users choose this compound. Not medical advice. Do not provide dosing, syringe units, or stack protocols.`
 }

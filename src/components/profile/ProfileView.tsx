@@ -23,6 +23,7 @@ import { AutoResizeTextarea } from '../ui/AutoResizeTextarea'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { Input } from '../ui/Input'
+import { PeptideBenefitsAccordion } from './PeptideBenefitsAccordion'
 
 interface ProfileViewProps {
   state: TrackerState
@@ -536,15 +537,10 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
                     updatePeptide(p.id, { timing: e.target.value })
                   }
                 />
-                <div className="sm:col-span-2">
-                  <Input
-                    label="Notes"
-                    value={p.notes ?? ''}
-                    onChange={(e) =>
-                      updatePeptide(p.id, { notes: e.target.value })
-                    }
-                  />
-                </div>
+                <PeptideBenefitsAccordion
+                  peptideName={p.name}
+                  catalogId={catalogEntry?.id}
+                />
               </div>
             </div>
             )
