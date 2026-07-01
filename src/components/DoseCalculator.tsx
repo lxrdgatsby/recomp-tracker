@@ -10,6 +10,7 @@ import {
   Package,
   Plus,
   Syringe,
+  Target,
   Trash2,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
@@ -22,6 +23,7 @@ import {
 } from '../constants/peptideCatalog'
 import type { FamiliarityLevel } from '../types/auth'
 import type { BacWaterUnits, Peptide, TitrationWeek } from '../types'
+import { InjectionSiteMap } from './peptides/InjectionSiteMap'
 import { buildPeptideWithProtocol } from '../utils/recompProtocol'
 
 const VIAL_OPTIONS = [5, 10, 15, 30] as const
@@ -734,6 +736,27 @@ export function DoseCalculator({
           </div>
         </div>
       )}
+
+      <div className="mb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <Target className="h-5 w-5 text-emerald-400" />
+            Injection Site Rotation
+          </h3>
+          <button
+            type="button"
+            className="text-xs text-emerald-400 transition-colors hover:text-emerald-300"
+          >
+            View Full Map →
+          </button>
+        </div>
+
+        <InjectionSiteMap
+          embedded
+          selectedPeptide={selectedPeptide}
+          onSiteSelect={(site) => console.log('Selected site:', site)}
+        />
+      </div>
 
       <div className="mb-8 rounded-3xl border border-emerald-500/30 bg-zinc-800 p-6">
         <div className="mb-4 flex items-center justify-between">

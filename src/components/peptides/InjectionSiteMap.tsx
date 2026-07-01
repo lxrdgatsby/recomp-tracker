@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { Peptide } from '../../types'
 
 const SITES = [
   { id: 'abdomen-left', label: 'Abdomen Left', side: 'Left' },
@@ -11,7 +12,17 @@ const SITES = [
 
 const STORAGE_KEY = 'injectionSites'
 
-export function InjectionSiteMap() {
+interface InjectionSiteMapProps {
+  selectedPeptide?: Peptide
+  onSiteSelect?: (site: string) => void
+  embedded?: boolean
+}
+
+export function InjectionSiteMap({
+  selectedPeptide,
+  onSiteSelect,
+  embedded = false,
+}: InjectionSiteMapProps) {
   const [usedSites, setUsedSites] = useState<string[]>([])
 
   useEffect(() => {
@@ -28,18 +39,37 @@ export function InjectionSiteMap() {
   }, [])
 
   const toggleSite = (id: string) => {
-    const updated = usedSites.includes(id)
+    const isUsed = usedSites.includes(id)
+    const updated = isUsed
       ? usedSites.filter((s) => s !== id)
       : [...usedSites, id]
 
     setUsedSites(updated)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    onSiteSelect?.(id)
   }
 
+  const containerClass = embedded
+    ? 'rounded-2xl border border-zinc-700 bg-zinc-900 p-4'
+    : 'rounded-3xl border border-white/10 bg-white/5 p-6'
+
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-      <h3 className="mb-2 font-semibold">Injection Site Rotation</h3>
-      <p className="mb-4 text-xs text-slate-400">Tap sites you used this week</p>
+    <div className={containerClass}>
+      {!embedded && (
+        <>
+          <h3 className="mb-2 font-semibold">Injection Site Rotation</h3>
+          <p className="mb-4 text-xs text-slate-400">
+            Tap sites you used this week
+            {selectedPeptide ? ` for ${selectedPeptide.name}` : ''}
+          </p>
+        </>
+      )}
+      {embedded && (
+        <p className="mb-3 text-xs text-zinc-400">
+          Tap sites you used this week
+          {selectedPeptide ? ` for ${selectedPeptide.name}` : ''}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {SITES.map((site) => {
