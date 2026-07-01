@@ -4,7 +4,7 @@ import { FAQsView } from '../components/faqs/FAQsView'
 import { ProfileView } from '../components/profile/ProfileView'
 import { CompanyDashboard } from '../components/company/CompanyDashboard'
 import { SettingsPage } from '../components/settings/SettingsPage'
-import { PeptidesView } from '../components/peptides/PeptidesView'
+import PeptidesPage from '../components/PeptidesPage'
 import { PlanView } from '../components/plan/PlanView'
 import { WorkoutsView } from '../components/workouts/WorkoutsView'
 import { ProgressView } from '../components/progress/ProgressView'
@@ -45,14 +45,7 @@ export function CompanyRoute() {
 }
 
 export function PeptidesRoute() {
-  const { state, toggleInjection, updateReconstitution } = useAppContext()
-  return (
-    <PeptidesView
-      state={state}
-      onToggleInjection={toggleInjection}
-      onUpdateReconstitution={updateReconstitution}
-    />
-  )
+  return <PeptidesPage />
 }
 
 export function PlanRoute() {

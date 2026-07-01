@@ -745,9 +745,8 @@ export function DoseCalculator({
             Injection Site Rotation
           </h3>
           <button
-            type="button"
             onClick={() => setShowMapModal(true)}
-            className="flex items-center gap-1 text-sm text-emerald-400 hover:underline"
+            className="text-emerald-400 hover:underline text-sm flex items-center gap-1"
           >
             View Full Map →
           </button>
@@ -866,25 +865,18 @@ export function DoseCalculator({
       </p>
 
       {showMapModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-3xl bg-zinc-900">
-            <div className="flex items-center justify-between border-b border-zinc-700 p-4">
-              <h3 className="font-semibold">Injection Site Rotation</h3>
-              <button
-                type="button"
-                onClick={() => setShowMapModal(false)}
-                className="text-zinc-400 hover:text-white"
-              >
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-zinc-700 flex justify-between">
+              <h3 className="font-semibold">Injection Site Rotation Map</h3>
+              <button onClick={() => setShowMapModal(false)} className="text-zinc-400">
                 Close
               </button>
             </div>
-
-            <div className="overflow-auto p-4" style={{ maxHeight: '70vh' }}>
+            <div className="flex-1 overflow-auto p-4">
               <InjectionSiteMap
                 selectedPeptide={selectedPeptide}
-                onSiteSelect={(site) => {
-                  console.log('Selected site:', site)
-                }}
+                onSiteSelect={(site) => console.log('Selected:', site)}
               />
             </div>
           </div>
