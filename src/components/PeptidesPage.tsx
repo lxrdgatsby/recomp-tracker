@@ -7,6 +7,7 @@ import type { Peptide, TitrationWeek } from '../types'
 import { computeAdherence } from '../utils/adherence'
 import { getTitrationForDay } from '../utils/recompProtocol'
 import { DoseCalculator } from './peptides/DoseCalculator'
+import { ReconstitutionGuide } from './peptides/ReconstitutionGuide'
 
 function getNextTitrationStep(
   peptide: Peptide,
@@ -94,6 +95,10 @@ export default function PeptidesPage() {
       <div className="p-6">
         <h1 className="text-3xl font-bold">Peptides</h1>
         <p className="text-zinc-400">Track • Calculate • Progress</p>
+      </div>
+
+      <div className="mb-8 px-6">
+        <ReconstitutionGuide variant="peptides" />
       </div>
 
       <div className="px-6 pb-8">
