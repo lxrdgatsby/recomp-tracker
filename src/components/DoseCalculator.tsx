@@ -829,10 +829,10 @@ export function DoseCalculator({
         <button
           type="button"
           onClick={exportToPDF}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-700 py-4 font-medium transition-colors hover:bg-zinc-800"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-500/30 py-4 font-medium transition-all hover:bg-emerald-950"
         >
           <FileText size={18} />
-          Export PDF Report
+          Export Professional PDF Report
         </button>
       </div>
 
