@@ -610,62 +610,6 @@ export function DoseCalculator({
         </div>
       </div>
 
-      {titrationSteps.length > 0 && currentStep && (
-        <div className="mb-6 rounded-2xl border border-amber-500/30 bg-zinc-800 p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-400" />
-              <span className="font-medium text-amber-400">Titration Schedule</span>
-            </div>
-            <span className="text-xs text-amber-300">{currentStep.weeks}</span>
-          </div>
-
-          <p className="mb-3 text-sm text-zinc-300">
-            Current recommended:{' '}
-            <strong className="text-white">{currentStep.doseLabel}</strong>
-            {currentStep.notes ? ` (${currentStep.notes})` : ''}
-            {currentStep.syringeUnits > 0 && (
-              <span className="text-zinc-400"> · {currentStep.syringeUnits} units</span>
-            )}
-          </p>
-
-          <div className="mb-3 h-2 overflow-hidden rounded-full bg-zinc-700">
-            <div
-              className="h-2 rounded-full bg-amber-500 transition-all"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              disabled={currentTitrationWeek === 0}
-              onClick={() =>
-                setCurrentTitrationWeek((w) => Math.max(0, w - 1))
-              }
-              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <span className="text-xs text-zinc-400">
-              Step {currentTitrationWeek + 1} of {titrationSteps.length} ({progressPercent}%)
-            </span>
-            <button
-              type="button"
-              disabled={currentTitrationWeek >= titrationSteps.length - 1}
-              onClick={() =>
-                setCurrentTitrationWeek((w) =>
-                  Math.min(titrationSteps.length - 1, w + 1)
-                )
-              }
-              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="mb-8">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -737,6 +681,57 @@ export function DoseCalculator({
           </div>
         )}
       </div>
+
+      {titrationSteps.length > 0 && currentStep && (
+        <div className="mb-8 rounded-3xl border border-amber-500/20 bg-zinc-800 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-amber-400" />
+            <h3 className="text-lg font-semibold">Titration Schedule</h3>
+          </div>
+
+          <div className="mb-4">
+            <div className="mb-1 flex justify-between text-sm">
+              <span className="text-zinc-300">Progress</span>
+              <span className="text-emerald-400">{progressPercent}%</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-zinc-700">
+              <div
+                className="h-3 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="mb-4 rounded-2xl bg-zinc-900 p-4">
+            <div className="mb-1 text-xs text-amber-400">CURRENT STEP</div>
+            <div className="text-2xl font-bold text-white">{currentStep.doseLabel}</div>
+            {currentStep.notes && (
+              <div className="mt-1 text-sm text-zinc-400">{currentStep.notes}</div>
+            )}
+            <div className="mt-2 text-sm text-zinc-300">
+              Recommended:{' '}
+              <span className="text-emerald-400">{currentStep.syringeUnits} units</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {titrationSteps.map((step, index) => (
+              <button
+                key={`${step.weeks}-${index}`}
+                type="button"
+                onClick={() => setCurrentTitrationWeek(index)}
+                className={`whitespace-nowrap rounded-2xl px-4 py-2 text-sm transition-all ${
+                  currentTitrationWeek === index
+                    ? 'bg-amber-500 font-medium text-black'
+                    : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                }`}
+              >
+                {step.weeks}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mb-8 rounded-3xl border border-emerald-500/30 bg-zinc-800 p-6">
         <div className="mb-4 flex items-center justify-between">
