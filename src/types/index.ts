@@ -60,6 +60,9 @@ export interface WeightEntry {
 export interface InjectionLog {
   date: string
   peptideId: string
+  peptideName?: string
+  doseMg?: number
+  units?: number
 }
 
 export interface WorkoutCompletion {

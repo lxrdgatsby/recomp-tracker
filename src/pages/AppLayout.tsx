@@ -11,6 +11,8 @@ import { saveProfileToDb, saveReconstitutionPlan } from '../lib/profileService'
 import type { PeptideSelection } from '../constants/peptideCatalog'
 import type { Peptide, Profile, TrackerState, ViewId } from '../types'
 import { requestNotificationPermission } from '../utils/notifications'
+import type { DoseLog } from '../components/DoseCalculator'
+import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
 
 const ROUTE_MAP: Record<string, ViewId> = {
@@ -58,6 +60,7 @@ export interface AppContext {
   ) => Promise<void>
   logWeight: (date: string, weight: number) => Promise<void>
   toggleInjection: (date: string, peptideId: string) => Promise<void>
+  addInjectionLog: (log: DoseLog) => Promise<void>
   toggleWorkout: (date: string, week: number, dayIndex: number) => Promise<void>
   updateReconstitution: (
     state: TrackerState,
@@ -174,6 +177,9 @@ export function AppLayout() {
           )
         : [...trackerState.injectionLogs, { date, peptideId }]
       await persistState({ ...trackerState, injectionLogs })
+    },
+    addInjectionLog: async (log) => {
+      await persistState(addInjectionLogToState(trackerState, log))
     },
     updateReconstitution: updateReconstitutionHandler,
     toggleWorkout: async (date, week, dayIndex) => {

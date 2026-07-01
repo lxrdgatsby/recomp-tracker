@@ -21,6 +21,7 @@ import {
   isInjectionDone,
 } from '../../utils/peptideSchedule'
 import { formatSyringeUnits, getTitrationForDay } from '../../utils/recompProtocol'
+import type { DoseLog } from '../DoseCalculator'
 import { DoseCalculator } from './DoseCalculator'
 import { InjectionSiteMap } from './InjectionSiteMap'
 import { ReconstitutionGuide } from './ReconstitutionGuide'
@@ -28,6 +29,7 @@ import { ReconstitutionGuide } from './ReconstitutionGuide'
 interface PeptidesViewProps {
   state: TrackerState
   onToggleInjection: (date: string, peptideId: string) => void
+  addInjectionLog: (log: DoseLog) => void | Promise<void>
   onUpdateReconstitution: (
     state: TrackerState,
     selections: PeptideSelection[]
@@ -84,6 +86,7 @@ function buildStackCards(state: TrackerState, today: string): StackCard[] {
 export function PeptidesView({
   state,
   onToggleInjection,
+  addInjectionLog,
   onUpdateReconstitution,
 }: PeptidesViewProps) {
   const { userProfile, setTrackerState } = useAuth()
@@ -429,7 +432,13 @@ export function PeptidesView({
             <DoseCalculator
               key={calculatorPeptide?.id ?? 'default'}
               peptides={peptides}
-              onLogDose={({ peptideId }) => onToggleInjection(today, peptideId)}
+              onLogDose={async (log) => {
+                await addInjectionLog(log)
+                setAddSuccess(
+                  `Logged ${log.doseMg}mg (${log.units} units) of ${log.peptideName}`
+                )
+                setTimeout(() => setAddSuccess(null), 3000)
+              }}
               {...calculatorDefaults}
             />
           </div>

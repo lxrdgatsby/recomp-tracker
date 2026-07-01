@@ -6,6 +6,8 @@ import type {
   TrackerState,
   WorkoutCompletion,
 } from '../types'
+import type { DoseLog } from '../components/DoseCalculator'
+import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState, loadState, saveState } from '../utils/storage'
 
 export function useTrackerStore() {
@@ -39,6 +41,10 @@ export function useTrackerStore() {
         profile: { ...s.profile, currentWeight: weight },
       }
     })
+  }, [])
+
+  const addInjectionLog = useCallback((log: DoseLog) => {
+    setState((s) => addInjectionLogToState(s, log))
   }, [])
 
   const toggleInjection = useCallback((date: string, peptideId: string) => {
@@ -81,6 +87,7 @@ export function useTrackerStore() {
     setPeptides,
     saveProfile,
     logWeight,
+    addInjectionLog,
     toggleInjection,
     toggleWorkout,
     exportData,

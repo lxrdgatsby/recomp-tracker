@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
-import { DoseCalculator } from '../DoseCalculator'
+import { DoseCalculator, type DoseLog } from '../DoseCalculator'
 import { InjectionSiteMap } from '../peptides/InjectionSiteMap'
 import { AdvancedAnalytics } from '../progress/AdvancedAnalytics'
 import { ProgressCorrelation } from '../progress/ProgressCorrelation'
@@ -20,12 +20,14 @@ interface MasterDashboardProps {
   state: TrackerState
   onLogWeight: (date: string, weight: number) => void
   onToggleInjection?: (date: string, peptideId: string) => void
+  addInjectionLog?: (log: DoseLog) => void | Promise<void>
 }
 
 export function MasterDashboard({
   state,
   onLogWeight,
   onToggleInjection,
+  addInjectionLog,
 }: MasterDashboardProps) {
   const [plan, setPlan] = useState<Generated90DayPlan | null>(null)
   const [checkInVersion, setCheckInVersion] = useState(0)
@@ -85,11 +87,7 @@ export function MasterDashboard({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <DoseCalculator
             peptides={state.peptides}
-            onLogDose={
-              onToggleInjection
-                ? ({ peptideId }) => onToggleInjection(today, peptideId)
-                : undefined
-            }
+            onLogDose={addInjectionLog}
           />
           <InjectionSiteMap />
         </div>
