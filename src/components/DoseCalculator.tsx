@@ -29,6 +29,7 @@ const SELECT_CLASS =
 
 export interface DoseLog {
   peptideId: string
+  peptideName: string
   doseMg: number
   units: number
   date: string
@@ -251,12 +252,23 @@ export function DoseCalculator({
 
   const handleLogDose = () => {
     if (!selectedPeptide) return
-    onLogDose?.({
+
+    const logData: DoseLog = {
       peptideId: selectedPeptide.id,
+      peptideName: selectedPeptide.name,
       doseMg: targetDoseMg,
       units: calculations.syringeUnits,
       date: new Date().toISOString(),
-    })
+    }
+
+    if (onLogDose) {
+      onLogDose(logData)
+    } else {
+      console.log('Dose logged:', logData)
+      alert(
+        `✅ Logged ${targetDoseMg}mg (${calculations.syringeUnits} units) of ${selectedPeptide.name}`
+      )
+    }
   }
 
   const reconstitutionSteps = selectedPeptide?.protocol?.reconstitutionSteps ?? [
