@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
-import { BAC_WATER_OPTIONS } from '../../constants/peptideCatalog'
+import {
+  BAC_WATER_OPTIONS,
+  defaultCalculatorTargetDoseMg,
+  recommendedBacWaterForVialMg,
+} from '../../constants/peptideCatalog'
+import type { FamiliarityLevel } from '../../types/auth'
 import type { BacWaterUnits } from '../../types'
+import { buildPeptideWithProtocol } from '../../utils/recompProtocol'
 
 const INPUT_CLASS =
   'mt-1 w-full rounded-2xl border border-white/20 bg-black/40 p-3 text-lg text-white focus:border-emerald-500/50 focus:outline-none'
@@ -16,6 +22,8 @@ interface DoseCalculatorProps {
   initialVialMg?: number
   initialBacWaterUnits?: BacWaterUnits
   initialTargetDoseMg?: number
+  peptideCatalogId?: string
+  familiarity?: FamiliarityLevel
 }
 
 function normalizeVialMg(value: number): (typeof VIAL_OPTIONS)[number] {
@@ -32,10 +40,34 @@ function normalizeBacUnits(value: number): BacWaterUnits {
   return 200
 }
 
+function targetDoseForVial(
+  vialMg: number,
+  bacWaterUnits: BacWaterUnits,
+  peptideCatalogId?: string,
+  familiarity?: FamiliarityLevel
+): number {
+  if (peptideCatalogId && familiarity) {
+    const built = buildPeptideWithProtocol(
+      {
+        catalogId: peptideCatalogId,
+        dose: `${vialMg}mg`,
+        status: 'using',
+        bacWaterUnits,
+        reconstituted: false,
+      },
+      familiarity
+    )
+    if (built?.protocol) return built.protocol.startingDoseMg
+  }
+  return defaultCalculatorTargetDoseMg(vialMg)
+}
+
 export function DoseCalculator({
   initialVialMg = 10,
   initialBacWaterUnits = 200,
   initialTargetDoseMg = 1,
+  peptideCatalogId,
+  familiarity = 'beginner',
 }: DoseCalculatorProps) {
   const [vialMg, setVialMg] = useState(() => normalizeVialMg(initialVialMg))
   const [bacWaterUnits, setBacWaterUnits] = useState<BacWaterUnits>(() =>
@@ -43,6 +75,15 @@ export function DoseCalculator({
   )
   const [targetDoseMg, setTargetDoseMg] = useState(initialTargetDoseMg)
   const [ready, setReady] = useState(false)
+
+  const applyVialSelection = (nextVialMg: (typeof VIAL_OPTIONS)[number]) => {
+    const nextBac = recommendedBacWaterForVialMg(nextVialMg)
+    setVialMg(nextVialMg)
+    setBacWaterUnits(nextBac)
+    setTargetDoseMg(
+      targetDoseForVial(nextVialMg, nextBac, peptideCatalogId, familiarity)
+    )
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -55,22 +96,32 @@ export function DoseCalculator({
           targetDoseMg?: number
         }
         if (typeof data.vialMg === 'number') {
-          setVialMg(normalizeVialMg(data.vialMg))
-        }
-        if (typeof data.bacWaterUnits === 'number') {
-          setBacWaterUnits(normalizeBacUnits(data.bacWaterUnits))
-        } else if (typeof data.bacWaterMl === 'number') {
-          setBacWaterUnits(normalizeBacUnits(Math.round(data.bacWaterMl * 100)))
-        }
-        if (typeof data.targetDoseMg === 'number') {
-          setTargetDoseMg(data.targetDoseMg)
+          const normalized = normalizeVialMg(data.vialMg)
+          const bac =
+            typeof data.bacWaterUnits === 'number'
+              ? normalizeBacUnits(data.bacWaterUnits)
+              : typeof data.bacWaterMl === 'number'
+                ? normalizeBacUnits(Math.round(data.bacWaterMl * 100))
+                : recommendedBacWaterForVialMg(normalized)
+          setVialMg(normalized)
+          setBacWaterUnits(bac)
+          setTargetDoseMg(
+            typeof data.targetDoseMg === 'number'
+              ? data.targetDoseMg
+              : targetDoseForVial(
+                  normalized,
+                  bac,
+                  peptideCatalogId,
+                  familiarity
+                )
+          )
         }
       } catch {
         // ignore invalid storage
       }
     }
     setReady(true)
-  }, [])
+  }, [peptideCatalogId, familiarity])
 
   useEffect(() => {
     if (!ready) return
@@ -95,7 +146,11 @@ export function DoseCalculator({
           <label className="text-xs text-slate-400">Vial Size</label>
           <select
             value={vialMg}
-            onChange={(e) => setVialMg(Number(e.target.value) as typeof vialMg)}
+            onChange={(e) =>
+              applyVialSelection(
+                Number(e.target.value) as (typeof VIAL_OPTIONS)[number]
+              )
+            }
             className={SELECT_CLASS}
           >
             {VIAL_OPTIONS.map((size) => (

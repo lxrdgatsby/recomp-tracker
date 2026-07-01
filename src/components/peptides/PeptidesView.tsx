@@ -237,8 +237,10 @@ export function PeptidesView({
       initialVialMg: protocol.vialMg,
       initialBacWaterUnits: protocol.bacWaterUnits,
       initialTargetDoseMg: protocol.startingDoseMg,
+      peptideCatalogId: calculatorPeptide?.id,
+      familiarity: userProfile?.familiarity ?? 'beginner',
     }
-  }, [calculatorPeptide])
+  }, [calculatorPeptide, userProfile?.familiarity])
 
   return (
     <div className="pb-8 text-white">

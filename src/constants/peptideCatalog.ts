@@ -13,6 +13,18 @@ export function recommendedBacWaterForVial(dose: string): BacWaterUnits {
   return 300
 }
 
+export function recommendedBacWaterForVialMg(vialMg: number): BacWaterUnits {
+  return recommendedBacWaterForVial(`${vialMg}mg`)
+}
+
+/** Generic calculator default injection dose (mg) paired with vial size. */
+export function defaultCalculatorTargetDoseMg(vialMg: number): number {
+  if (vialMg <= 5) return 0.25
+  if (vialMg <= 10) return 0.5
+  if (vialMg <= 15) return 0.75
+  return 1
+}
+
 export type PeptideUsageStatus = 'using' | 'interested'
 
 export interface PeptideCatalogEntry {
