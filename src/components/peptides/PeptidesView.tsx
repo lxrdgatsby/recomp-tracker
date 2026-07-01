@@ -339,6 +339,42 @@ export function PeptidesView({
         )}
       </div>
 
+      <div className="mb-8">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <label className="block space-y-2">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-slate-200">
+              <Plus size={16} className="text-emerald-400" />
+              Add another peptide
+            </span>
+            <select
+              className="w-full appearance-none rounded-2xl border border-white/20 bg-black/40 px-4 py-3 text-base text-white focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
+              value={peptidePicker}
+              disabled={addingPeptide}
+              onChange={(e) => {
+                const catalogId = e.target.value
+                if (!catalogId) return
+                void addPeptideFromCatalog(catalogId)
+                setPeptidePicker('')
+              }}
+            >
+              <option value="">
+                {availableCatalogPeptides.length > 0
+                  ? 'Choose your peptides…'
+                  : 'All catalog peptides added'}
+              </option>
+              {availableCatalogPeptides.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} — {entry.tagline}
+                </option>
+              ))}
+            </select>
+            {addError && (
+              <p className="text-sm text-red-400">{addError}</p>
+            )}
+          </label>
+        </div>
+      </div>
+
       <div>
         <h2 className="mb-3 font-medium">Quick Tools</h2>
         <div className="grid grid-cols-2 gap-3">
@@ -383,42 +419,6 @@ export function PeptidesView({
             <InjectionSiteMap />
           </div>
         )}
-      </div>
-
-      <div className="mt-8">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <label className="block space-y-2">
-            <span className="flex items-center gap-1.5 text-sm font-medium text-slate-200">
-              <Plus size={16} className="text-emerald-400" />
-              Add another peptide
-            </span>
-            <select
-              className="w-full appearance-none rounded-2xl border border-white/20 bg-black/40 px-4 py-3 text-base text-white focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
-              value={peptidePicker}
-              disabled={addingPeptide}
-              onChange={(e) => {
-                const catalogId = e.target.value
-                if (!catalogId) return
-                void addPeptideFromCatalog(catalogId)
-                setPeptidePicker('')
-              }}
-            >
-              <option value="">
-                {availableCatalogPeptides.length > 0
-                  ? 'Choose your peptides…'
-                  : 'All catalog peptides added'}
-              </option>
-              {availableCatalogPeptides.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name} — {entry.tagline}
-                </option>
-              ))}
-            </select>
-            {addError && (
-              <p className="text-sm text-red-400">{addError}</p>
-            )}
-          </label>
-        </div>
       </div>
     </div>
   )
