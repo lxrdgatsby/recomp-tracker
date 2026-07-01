@@ -6,9 +6,11 @@ import {
   Clock,
   Copy,
   Droplet,
+  FileText,
   Plus,
   Syringe,
 } from 'lucide-react'
+import jsPDF from 'jspdf'
 import {
   BAC_WATER_OPTIONS,
   defaultCalculatorTargetDoseMg,
@@ -321,6 +323,56 @@ export function DoseCalculator({
     'Refrigerate and use within recommended period.',
   ]
 
+  const exportToPDF = () => {
+    if (!selectedPeptide) return
+
+    const doc = new jsPDF()
+    const date = new Date().toLocaleDateString()
+    const safeDate = date.replace(/\//g, '-')
+
+    doc.setFontSize(18)
+    doc.text(`PepTrack Protocol - ${selectedPeptide.name}`, 20, 20)
+
+    doc.setFontSize(12)
+    doc.text(`Generated: ${date}`, 20, 35)
+    doc.text(`Vial Size: ${vialMg}mg`, 20, 50)
+    doc.text(`BAC Water: ${bacWaterMl}mL`, 20, 60)
+    doc.text(
+      `Target Dose: ${targetDoseMg}mg (${calculations.syringeUnits} units)`,
+      20,
+      70
+    )
+    doc.text(`Concentration: ${calculations.concentrationLabel}`, 20, 80)
+    doc.text(`Syringe Type: U-${syringeType}`, 20, 90)
+    doc.text(`Vials on hand: ${vialsUsed}`, 20, 100)
+
+    if (currentTitration) {
+      doc.text(
+        `Titration: ${currentTitration.doseLabel}${currentTitration.notes ? ` (${currentTitration.notes})` : ''}`,
+        20,
+        110
+      )
+    }
+
+    const stepsStartY = currentTitration ? 125 : 115
+    doc.text('Reconstitution Steps:', 20, stepsStartY)
+    reconstitutionSteps.forEach((step, i) => {
+      const lines = doc.splitTextToSize(`${i + 1}. ${step}`, 170)
+      let y = stepsStartY + 15 + i * 12
+      for (const line of lines) {
+        if (y > 270) {
+          doc.addPage()
+          y = 20
+        }
+        doc.text(line, 20, y)
+        y += 8
+      }
+    })
+
+    doc.save(`${selectedPeptide.name}_Protocol_${safeDate}.pdf`)
+    alert('✅ PDF exported successfully!')
+  }
+
   return (
     <div className={`rounded-3xl bg-zinc-900 p-6 text-white ${className}`}>
       <div className="mb-6 flex items-center gap-3">
@@ -535,21 +587,31 @@ export function DoseCalculator({
         </ol>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleLogDose}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 font-semibold text-white transition-all hover:bg-emerald-500 active:scale-[0.985]"
+          >
+            <Plus className="h-5 w-5" />
+            Log This Dose
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveToProtocol}
+            className="w-full rounded-2xl border border-zinc-700 py-4 font-medium transition-colors hover:bg-zinc-800 sm:flex-1"
+          >
+            Save to My Protocol
+          </button>
+        </div>
         <button
           type="button"
-          onClick={handleLogDose}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-4 font-semibold text-white transition-all hover:bg-emerald-500 active:scale-[0.985]"
+          onClick={exportToPDF}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-700 py-4 font-medium transition-colors hover:bg-zinc-800"
         >
-          <Plus className="h-5 w-5" />
-          Log This Dose
-        </button>
-        <button
-          type="button"
-          onClick={handleSaveToProtocol}
-          className="w-full rounded-2xl border border-zinc-700 py-4 font-medium transition-colors hover:bg-zinc-800"
-        >
-          Save to My Protocol
+          <FileText size={18} />
+          Export PDF Report
         </button>
       </div>
 
