@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Calculator,
   Check,
+  Clock,
   Copy,
   Droplet,
   Plus,
@@ -128,6 +129,7 @@ export function DoseCalculator({
   const [targetDoseMg, setTargetDoseMg] = useState(initialTargetDoseMg)
   const [syringeType, setSyringeType] = useState<'30' | '50' | '100'>('100')
   const [isCopied, setIsCopied] = useState(false)
+  const [vialsUsed, setVialsUsed] = useState(1)
   const [ready, setReady] = useState(false)
 
   const selectedPeptide = useMemo(
@@ -143,6 +145,10 @@ export function DoseCalculator({
       setBacWaterMl(selectedPeptide.protocol.bacWaterMl || 2)
       setTargetDoseMg(selectedPeptide.protocol.startingDoseMg || 0.25)
     }
+  }, [selectedPeptide])
+
+  const currentTitration = useMemo(() => {
+    return selectedPeptide?.protocol?.titration?.[0] ?? null
   }, [selectedPeptide])
 
   const calculations = useMemo(() => {
@@ -193,6 +199,7 @@ export function DoseCalculator({
           bacWaterMl?: number
           targetDoseMg?: number
           syringeType?: '30' | '50' | '100'
+          vialsUsed?: number
         }
 
         if (
@@ -223,6 +230,10 @@ export function DoseCalculator({
         ) {
           setSyringeType(data.syringeType)
         }
+
+        if (typeof data.vialsUsed === 'number' && data.vialsUsed >= 1) {
+          setVialsUsed(data.vialsUsed)
+        }
       } catch {
         // ignore invalid storage
       }
@@ -241,6 +252,7 @@ export function DoseCalculator({
         bacWaterMl,
         targetDoseMg,
         syringeType,
+        vialsUsed,
       })
     )
   }, [
@@ -248,6 +260,7 @@ export function DoseCalculator({
     bacWaterMl,
     targetDoseMg,
     syringeType,
+    vialsUsed,
     selectedPeptide?.id,
     selectedPeptideId,
     ready,
@@ -407,6 +420,20 @@ export function DoseCalculator({
         </div>
       </div>
 
+      {currentTitration && (
+        <div className="mb-6 rounded-2xl border border-amber-500/30 bg-zinc-800 p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-400" />
+            <span className="font-medium text-amber-400">Titration Schedule</span>
+          </div>
+          <p className="text-sm text-zinc-300">
+            Current recommended:{' '}
+            <strong className="text-white">{currentTitration.doseLabel}</strong>
+            {currentTitration.notes ? ` (${currentTitration.notes})` : ''}
+          </p>
+        </div>
+      )}
+
       <div className="mb-8 rounded-3xl border border-emerald-500/30 bg-zinc-800 p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -450,11 +477,45 @@ export function DoseCalculator({
           </div>
         </div>
 
-        {calculations.dosesRemaining > 0 && (
-          <p className="mt-4 text-center text-sm text-emerald-400">
-            ≈ {calculations.dosesRemaining} doses left in this vial
-          </p>
-        )}
+        <div className="mt-4 rounded-2xl bg-zinc-900 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-xs text-zinc-400">Vials on hand</div>
+              <div className="mt-1 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setVialsUsed((v) => Math.max(1, v - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-300 transition-colors hover:bg-zinc-800"
+                  aria-label="Decrease vials"
+                >
+                  −
+                </button>
+                <span className="min-w-[2ch] text-center text-xl font-semibold tabular-nums text-white">
+                  {vialsUsed}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setVialsUsed((v) => v + 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-300 transition-colors hover:bg-zinc-800"
+                  aria-label="Increase vials"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            {calculations.dosesRemaining > 0 && (
+              <div className="text-sm text-emerald-400">
+                ≈ {calculations.dosesRemaining} doses left per vial
+                {vialsUsed > 1 && (
+                  <span className="block text-zinc-400">
+                    ~{calculations.dosesRemaining * vialsUsed} total across {vialsUsed}{' '}
+                    vials
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="mb-8">
