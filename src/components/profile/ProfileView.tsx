@@ -3,11 +3,8 @@ import { Link } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
-  recommendedBacWaterForVial,
-  PEPTIDE_CATALOG,
   getCatalogEntry,
   getCatalogEntryByName,
-  type PeptideCatalogEntry,
 } from '../../constants/peptideCatalog'
 import type { FamiliarityLevel, Gender } from '../../types/auth'
 import {
@@ -17,10 +14,8 @@ import {
   parseTrainingActivities,
   serializeTrainingActivities,
 } from '../../types/auth'
-import { generateId } from '../../lib/generateId'
 import type { Peptide, PeptideFrequency, Profile, TrackerState } from '../../types'
 import {
-  buildPeptideWithProtocol,
   getCurrentInjectionDose,
   rebuildPeptideForVialSize,
 } from '../../utils/recompProtocol'
@@ -46,9 +41,6 @@ interface ProfileViewProps {
   ) => void | Promise<void>
 }
 
-const PEPTIDE_SELECT_CLASS =
-  'w-full rounded-xl border border-slate-700 bg-navy-950 px-3 py-2.5 text-base text-slate-100 focus:border-teal-500/60 focus:outline-none'
-
 function getVialSizeLabel(peptide: Peptide): string {
   if (peptide.vialSize) return peptide.vialSize
   if (peptide.protocol?.vialMg) {
@@ -56,32 +48,6 @@ function getVialSizeLabel(peptide: Peptide): string {
     return mg < 1 ? `${Math.round(mg * 1000)}mcg` : `${mg}mg`
   }
   return peptide.dose
-}
-
-function peptideFromCatalog(
-  entry: PeptideCatalogEntry,
-  familiarity: FamiliarityLevel
-): Peptide {
-  const built = buildPeptideWithProtocol(
-    {
-      catalogId: entry.id,
-      dose: entry.defaultDose,
-      status: 'using',
-      bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
-      reconstituted: false,
-    },
-    familiarity
-  )
-  if (built) return { ...built, id: generateId() }
-  return {
-    id: generateId(),
-    name: entry.name,
-    dose: entry.defaultDose,
-    frequency: entry.frequency,
-    timing: entry.timing,
-    notes: entry.notes,
-    vialSize: entry.defaultDose,
-  }
 }
 
 function normalizePeptideStack(
@@ -186,8 +152,6 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   }
   const [justSaved, setJustSaved] = useState(false)
   const [saving, setLoading] = useState(false)
-  const [peptidePicker, setPeptidePicker] = useState('')
-
   const profileDirty = isDraftDirty(draftProfile, state.profile)
   const peptidesDirty = useMemo(
     () => JSON.stringify(draftPeptides) !== JSON.stringify(state.peptides),
@@ -204,21 +168,6 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
     additionalInfo !== (userProfile?.additionalInfo ?? '')
   const isDirty = profileDirty || peptidesDirty || questionnaireDirty
   const isValid = draftToProfile(draftProfile) !== null
-
-  const availableCatalogPeptides = useMemo(() => {
-    const addedNames = new Set(
-      draftPeptides.map((p) => p.name.trim().toLowerCase())
-    )
-    return PEPTIDE_CATALOG.filter(
-      (entry) => !addedNames.has(entry.name.toLowerCase())
-    )
-  }, [draftPeptides])
-
-  const addPeptideFromCatalog = (catalogId: string) => {
-    const entry = getCatalogEntry(catalogId)
-    if (!entry) return
-    setDraftPeptides((prev) => [...prev, peptideFromCatalog(entry, familiarity)])
-  }
 
   const setPeptideVialSize = (id: string, vialSize: string) => {
     setDraftPeptides((prev) =>
@@ -467,7 +416,7 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
         <div className="space-y-4">
           {draftPeptides.length === 0 && (
             <p className="text-sm text-slate-500">
-              No peptides in your stack. Add one using the dropdown below.
+              No peptides in your stack. Add peptides from the Peptides tab.
             </p>
           )}
           {draftPeptides.map((p) => {
@@ -590,32 +539,6 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
             )
           })}
 
-          <label className="block space-y-1.5 border-t border-slate-800/80 pt-4">
-            <span className="text-sm font-medium text-slate-300">
-              Add another peptide
-            </span>
-            <select
-              className={PEPTIDE_SELECT_CLASS}
-              value={peptidePicker}
-              onChange={(e) => {
-                const catalogId = e.target.value
-                if (!catalogId) return
-                addPeptideFromCatalog(catalogId)
-                setPeptidePicker('')
-              }}
-            >
-              <option value="">
-                {availableCatalogPeptides.length > 0
-                  ? 'Choose your peptides…'
-                  : 'All catalog peptides added'}
-              </option>
-              {availableCatalogPeptides.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name} — {entry.tagline}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
       </Card>
       </div>

@@ -1,11 +1,13 @@
 import { format, parseISO, differenceInDays } from 'date-fns'
 import { Plus, Syringe } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+
 import { useAuth } from '../../contexts/AuthContext'
 import {
   getCatalogEntry,
   getCatalogEntryByName,
+  PEPTIDE_CATALOG,
+  recommendedBacWaterForVial,
   type PeptideSelection,
 } from '../../constants/peptideCatalog'
 import type { Peptide, TrackerState } from '../../types'
@@ -84,6 +86,14 @@ export function PeptidesView({
   const today = format(new Date(), 'yyyy-MM-dd')
   const [showSites, setShowSites] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
+  const [peptidePicker, setPeptidePicker] = useState('')
+
+  const availableCatalogPeptides = useMemo(() => {
+    const addedNames = new Set(peptides.map((p) => p.name.trim().toLowerCase()))
+    return PEPTIDE_CATALOG.filter(
+      (entry) => !addedNames.has(entry.name.toLowerCase())
+    )
+  }, [peptides])
 
   const stackCards = useMemo(() => buildStackCards(state, today), [state, today])
 
@@ -109,6 +119,41 @@ export function PeptidesView({
     const updated = selections.map((s) =>
       s.catalogId === match.catalogId ? { ...s, reconstituted: checked } : s
     )
+
+    const { peptides: nextPeptides, recompPlan } = generateRecompPlan({
+      familiarity: userProfile.familiarity ?? 'beginner',
+      mainGoal: userProfile.mainGoal ?? '',
+      gender: userProfile.gender,
+      age: userProfile.age,
+      trainingActivities: userProfile.trainingActivities,
+      additionalInfo: userProfile.additionalInfo,
+      currentWeight: state.profile.currentWeight,
+      goalWeight: state.profile.goalWeight,
+      weeklyLossTarget: state.profile.weeklyLossTarget,
+      peptideSelections: updated,
+    })
+
+    void onUpdateReconstitution(
+      { ...state, peptides: nextPeptides, recompPlan },
+      updated
+    )
+  }
+
+  const addPeptideFromCatalog = (catalogId: string) => {
+    const entry = getCatalogEntry(catalogId)
+    if (!entry || !userProfile) return
+    if (selections.some((s) => s.catalogId === catalogId)) return
+
+    const updated = [
+      ...selections,
+      {
+        catalogId: entry.id,
+        dose: entry.defaultDose,
+        status: 'using' as const,
+        bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
+        reconstituted: false,
+      },
+    ]
 
     const { peptides: nextPeptides, recompPlan } = generateRecompPlan({
       familiarity: userProfile.familiarity ?? 'beginner',
@@ -182,27 +227,13 @@ export function PeptidesView({
       </div>
 
       <div className="mb-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-medium">Your Stack</h2>
-          <Link
-            to="/app/profile"
-            className="flex items-center gap-1.5 text-sm text-emerald-400 transition-colors hover:text-emerald-300"
-          >
-            <Plus size={16} /> Add Peptide
-          </Link>
-        </div>
+        <h2 className="mb-4 font-medium">Your Stack</h2>
 
         {stackCards.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
             <p className="text-sm text-slate-400">
-              No peptides in your stack yet.
+              No peptides in your stack yet. Add one below.
             </p>
-            <Link
-              to="/app/profile"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-400"
-            >
-              <Plus size={16} /> Add your first peptide
-            </Link>
           </div>
         ) : (
           stackCards.map(({ peptide, nextDose, frequency, doneToday, scheduledToday }) => {
@@ -337,6 +368,38 @@ export function PeptidesView({
             <InjectionSiteMap />
           </div>
         )}
+      </div>
+
+      <div className="mt-8">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <label className="block space-y-2">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-slate-200">
+              <Plus size={16} className="text-emerald-400" />
+              Add another peptide
+            </span>
+            <select
+              className="w-full appearance-none rounded-2xl border border-white/20 bg-black/40 px-4 py-3 text-base text-white focus:border-emerald-500/50 focus:outline-none"
+              value={peptidePicker}
+              onChange={(e) => {
+                const catalogId = e.target.value
+                if (!catalogId) return
+                addPeptideFromCatalog(catalogId)
+                setPeptidePicker('')
+              }}
+            >
+              <option value="">
+                {availableCatalogPeptides.length > 0
+                  ? 'Choose your peptides…'
+                  : 'All catalog peptides added'}
+              </option>
+              {availableCatalogPeptides.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name} — {entry.tagline}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
     </div>
   )
