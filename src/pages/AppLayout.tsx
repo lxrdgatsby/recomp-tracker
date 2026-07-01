@@ -39,20 +39,22 @@ const VIEW_ROUTES: Record<ViewId, string> = {
   progress: '/app/progress',
 }
 
+export type SaveProfileExtras = {
+  familiarity?: string | null
+  mainGoal?: string | null
+  interestedPeptides?: string | null
+  additionalInfo?: string | null
+  gender?: string | null
+  age?: number | null
+  trainingActivities?: string | null
+}
+
 export interface AppContext {
   state: TrackerState
   saveProfile: (
     profile: Profile,
     peptides: Peptide[],
-    extras?: {
-      familiarity?: string | null
-      mainGoal?: string | null
-      interestedPeptides?: string | null
-      additionalInfo?: string | null
-      gender?: string | null
-      age?: number | null
-      trainingActivities?: string | null
-    }
+    extras?: SaveProfileExtras
   ) => Promise<void>
   logWeight: (date: string, weight: number) => Promise<void>
   toggleInjection: (date: string, peptideId: string) => Promise<void>
@@ -94,23 +96,60 @@ export function AppLayout() {
 
   const persistState = useCallback(
     async (state: TrackerState) => {
-      setTrackerState(state)
       if (user) {
-        await saveProfileToDb(user.id, state.profile, state.peptides, state)
+        const { error } = await saveProfileToDb(
+          user.id,
+          state.profile,
+          state.peptides,
+          state,
+          undefined,
+          userProfile?.peptideSelections ?? []
+        )
+        if (error) throw new Error(error)
+        await refreshProfile()
+        return
       }
+      setTrackerState(state)
     },
-    [user, setTrackerState]
+    [user, userProfile?.peptideSelections, refreshProfile, setTrackerState]
+  )
+
+  const saveProfileHandler = useCallback(
+    async (profile: Profile, peptides: Peptide[], extras?: SaveProfileExtras) => {
+      if (user) {
+        const { error } = await saveProfileToDb(
+          user.id,
+          profile,
+          peptides,
+          { ...trackerState, profile, peptides },
+          extras,
+          userProfile?.peptideSelections ?? []
+        )
+        if (error) throw new Error(error)
+        await refreshProfile()
+        return
+      }
+      setTrackerState({ ...trackerState, profile, peptides })
+    },
+    [user, userProfile?.peptideSelections, trackerState, refreshProfile, setTrackerState]
+  )
+
+  const updateReconstitutionHandler = useCallback(
+    async (state: TrackerState, selections: PeptideSelection[]) => {
+      if (user) {
+        const { error } = await saveReconstitutionPlan(user.id, selections, state)
+        if (error) throw new Error(error)
+        await refreshProfile()
+        return
+      }
+      setTrackerState(state)
+    },
+    [user, refreshProfile, setTrackerState]
   )
 
   const contextValue: AppContext = {
     state: trackerState,
-    saveProfile: async (profile, peptides, extras) => {
-      const newState = { ...trackerState, profile, peptides }
-      setTrackerState(newState)
-      if (user) {
-        await saveProfileToDb(user.id, profile, peptides, newState, extras)
-      }
-    },
+    saveProfile: saveProfileHandler,
     logWeight: async (date, weight) => {
       const existing = trackerState.weightHistory.filter((e) => e.date !== date)
       const weightHistory = [...existing, { date, weight }].sort((a, b) =>
@@ -133,13 +172,7 @@ export function AppLayout() {
         : [...trackerState.injectionLogs, { date, peptideId }]
       await persistState({ ...trackerState, injectionLogs })
     },
-    updateReconstitution: async (state, selections) => {
-      setTrackerState(state)
-      if (user) {
-        await saveReconstitutionPlan(user.id, selections, state)
-        await refreshProfile()
-      }
-    },
+    updateReconstitution: updateReconstitutionHandler,
     toggleWorkout: async (date, week, dayIndex) => {
       const exists = trackerState.workoutCompletions.some(
         (c) => c.date === date && c.week === week && c.dayIndex === dayIndex

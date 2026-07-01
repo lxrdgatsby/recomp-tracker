@@ -87,6 +87,8 @@ export function PeptidesView({
   const [showSites, setShowSites] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
   const [peptidePicker, setPeptidePicker] = useState('')
+  const [addError, setAddError] = useState<string | null>(null)
+  const [addingPeptide, setAddingPeptide] = useState(false)
 
   const availableCatalogPeptides = useMemo(() => {
     const addedNames = new Set(peptides.map((p) => p.name.trim().toLowerCase()))
@@ -139,9 +141,12 @@ export function PeptidesView({
     )
   }
 
-  const addPeptideFromCatalog = (catalogId: string) => {
+  const addPeptideFromCatalog = async (catalogId: string) => {
     const entry = getCatalogEntry(catalogId)
-    if (!entry || !userProfile) return
+    if (!entry || !userProfile) {
+      setAddError('Sign in to add peptides to your stack.')
+      return
+    }
     if (selections.some((s) => s.catalogId === catalogId)) return
 
     const updated = [
@@ -168,10 +173,20 @@ export function PeptidesView({
       peptideSelections: updated,
     })
 
-    void onUpdateReconstitution(
-      { ...state, peptides: nextPeptides, recompPlan },
-      updated
-    )
+    setAddingPeptide(true)
+    setAddError(null)
+    try {
+      await onUpdateReconstitution(
+        { ...state, peptides: nextPeptides, recompPlan },
+        updated
+      )
+    } catch (err) {
+      setAddError(
+        err instanceof Error ? err.message : 'Could not save peptide. Try again.'
+      )
+    } finally {
+      setAddingPeptide(false)
+    }
   }
 
   const calculatorPeptide = peptides.find((p) => p.protocol)
@@ -378,12 +393,13 @@ export function PeptidesView({
               Add another peptide
             </span>
             <select
-              className="w-full appearance-none rounded-2xl border border-white/20 bg-black/40 px-4 py-3 text-base text-white focus:border-emerald-500/50 focus:outline-none"
+              className="w-full appearance-none rounded-2xl border border-white/20 bg-black/40 px-4 py-3 text-base text-white focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
               value={peptidePicker}
+              disabled={addingPeptide}
               onChange={(e) => {
                 const catalogId = e.target.value
                 if (!catalogId) return
-                addPeptideFromCatalog(catalogId)
+                void addPeptideFromCatalog(catalogId)
                 setPeptidePicker('')
               }}
             >
@@ -398,6 +414,9 @@ export function PeptidesView({
                 </option>
               ))}
             </select>
+            {addError && (
+              <p className="text-sm text-red-400">{addError}</p>
+            )}
           </label>
         </div>
       </div>

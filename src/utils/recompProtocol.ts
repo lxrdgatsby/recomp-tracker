@@ -359,6 +359,13 @@ export function getCurrentInjectionDose(
   }
 }
 
+function vialDoseFromPeptide(peptide: Peptide): string {
+  if (peptide.vialSize) return peptide.vialSize
+  if (peptide.protocol?.vialMg != null) return formatMg(peptide.protocol.vialMg)
+  const entry = getCatalogEntry(peptide.id) ?? getCatalogEntryByName(peptide.name)
+  return entry?.defaultDose ?? '10mg'
+}
+
 export function selectionsFromPeptides(peptides: Peptide[]): PeptideSelection[] {
   const selections: PeptideSelection[] = []
   for (const p of peptides) {
@@ -367,11 +374,39 @@ export function selectionsFromPeptides(peptides: Peptide[]): PeptideSelection[] 
     if (!entry) continue
     selections.push({
       catalogId: entry.id,
-      dose: p.vialSize ?? p.dose,
+      dose: vialDoseFromPeptide(p),
       status: 'using',
       bacWaterUnits: p.protocol.bacWaterUnits,
       reconstituted: p.protocol.reconstituted,
     })
   }
   return selections
+}
+
+/** Keep peptide_selections aligned with the visible stack (preserves reconstitution flags). */
+export function syncSelectionsFromPeptides(
+  peptides: Peptide[],
+  existing: PeptideSelection[] = []
+): PeptideSelection[] {
+  const existingByCatalog = new Map(
+    existing.map((selection) => [selection.catalogId, selection])
+  )
+
+  return peptides
+    .map((peptide) => {
+      if (!peptide.protocol) return null
+      const entry = getCatalogEntry(peptide.id) ?? getCatalogEntryByName(peptide.name)
+      if (!entry) return null
+
+      const previous = existingByCatalog.get(entry.id)
+      return normalizeSelection({
+        catalogId: entry.id,
+        dose: vialDoseFromPeptide(peptide),
+        status: previous?.status ?? 'using',
+        bacWaterUnits: peptide.protocol.bacWaterUnits,
+        reconstituted:
+          previous?.reconstituted ?? peptide.protocol.reconstituted ?? false,
+      })
+    })
+    .filter((selection): selection is PeptideSelection => selection !== null)
 }

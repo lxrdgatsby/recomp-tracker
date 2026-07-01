@@ -1,6 +1,6 @@
 import { Check, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   getCatalogEntry,
@@ -111,7 +111,7 @@ function clonePeptides(peptides: Peptide[]): Peptide[] {
 }
 
 export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
-  const { userProfile, refreshProfile } = useAuth()
+  const { userProfile } = useAuth()
   const initialFamiliarity = (userProfile?.familiarity ??
     'beginner') as FamiliarityLevel
   const [draftProfile, setDraftProfile] = useState(() =>
@@ -169,6 +169,13 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
   const isDirty = profileDirty || peptidesDirty || questionnaireDirty
   const isValid = draftToProfile(draftProfile) !== null
 
+  useEffect(() => {
+    if (peptidesDirty) return
+    setDraftPeptides(
+      normalizePeptideStack(clonePeptides(state.peptides), familiarity)
+    )
+  }, [state.peptides, familiarity, peptidesDirty])
+
   const setPeptideVialSize = (id: string, vialSize: string) => {
     setDraftPeptides((prev) =>
       prev.map((p) =>
@@ -196,19 +203,23 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
       if (!entry) return p
       return rebuildPeptideForVialSize(p, getVialSizeLabel(p), familiarity)
     })
-    await onSaveProfile(profile, peptidesToSave, {
-      familiarity,
-      mainGoal,
-      interestedPeptides,
-      additionalInfo,
-      gender: gender || null,
-      age: age === '' ? null : age,
-      trainingActivities: serializeTrainingActivities(selectedTraining) || null,
-    })
-    await refreshProfile()
-    setLoading(false)
-    setJustSaved(true)
-    setTimeout(() => setJustSaved(false), 2500)
+    try {
+      await onSaveProfile(profile, peptidesToSave, {
+        familiarity,
+        mainGoal,
+        interestedPeptides,
+        additionalInfo,
+        gender: gender || null,
+        age: age === '' ? null : age,
+        trainingActivities: serializeTrainingActivities(selectedTraining) || null,
+      })
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 2500)
+    } catch (err) {
+      console.error('Failed to save profile', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

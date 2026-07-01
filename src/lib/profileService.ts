@@ -7,7 +7,11 @@ import {
   formatPeptideSelections,
   type PeptideSelection,
 } from '../constants/peptideCatalog'
-import { generateRecompPlan, normalizeSelection } from '../utils/recompProtocol'
+import {
+  generateRecompPlan,
+  normalizeSelection,
+  syncSelectionsFromPeptides,
+} from '../utils/recompProtocol'
 import type { Questionnaire } from '../types/auth'
 import { formatSupabaseError } from './supabaseErrors'
 import { supabase } from './supabase'
@@ -203,6 +207,52 @@ export async function completeOnboarding(
   return { error: error ? formatSupabaseError(error.message) : null }
 }
 
+async function persistPeptideData(
+  userId: string,
+  profile: Profile,
+  trackerState: TrackerState,
+  selections: PeptideSelection[],
+  extras?: {
+    familiarity?: string | null
+    mainGoal?: string | null
+    interestedPeptides?: string | null
+    additionalInfo?: string | null
+    gender?: string | null
+    age?: number | null
+    trainingActivities?: string | null
+  }
+): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  const normalizedSelections = selections.map(normalizeSelection)
+  const interestedPeptides =
+    extras?.interestedPeptides ?? formatPeptideSelections(normalizedSelections)
+
+  const update: Record<string, unknown> = {
+    current_weight: profile.currentWeight,
+    goal_weight: profile.goalWeight,
+    height: profile.height,
+    start_date: profile.startDate,
+    weekly_loss_target: profile.weeklyLossTarget,
+    peptide_selections: normalizedSelections,
+    peptide_stack: trackerState.peptides,
+    tracker_data: trackerState,
+    interested_peptides: interestedPeptides,
+  }
+  if (extras?.familiarity !== undefined) update.familiarity = extras.familiarity
+  if (extras?.mainGoal !== undefined) update.main_goal = extras.mainGoal
+  if (extras?.additionalInfo !== undefined)
+    update.additional_info = extras.additionalInfo
+  if (extras?.gender !== undefined) update.gender = extras.gender
+  if (extras?.age !== undefined) update.age = extras.age
+  if (extras?.trainingActivities !== undefined)
+    update.training_activities = extras.trainingActivities
+
+  const { error } = await supabase.from('profiles').update(update).eq('id', userId)
+
+  return { error: error ? formatSupabaseError(error.message) : null }
+}
+
 export async function saveProfileToDb(
   userId: string,
   profile: Profile,
@@ -216,33 +266,33 @@ export async function saveProfileToDb(
     gender?: string | null
     age?: number | null
     trainingActivities?: string | null
-  }
+  },
+  existingSelections: PeptideSelection[] = []
 ): Promise<{ error: string | null }> {
-  if (!supabase) return { error: 'Supabase not configured' }
+  const familiarity = (extras?.familiarity ??
+    'beginner') as UserProfile['familiarity']
+  const selections = syncSelectionsFromPeptides(peptides, existingSelections)
+  const { recompPlan } = generateRecompPlan({
+    familiarity: familiarity ?? 'beginner',
+    mainGoal: extras?.mainGoal ?? '',
+    gender: extras?.gender ?? null,
+    age: extras?.age ?? null,
+    trainingActivities: extras?.trainingActivities ?? null,
+    additionalInfo: extras?.additionalInfo ?? null,
+    currentWeight: profile.currentWeight,
+    goalWeight: profile.goalWeight,
+    weeklyLossTarget: profile.weeklyLossTarget,
+    peptideSelections: selections,
+  })
 
-  const update: Record<string, unknown> = {
-    current_weight: profile.currentWeight,
-    goal_weight: profile.goalWeight,
-    height: profile.height,
-    start_date: profile.startDate,
-    weekly_loss_target: profile.weeklyLossTarget,
-    peptide_stack: peptides,
-    tracker_data: trackerState,
+  const nextState: TrackerState = {
+    ...trackerState,
+    profile,
+    peptides,
+    recompPlan: recompPlan ?? trackerState.recompPlan,
   }
-  if (extras?.familiarity !== undefined) update.familiarity = extras.familiarity
-  if (extras?.mainGoal !== undefined) update.main_goal = extras.mainGoal
-  if (extras?.interestedPeptides !== undefined)
-    update.interested_peptides = extras.interestedPeptides
-  if (extras?.additionalInfo !== undefined)
-    update.additional_info = extras.additionalInfo
-  if (extras?.gender !== undefined) update.gender = extras.gender
-  if (extras?.age !== undefined) update.age = extras.age
-  if (extras?.trainingActivities !== undefined)
-    update.training_activities = extras.trainingActivities
 
-  const { error } = await supabase.from('profiles').update(update).eq('id', userId)
-
-  return { error: error?.message ?? null }
+  return persistPeptideData(userId, profile, nextState, selections, extras)
 }
 
 export async function applyProfileUpdates(
@@ -300,18 +350,12 @@ export async function saveReconstitutionPlan(
   selections: PeptideSelection[],
   trackerState: TrackerState
 ): Promise<{ error: string | null }> {
-  if (!supabase) return { error: 'Supabase not configured' }
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      peptide_selections: selections.map(normalizeSelection),
-      peptide_stack: trackerState.peptides,
-      tracker_data: trackerState,
-    })
-    .eq('id', userId)
-
-  return { error: error ? formatSupabaseError(error.message) : null }
+  return persistPeptideData(
+    userId,
+    trackerState.profile,
+    trackerState,
+    selections
+  )
 }
 
 export async function isUsernameAvailable(
