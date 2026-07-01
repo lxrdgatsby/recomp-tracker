@@ -173,6 +173,7 @@ export function DoseCalculator({
   const [vials, setVials] = useState<Vial[]>([])
   const [activeVialId, setActiveVialId] = useState<string | null>(null)
   const [currentTitrationWeek, setCurrentTitrationWeek] = useState(0)
+  const [showMapModal, setShowMapModal] = useState(false)
   const [ready, setReady] = useState(false)
 
   const selectedPeptide = useMemo(
@@ -745,9 +746,7 @@ export function DoseCalculator({
           </h3>
           <button
             type="button"
-            onClick={() => {
-              alert('Opening full injection site map...')
-            }}
+            onClick={() => setShowMapModal(true)}
             className="flex items-center gap-1 text-sm text-emerald-400 hover:underline"
           >
             View Full Map →
@@ -865,6 +864,32 @@ export function DoseCalculator({
         Calculations are approximate. Always double-check with your provider. Store peptides
         properly.
       </p>
+
+      {showMapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-hidden rounded-3xl bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-zinc-700 p-4">
+              <h3 className="font-semibold">Injection Site Rotation</h3>
+              <button
+                type="button"
+                onClick={() => setShowMapModal(false)}
+                className="text-zinc-400 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="overflow-auto p-4" style={{ maxHeight: '70vh' }}>
+              <InjectionSiteMap
+                selectedPeptide={selectedPeptide}
+                onSiteSelect={(site) => {
+                  console.log('Selected site:', site)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
