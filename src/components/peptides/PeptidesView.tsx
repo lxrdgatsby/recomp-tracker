@@ -263,9 +263,23 @@ export function PeptidesView({
           <div className="space-y-4 text-sm">
             <div className="flex gap-3">
               <div className="font-mono text-emerald-400">1.</div>
-              <div>
-                Add BAC water slowly down the vial wall. Swirl gently.{' '}
-                <span className="text-emerald-400">Never shake.</span>
+              <div className="space-y-3 leading-relaxed">
+                <ul className="list-disc space-y-1 pl-4 text-slate-300">
+                  <li>Add 100 units of BAC water if it&apos;s a 5mg vial</li>
+                  <li>Add 200 units of BAC water if it&apos;s a 10mg vial</li>
+                  <li>Add 300 units of BAC water if it&apos;s a 15mg vial</li>
+                </ul>
+                <p>
+                  Draw air by pulling the 100-unit syringe plunger back each time
+                  before injecting into the BAC water vial. Push the air into the
+                  vial, then draw back to the 100-unit mark on the syringe. Inject
+                  the BAC water into the peptide vial and allow the air pressure to
+                  slowly release down the vial wall while holding the peptide vial
+                  tilted on its side. Never push the BAC water in quickly or squirt
+                  it into the peptide vial — this can damage the reconstitution
+                  process. Swirl gently.{' '}
+                  <span className="text-emerald-400">Never shake.</span>
+                </p>
               </div>
             </div>
             <div className="flex gap-3">
