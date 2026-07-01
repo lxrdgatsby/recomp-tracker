@@ -87,10 +87,7 @@ export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
               await addInjectionLog({ ...log })
               alert(`✅ Successfully logged dose for ${log.peptideName}`)
             }}
-            onSaveProtocol={async (protocol) => {
-              await saveActiveProtocol({ ...protocol })
-              alert(`✅ Protocol for ${protocol.peptideName} saved successfully!`)
-            }}
+            onSaveProtocol={(protocol) => saveActiveProtocol({ ...protocol })}
           />
           <InjectionSiteMap />
         </div>

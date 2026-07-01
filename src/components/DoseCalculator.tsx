@@ -297,12 +297,9 @@ export function DoseCalculator({
       lastUpdated: new Date().toISOString(),
     }
 
-    if (onSaveProtocol) {
-      onSaveProtocol(protocolData)
-    } else {
-      console.log('Saving protocol:', protocolData)
-      alert(`✅ Protocol for ${selectedPeptide.name} saved successfully!`)
-    }
+    console.log('Saving protocol:', protocolData)
+    onSaveProtocol?.(protocolData)
+    alert(`✅ Protocol for ${selectedPeptide.name} has been saved to your plan!`)
   }
 
   const reconstitutionSteps = selectedPeptide?.protocol?.reconstitutionSteps ?? [
@@ -489,7 +486,7 @@ export function DoseCalculator({
         <button
           type="button"
           onClick={handleSaveToProtocol}
-          className="w-full rounded-2xl border border-zinc-700 py-4 font-medium transition-colors hover:bg-zinc-800 sm:flex-1"
+          className="w-full rounded-2xl border border-zinc-700 py-4 font-medium transition-colors hover:bg-zinc-800"
         >
           Save to My Protocol
         </button>
