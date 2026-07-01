@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Calculator,
+  Check,
   Copy,
   Droplet,
   Plus,
@@ -376,40 +377,54 @@ export function DoseCalculator({
         </div>
       </div>
 
-      <div className="mb-8 rounded-2xl bg-zinc-800 p-6">
-        <h3 className="mb-4 flex items-center gap-2 font-semibold">
-          <Syringe className="h-5 w-5 text-emerald-400" />
-          Live Results
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
+      <div className="mb-8 rounded-3xl border border-emerald-500/30 bg-zinc-800 p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Syringe className="h-5 w-5 text-emerald-400" />
+            <h3 className="text-lg font-semibold">Live Results</h3>
+          </div>
+          <div className="text-xs text-emerald-400">Real-time</div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl bg-zinc-900 p-4">
             <div className="text-xs text-zinc-400">Concentration</div>
-            <div className="text-3xl font-bold text-emerald-400">
+            <div className="mt-1 text-3xl font-bold tabular-nums text-white">
               {calculations.concentrationLabel}
             </div>
-            <div className="mt-3 text-xs text-zinc-500">
-              {calculations.volumePerDoseMl} mL per dose · ~{calculations.dosesRemaining}{' '}
-              doses left
+          </div>
+
+          <div className="rounded-2xl bg-zinc-900 p-4">
+            <div className="text-xs text-zinc-400">Volume to Draw</div>
+            <div className="mt-1 text-3xl font-bold tabular-nums text-white">
+              {calculations.volumePerDoseMl} mL
             </div>
           </div>
-          <div>
-            <div className="text-xs text-zinc-400">Draw on Syringe</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-5xl font-bold tabular-nums text-white">
+
+          <div className="relative rounded-2xl bg-zinc-900 p-4">
+            <div className="text-xs text-zinc-400">Syringe Units</div>
+            <div className="flex items-baseline">
+              <span className="text-5xl font-bold tabular-nums text-emerald-400">
                 {calculations.syringeUnits}
               </span>
-              <span className="text-xl text-zinc-400">units</span>
+              <span className="ml-1 text-2xl text-zinc-400">U</span>
             </div>
             <button
               type="button"
               onClick={handleCopyUnits}
-              className="mt-2 flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300"
+              className="absolute right-4 top-4 text-emerald-400 transition-colors hover:text-emerald-300"
+              aria-label="Copy syringe units"
             >
-              <Copy className="h-3.5 w-3.5" />
-              {isCopied ? '✓ Copied' : 'Copy units'}
+              {isCopied ? <Check size={18} /> : <Copy size={18} />}
             </button>
           </div>
         </div>
+
+        {calculations.dosesRemaining > 0 && (
+          <p className="mt-4 text-center text-sm text-emerald-400">
+            ≈ {calculations.dosesRemaining} doses left in this vial
+          </p>
+        )}
       </div>
 
       <div className="mb-8">
