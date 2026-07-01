@@ -21,11 +21,28 @@ import {
   recommendedBacWaterForVialMg,
 } from '../constants/peptideCatalog'
 import type { FamiliarityLevel } from '../types/auth'
-import type { BacWaterUnits, Peptide } from '../types'
+import type { BacWaterUnits, Peptide, TitrationWeek } from '../types'
 import { buildPeptideWithProtocol } from '../utils/recompProtocol'
 
 const VIAL_OPTIONS = [5, 10, 15, 30] as const
 const STORAGE_KEY = 'doseCalculator'
+
+const DEFAULT_TITRATION_STEPS: TitrationWeek[] = [
+  {
+    weeks: 'Week 1-2',
+    doseMg: 0.25,
+    doseLabel: '250 mcg',
+    syringeUnits: 10,
+    notes: 'Starting dose',
+  },
+  {
+    weeks: 'Week 3-4',
+    doseMg: 0.5,
+    doseLabel: '500 mcg',
+    syringeUnits: 20,
+    notes: 'Therapeutic dose',
+  },
+]
 
 const INPUT_CLASS =
   'w-full rounded-2xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-lg text-white focus:border-emerald-500 focus:outline-none'
@@ -153,6 +170,7 @@ export function DoseCalculator({
   const [isCopied, setIsCopied] = useState(false)
   const [vials, setVials] = useState<Vial[]>([])
   const [activeVialId, setActiveVialId] = useState<string | null>(null)
+  const [currentTitrationWeek, setCurrentTitrationWeek] = useState(0)
   const [ready, setReady] = useState(false)
 
   const selectedPeptide = useMemo(
@@ -170,9 +188,20 @@ export function DoseCalculator({
     }
   }, [selectedPeptide])
 
-  const currentTitration = useMemo(() => {
-    return selectedPeptide?.protocol?.titration?.[0] ?? null
+  useEffect(() => {
+    setCurrentTitrationWeek(0)
+  }, [selectedPeptide?.id])
+
+  const titrationSteps = useMemo(() => {
+    const fromProtocol = selectedPeptide?.protocol?.titration
+    if (fromProtocol && fromProtocol.length > 0) return fromProtocol
+    return DEFAULT_TITRATION_STEPS
   }, [selectedPeptide])
+
+  const currentStep = titrationSteps[currentTitrationWeek] ?? titrationSteps[0]
+  const progressPercent = Math.round(
+    ((currentTitrationWeek + 1) / titrationSteps.length) * 100
+  )
 
   const peptideVials = useMemo(
     () =>
@@ -254,6 +283,7 @@ export function DoseCalculator({
           syringeType?: '30' | '50' | '100'
           vials?: Vial[]
           activeVialId?: string | null
+          currentTitrationWeek?: number
         }
 
         if (
@@ -292,6 +322,13 @@ export function DoseCalculator({
         if (typeof data.activeVialId === 'string') {
           setActiveVialId(data.activeVialId)
         }
+
+        if (
+          typeof data.currentTitrationWeek === 'number' &&
+          data.currentTitrationWeek >= 0
+        ) {
+          setCurrentTitrationWeek(data.currentTitrationWeek)
+        }
       } catch {
         // ignore invalid storage
       }
@@ -312,6 +349,7 @@ export function DoseCalculator({
         syringeType,
         vials,
         activeVialId,
+        currentTitrationWeek,
       })
     )
   }, [
@@ -321,6 +359,7 @@ export function DoseCalculator({
     syringeType,
     vials,
     activeVialId,
+    currentTitrationWeek,
     selectedPeptide?.id,
     selectedPeptideId,
     ready,
@@ -444,15 +483,16 @@ export function DoseCalculator({
     }
 
     const titrationY = activeVial ? 120 : 110
-    if (currentTitration) {
+    if (currentStep) {
       doc.text(
-        `Titration: ${currentTitration.doseLabel}${currentTitration.notes ? ` (${currentTitration.notes})` : ''}`,
+        `Titration (${currentStep.weeks}): ${currentStep.doseLabel}${currentStep.notes ? ` (${currentStep.notes})` : ''}`,
         20,
         titrationY
       )
+      doc.text(`Titration progress: ${progressPercent}%`, 20, titrationY + 10)
     }
 
-    const stepsStartY = currentTitration ? titrationY + 15 : activeVial ? 125 : 115
+    const stepsStartY = currentStep ? titrationY + 25 : activeVial ? 125 : 115
     doc.text('Reconstitution Steps:', 20, stepsStartY)
     reconstitutionSteps.forEach((step, i) => {
       const lines = doc.splitTextToSize(`${i + 1}. ${step}`, 170)
@@ -570,17 +610,59 @@ export function DoseCalculator({
         </div>
       </div>
 
-      {currentTitration && (
+      {titrationSteps.length > 0 && currentStep && (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-zinc-800 p-4">
-          <div className="mb-2 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-400" />
-            <span className="font-medium text-amber-400">Titration Schedule</span>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-400" />
+              <span className="font-medium text-amber-400">Titration Schedule</span>
+            </div>
+            <span className="text-xs text-amber-300">{currentStep.weeks}</span>
           </div>
-          <p className="text-sm text-zinc-300">
+
+          <p className="mb-3 text-sm text-zinc-300">
             Current recommended:{' '}
-            <strong className="text-white">{currentTitration.doseLabel}</strong>
-            {currentTitration.notes ? ` (${currentTitration.notes})` : ''}
+            <strong className="text-white">{currentStep.doseLabel}</strong>
+            {currentStep.notes ? ` (${currentStep.notes})` : ''}
+            {currentStep.syringeUnits > 0 && (
+              <span className="text-zinc-400"> · {currentStep.syringeUnits} units</span>
+            )}
           </p>
+
+          <div className="mb-3 h-2 overflow-hidden rounded-full bg-zinc-700">
+            <div
+              className="h-2 rounded-full bg-amber-500 transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              disabled={currentTitrationWeek === 0}
+              onClick={() =>
+                setCurrentTitrationWeek((w) => Math.max(0, w - 1))
+              }
+              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="text-xs text-zinc-400">
+              Step {currentTitrationWeek + 1} of {titrationSteps.length} ({progressPercent}%)
+            </span>
+            <button
+              type="button"
+              disabled={currentTitrationWeek >= titrationSteps.length - 1}
+              onClick={() =>
+                setCurrentTitrationWeek((w) =>
+                  Math.min(titrationSteps.length - 1, w + 1)
+                )
+              }
+              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 
