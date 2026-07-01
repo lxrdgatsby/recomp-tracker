@@ -22,8 +22,8 @@ export const GOAL_PEPTIDE_RECOMMENDATIONS: Record<OnboardingGoal, string[]> = {
   'Recovery & healing': ['bpc157', 'tb500', 'ghkcu'],
   Performance: ['motsc', 'ss31', 'semax', 'bpc157'],
   Longevity: ['epitalon', 'ghkcu', 'motsc', 'ss31'],
-  'Clearer skin': ['ghkcu', 'bpc157'],
-  'Better sleep': ['dsip', 'epitalon'],
+  'Clearer skin': ['ghkcu', 'bpc157', 'melanotan2'],
+  'Better sleep': ['dsip', 'epitalon', 'pinealon'],
   'Reduce anxiety': ['selank', 'semax'],
 }
 

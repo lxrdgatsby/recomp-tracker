@@ -215,6 +215,26 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     timing: 'Morning intranasal or SubQ',
     notes: 'Often stacked with Semax. Non-sedating anxiolytic.',
   },
+  {
+    id: 'melanotan2',
+    name: 'Melanotan II',
+    tagline: 'Tanning peptide — melanogenesis support',
+    doseOptions: ['5mg', '10mg'],
+    defaultDose: '10mg',
+    frequency: 'daily',
+    timing: 'Evening SubQ — titrate slowly, use sun protection',
+    notes: 'Start low. Nausea or flushing can occur early. Not a daily high-dose compound long-term.',
+  },
+  {
+    id: 'pinealon',
+    name: 'Pinealon',
+    tagline: 'Bioregulator — brain & circadian support',
+    doseOptions: ['5mg', '10mg'],
+    defaultDose: '10mg',
+    frequency: 'daily',
+    timing: 'Morning SubQ or intranasal — short cycles',
+    notes: 'Epithalamin-derived tetrapeptide. Often run in 10–20 day cycles.',
+  },
 ]
 
 export function getCatalogEntry(catalogId: string): PeptideCatalogEntry | undefined {

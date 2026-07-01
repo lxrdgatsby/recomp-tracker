@@ -170,6 +170,31 @@ export const PEPTIDE_TITRATION: Record<string, TitrationMap> = {
       { weeks: '1-13', doseMg: 0.6, notes: 'Daily AM SubQ or intranasal (600mcg)' },
     ],
   },
+  melanotan2: {
+    beginner: [
+      { weeks: '1-4', doseMg: 0.1, notes: 'Daily PM SubQ — initiation (100mcg)' },
+      { weeks: '5-13', doseMg: 0.25, notes: 'Daily or EOD — maintenance (250mcg)' },
+    ],
+    intermediate: [
+      { weeks: '1-2', doseMg: 0.1, notes: 'Daily PM SubQ (100mcg)' },
+      { weeks: '3-13', doseMg: 0.25, notes: 'Daily or EOD (250mcg)' },
+    ],
+    advanced: [
+      { weeks: '1-2', doseMg: 0.25, notes: 'Daily PM SubQ (250mcg)' },
+      { weeks: '3-13', doseMg: 0.5, notes: 'Daily or EOD — max common dose (500mcg)' },
+    ],
+  },
+  pinealon: {
+    beginner: [
+      { weeks: '1-13', doseMg: 0.5, notes: 'Daily AM — run in 10–20 day cycles (500mcg)' },
+    ],
+    intermediate: [
+      { weeks: '1-13', doseMg: 0.75, notes: 'Daily AM — short cycles (750mcg)' },
+    ],
+    advanced: [
+      { weeks: '1-13', doseMg: 1, notes: 'Daily AM — short cycles (1mg)' },
+    ],
+  },
 }
 
 export function getTitrationPhases(
