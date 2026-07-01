@@ -380,8 +380,7 @@ export function PeptidesView({
 
       <div className="mb-8">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <div className="mb-3 flex items-center gap-1.5 text-sm font-medium text-slate-200">
-            <Plus size={16} className="text-emerald-400" />
+          <div className="mb-3 text-sm font-medium text-slate-200">
             Add another peptide
           </div>
 
@@ -405,7 +404,8 @@ export function PeptidesView({
                         {entry.tagline}
                       </div>
                     </div>
-                    <span className="shrink-0 text-sm font-medium text-emerald-400">
+                    <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-emerald-400">
+                      {!isAdding && <Plus size={14} strokeWidth={2.5} />}
                       {isAdding ? 'Adding…' : 'Add'}
                     </span>
                   </button>
