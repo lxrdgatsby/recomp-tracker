@@ -23,6 +23,7 @@ export function InjectionSiteMap({
   onSiteSelect,
   embedded = false,
 }: InjectionSiteMapProps) {
+  const isEmbedded = embedded || Boolean(selectedPeptide)
   const [usedSites, setUsedSites] = useState<string[]>([])
 
   useEffect(() => {
@@ -49,13 +50,13 @@ export function InjectionSiteMap({
     onSiteSelect?.(id)
   }
 
-  const containerClass = embedded
+  const containerClass = isEmbedded
     ? 'rounded-2xl border border-zinc-700 bg-zinc-900 p-4'
     : 'rounded-3xl border border-white/10 bg-white/5 p-6'
 
   return (
     <div className={containerClass}>
-      {!embedded && (
+      {!isEmbedded && (
         <>
           <h3 className="mb-2 font-semibold">Injection Site Rotation</h3>
           <p className="mb-4 text-xs text-slate-400">
@@ -64,7 +65,7 @@ export function InjectionSiteMap({
           </p>
         </>
       )}
-      {embedded && (
+      {isEmbedded && (
         <p className="mb-3 text-xs text-zinc-400">
           Tap sites you used this week
           {selectedPeptide ? ` for ${selectedPeptide.name}` : ''}
@@ -82,7 +83,9 @@ export function InjectionSiteMap({
               className={`rounded-2xl border p-4 text-left transition-all ${
                 isUsed
                   ? 'border-emerald-500 bg-emerald-500/10'
-                  : 'border-white/20 hover:border-white/40'
+                  : isEmbedded
+                    ? 'border-zinc-600 hover:border-zinc-500'
+                    : 'border-white/20 hover:border-white/40'
               }`}
             >
               <div className="flex justify-between">

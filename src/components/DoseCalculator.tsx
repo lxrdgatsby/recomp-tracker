@@ -752,7 +752,6 @@ export function DoseCalculator({
         </div>
 
         <InjectionSiteMap
-          embedded
           selectedPeptide={selectedPeptide}
           onSiteSelect={(site) => console.log('Selected site:', site)}
         />
