@@ -428,6 +428,8 @@ export function PeptidesView({
           <div className="mt-3">
             <DoseCalculator
               key={calculatorPeptide?.id ?? 'default'}
+              peptides={peptides}
+              onLogDose={({ peptideId }) => onToggleInjection(today, peptideId)}
               {...calculatorDefaults}
             />
           </div>

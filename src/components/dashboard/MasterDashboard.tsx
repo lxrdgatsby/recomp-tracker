@@ -19,9 +19,14 @@ import {
 interface MasterDashboardProps {
   state: TrackerState
   onLogWeight: (date: string, weight: number) => void
+  onToggleInjection?: (date: string, peptideId: string) => void
 }
 
-export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
+export function MasterDashboard({
+  state,
+  onLogWeight,
+  onToggleInjection,
+}: MasterDashboardProps) {
   const [plan, setPlan] = useState<Generated90DayPlan | null>(null)
   const [checkInVersion, setCheckInVersion] = useState(0)
 
@@ -78,7 +83,14 @@ export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
         <AdvancedAnalytics refreshKey={checkInVersion} />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <DoseCalculator />
+          <DoseCalculator
+            peptides={state.peptides}
+            onLogDose={
+              onToggleInjection
+                ? ({ peptideId }) => onToggleInjection(today, peptideId)
+                : undefined
+            }
+          />
           <InjectionSiteMap />
         </div>
 
