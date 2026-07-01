@@ -456,59 +456,61 @@ export function DoseCalculator({
     if (!selectedPeptide) return
 
     const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
     const date = new Date().toLocaleDateString()
-    const safeDate = date.replace(/\//g, '-')
 
-    doc.setFontSize(18)
-    doc.text(`PepTrack Protocol - ${selectedPeptide.name}`, 20, 20)
+    doc.setFontSize(20)
+    doc.setTextColor(0, 150, 100)
+    doc.text('PepTrack Protocol Report', pageWidth / 2, 20, { align: 'center' })
 
-    doc.setFontSize(12)
-    doc.text(`Generated: ${date}`, 20, 35)
-    doc.text(`Vial Size: ${vialMg}mg`, 20, 50)
-    doc.text(`BAC Water: ${bacWaterMl}mL`, 20, 60)
+    doc.setFontSize(11)
+    doc.setTextColor(100)
     doc.text(
-      `Target Dose: ${targetDoseMg}mg (${calculations.syringeUnits} units)`,
-      20,
-      70
+      `Generated: ${date} • ${selectedPeptide.name}`,
+      pageWidth / 2,
+      30,
+      { align: 'center' }
     )
-    doc.text(`Concentration: ${calculations.concentrationLabel}`, 20, 80)
-    doc.text(`Syringe Type: U-${syringeType}`, 20, 90)
-    doc.text(`Tracked vials: ${peptideVials.length}`, 20, 100)
-    if (activeVial) {
-      doc.text(
-        `Active vial: ${activeVial.remainingMg.toFixed(1)}mg / ${activeVial.vialMg}mg remaining`,
-        20,
-        110
-      )
-    }
 
-    const titrationY = activeVial ? 120 : 110
-    if (currentStep) {
-      doc.text(
-        `Titration (${currentStep.weeks}): ${currentStep.doseLabel}${currentStep.notes ? ` (${currentStep.notes})` : ''}`,
-        20,
-        titrationY
-      )
-      doc.text(`Titration progress: ${progressPercent}%`, 20, titrationY + 10)
-    }
+    doc.setFillColor(240, 248, 244)
+    doc.rect(20, 40, pageWidth - 40, 45, 'F')
 
-    const stepsStartY = currentStep ? titrationY + 25 : activeVial ? 125 : 115
-    doc.text('Reconstitution Steps:', 20, stepsStartY)
+    doc.setTextColor(0)
+    doc.setFontSize(12)
+    doc.text(`Vial: ${vialMg}mg`, 30, 50)
+    doc.text(`BAC Water: ${bacWaterMl}mL`, 30, 58)
+    doc.text(
+      `Target Dose: ${targetDoseMg}mg (${calculations.syringeUnits} units on U-${syringeType})`,
+      30,
+      66
+    )
+    doc.text(`Concentration: ${calculations.concentrationLabel}`, 30, 74)
+
+    doc.setFontSize(13)
+    doc.text('Reconstitution Steps', 20, 100)
+
+    doc.setFontSize(11)
+    let stepY = 115
     reconstitutionSteps.forEach((step, i) => {
-      const lines = doc.splitTextToSize(`${i + 1}. ${step}`, 170)
-      let y = stepsStartY + 15 + i * 12
+      const lines = doc.splitTextToSize(`${i + 1}. ${step}`, pageWidth - 40)
       for (const line of lines) {
-        if (y > 270) {
+        if (stepY > 265) {
           doc.addPage()
-          y = 20
+          stepY = 20
         }
-        doc.text(line, 20, y)
-        y += 8
+        doc.text(line, 20, stepY)
+        stepY += 8
       }
     })
 
-    doc.save(`${selectedPeptide.name}_Protocol_${safeDate}.pdf`)
-    alert('✅ PDF exported successfully!')
+    doc.setFontSize(10)
+    doc.setTextColor(150)
+    doc.text('This is a personal tracking tool. Not medical advice.', 20, 280)
+    doc.text('Always consult your healthcare provider.', 20, 288)
+
+    doc.save(`${selectedPeptide.name}_Protocol_${date.replace(/\//g, '-')}.pdf`)
+
+    alert('✅ Professional PDF exported successfully!')
   }
 
   return (
