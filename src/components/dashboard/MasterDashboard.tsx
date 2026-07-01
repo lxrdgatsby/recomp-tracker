@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { useEffect, useState } from 'react'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
-import { DoseCalculator } from '../peptides/DoseCalculator'
+import { DoseCalculator } from '../DoseCalculator'
 import { InjectionSiteMap } from '../peptides/InjectionSiteMap'
 import { AdvancedAnalytics } from '../progress/AdvancedAnalytics'
 import { ProgressCorrelation } from '../progress/ProgressCorrelation'
