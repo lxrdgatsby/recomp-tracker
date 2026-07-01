@@ -88,6 +88,7 @@ export function PeptidesView({
   onUpdateReconstitution,
 }: PeptidesViewProps) {
   const addInjectionLog = useTrackerStore((store) => store.addInjectionLog)
+  const saveActiveProtocol = useTrackerStore((store) => store.saveActiveProtocol)
   const { userProfile, setTrackerState } = useAuth()
   const { peptides } = state
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -434,6 +435,10 @@ export function PeptidesView({
               onLogDose={async (log) => {
                 await addInjectionLog({ ...log })
                 alert(`✅ Successfully logged dose for ${log.peptideName}`)
+              }}
+              onSaveProtocol={async (protocol) => {
+                await saveActiveProtocol({ ...protocol })
+                alert(`✅ Protocol for ${protocol.peptideName} saved successfully!`)
               }}
               {...calculatorDefaults}
             />

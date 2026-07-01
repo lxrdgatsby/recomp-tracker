@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from 'react'
-import type { DoseLog } from '../components/DoseCalculator'
+import type { DoseLog, SavedProtocolData } from '../components/DoseCalculator'
+import { useAuth } from '../contexts/AuthContext'
+import { applyProtocolSave } from '../utils/protocolSave'
 import type {
   InjectionLog,
   Peptide,
@@ -18,13 +20,16 @@ export interface TrackerStoreApi {
   saveProfile: (profile: Profile, peptides: Peptide[]) => Promise<void>
   logWeight: (date: string, weight: number) => Promise<void>
   addInjectionLog: (log: DoseLog) => Promise<void>
+  saveActiveProtocol: (protocol: SavedProtocolData) => Promise<void>
   toggleInjection: (date: string, peptideId: string) => Promise<void>
   toggleWorkout: (date: string, week: number, dayIndex: number) => Promise<void>
   exportData: () => void
 }
 
 function useTrackerStoreApi(): TrackerStoreApi {
+  const { userProfile } = useAuth()
   const { trackerState, persistState } = usePersistTrackerState()
+  const familiarity = userProfile?.familiarity ?? 'beginner'
 
   const updateProfile = useCallback(
     async (profile: Partial<Profile>) => {
@@ -72,6 +77,13 @@ function useTrackerStoreApi(): TrackerStoreApi {
     [trackerState, persistState]
   )
 
+  const saveActiveProtocol = useCallback(
+    async (protocol: SavedProtocolData) => {
+      await persistState(applyProtocolSave(trackerState, protocol, familiarity))
+    },
+    [trackerState, persistState, familiarity]
+  )
+
   const toggleInjection = useCallback(
     async (date: string, peptideId: string) => {
       const exists = trackerState.injectionLogs.some(
@@ -113,6 +125,7 @@ function useTrackerStoreApi(): TrackerStoreApi {
       saveProfile,
       logWeight,
       addInjectionLog,
+      saveActiveProtocol,
       toggleInjection,
       toggleWorkout,
       exportData,
@@ -124,6 +137,7 @@ function useTrackerStoreApi(): TrackerStoreApi {
       saveProfile,
       logWeight,
       addInjectionLog,
+      saveActiveProtocol,
       toggleInjection,
       toggleWorkout,
       exportData,

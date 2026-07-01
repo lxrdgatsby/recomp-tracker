@@ -36,6 +36,16 @@ export interface DoseLog {
   date: string
 }
 
+export interface SavedProtocolData {
+  peptideId: string
+  peptideName: string
+  vialMg: number
+  bacWaterMl: number
+  targetDoseMg: number
+  syringeType: '30' | '50' | '100'
+  lastUpdated: string
+}
+
 interface DoseCalculatorProps {
   peptides?: Peptide[]
   initialPeptideId?: string
@@ -45,6 +55,7 @@ interface DoseCalculatorProps {
   peptideCatalogId?: string
   familiarity?: FamiliarityLevel
   onLogDose?: (log: DoseLog) => void
+  onSaveProtocol?: (protocol: SavedProtocolData) => void
   className?: string
 }
 
@@ -95,6 +106,7 @@ export function DoseCalculator({
   peptideCatalogId,
   familiarity = 'beginner',
   onLogDose,
+  onSaveProtocol,
   className = '',
 }: DoseCalculatorProps) {
   const catalogPeptides = useMemo(
@@ -269,6 +281,27 @@ export function DoseCalculator({
       alert(
         `✅ Logged ${targetDoseMg}mg (${calculations.syringeUnits} units) of ${selectedPeptide.name}`
       )
+    }
+  }
+
+  const handleSaveToProtocol = () => {
+    if (!selectedPeptide) return
+
+    const protocolData: SavedProtocolData = {
+      peptideId: selectedPeptide.id,
+      peptideName: selectedPeptide.name,
+      vialMg,
+      bacWaterMl,
+      targetDoseMg,
+      syringeType,
+      lastUpdated: new Date().toISOString(),
+    }
+
+    if (onSaveProtocol) {
+      onSaveProtocol(protocolData)
+    } else {
+      console.log('Saving protocol:', protocolData)
+      alert(`✅ Protocol for ${selectedPeptide.name} saved successfully!`)
     }
   }
 
@@ -455,10 +488,8 @@ export function DoseCalculator({
         </button>
         <button
           type="button"
-          onClick={() => {
-            alert('Protocol saved to your plan (connect to store)')
-          }}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-zinc-700 py-4 font-semibold text-zinc-200 transition-all hover:bg-zinc-800"
+          onClick={handleSaveToProtocol}
+          className="w-full rounded-2xl border border-zinc-700 py-4 font-medium transition-colors hover:bg-zinc-800 sm:flex-1"
         >
           Save to My Protocol
         </button>

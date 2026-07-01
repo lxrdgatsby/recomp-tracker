@@ -24,6 +24,7 @@ interface MasterDashboardProps {
 
 export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
   const addInjectionLog = useTrackerStore((store) => store.addInjectionLog)
+  const saveActiveProtocol = useTrackerStore((store) => store.saveActiveProtocol)
   const [plan, setPlan] = useState<Generated90DayPlan | null>(null)
   const [checkInVersion, setCheckInVersion] = useState(0)
 
@@ -85,6 +86,10 @@ export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
             onLogDose={async (log) => {
               await addInjectionLog({ ...log })
               alert(`✅ Successfully logged dose for ${log.peptideName}`)
+            }}
+            onSaveProtocol={async (protocol) => {
+              await saveActiveProtocol({ ...protocol })
+              alert(`✅ Protocol for ${protocol.peptideName} saved successfully!`)
             }}
           />
           <InjectionSiteMap />
