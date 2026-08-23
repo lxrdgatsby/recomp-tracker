@@ -10,7 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { saveProfileToDb, saveReconstitutionPlan } from '../lib/profileService'
 import type { PeptideSelection } from '../constants/peptideCatalog'
 import type { Peptide, Profile, TrackerState, ViewId } from '../types'
-import { requestNotificationPermission } from '../utils/notifications'
+import { useReminderRuntime } from '../hooks/useReminderRuntime'
 import type { DoseLog } from '../components/DoseCalculator'
 import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { addInjectionLogToState } from '../utils/injectionLogs'
@@ -88,12 +88,7 @@ export function AppLayout() {
     setShowOnboarding(!userProfile?.onboardingCompleted)
   }, [userProfile?.onboardingCompleted])
 
-  useEffect(() => {
-    if (showOnboarding) return
-    if ('Notification' in window && Notification.permission === 'default') {
-      void requestNotificationPermission()
-    }
-  }, [showOnboarding])
+  useReminderRuntime(!showOnboarding)
 
   const activeView = ROUTE_MAP[location.pathname] ?? 'dashboard'
 

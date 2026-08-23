@@ -1,6 +1,11 @@
 import { AUTHORITATIVE_PEPTIDE_KNOWLEDGE } from './peptideKnowledge.js'
 
-const SYSTEM_PROMPT = `You are a world-class peptide and body recomposition expert built into Peptide Tracker. You have deep, authoritative knowledge of peptide chemistry, reconstitution, storage, U-100 syringe dosing, injection technique, clinical handling practices, stacking, titration, side effects, and training/nutrition for recomp. Never guess — follow the authoritative knowledge below and the user's tailored protocol.
+const SYSTEM_PROMPT = `You are PeptideTracker's research protocol assistant.
+You are NOT a doctor. Never prescribe. Always include a short disclaimer.
+Use the user's logged stack, vials, doses, check-ins, and 90-day plan when answering.
+Be concise and practical.
+
+You are a world-class peptide and body recomposition expert built into Peptide Tracker. You have deep, authoritative knowledge of peptide chemistry, reconstitution, storage, U-100 syringe dosing, injection technique, clinical handling practices, stacking, titration, side effects, and training/nutrition for recomp. Never guess — follow the authoritative knowledge below and the user's tailored protocol.
 
 CRITICAL — TAILORED PROTOCOL DOSING (read the user profile section):
 - Each user has a personalized 90-day recomp protocol with exact injection doses and syringe units.
@@ -51,11 +56,12 @@ type AIProvider = 'xai' | 'openai'
 
 const PROVIDER_CONFIG: Record<
   AIProvider,
-  { url: string; model: string; label: string }
+  { url: string; model: string; models?: string[]; label: string }
 > = {
   xai: {
     url: 'https://api.x.ai/v1/chat/completions',
-    model: 'grok-3-mini',
+    model: 'grok-4',
+    models: ['grok-4', 'grok-3', 'grok-3-mini'],
     label: 'xAI Grok',
   },
   openai: {
@@ -155,7 +161,7 @@ export async function runChat(
         content: '',
         profileUpdates: null,
         error:
-          'AI assistant not configured. Add XAI_API_KEY (console.x.ai) or OPENAI_API_KEY to .env.local / Vercel env vars (server-side only — do NOT use NEXT_PUBLIC_), then restart npm run dev.',
+          'AI key not configured. Add VITE_XAI_API_KEY to .env.local and redeploy. Server-side XAI_API_KEY on Vercel also works.',
       },
     }
   }
@@ -175,25 +181,11 @@ export async function runChat(
     : SYSTEM_PROMPT
 
   const config = PROVIDER_CONFIG[provider]
+  const models = config.models?.length ? config.models : [config.model]
 
   try {
-    const response = await fetch(config.url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [{ role: 'system', content: systemContent }, ...messages],
-        tools: PROFILE_TOOLS,
-        tool_choice: 'auto',
-        max_tokens: 1200,
-        temperature: 0.7,
-      }),
-    })
-
-    const data = (await response.json()) as {
+    let response: Response | null = null
+    let data: {
       error?: { message?: string }
       choices?: Array<{
         message?: {
@@ -203,15 +195,68 @@ export async function runChat(
           }>
         }
       }>
+    } = {}
+
+    let lastError = ''
+    const attempts: Array<{ model: string; withTools: boolean }> = models.flatMap(
+      (model) => [
+        { model, withTools: true },
+        { model, withTools: false },
+      ]
+    )
+
+    for (const attempt of attempts) {
+      const payload: Record<string, unknown> = {
+        model: attempt.model,
+        messages: [{ role: 'system', content: systemContent }, ...messages],
+        max_tokens: 1200,
+        temperature: 0.7,
+      }
+      if (attempt.withTools) {
+        payload.tools = PROFILE_TOOLS
+        payload.tool_choice = 'auto'
+      }
+
+      response = await fetch(config.url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const raw = await response.text()
+      try {
+        data = JSON.parse(raw) as typeof data
+      } catch {
+        data = { error: { message: raw.slice(0, 240) || `HTTP ${response.status}` } }
+      }
+
+      if (response.ok) break
+      const msg = data.error?.message ?? raw.slice(0, 240)
+      lastError = msg || `HTTP ${response.status}`
+      const retryable =
+        !msg ||
+        /model|not found|does not exist|invalid|unrecognized|tool/i.test(msg) ||
+        response.status === 400 ||
+        response.status === 404
+      if (!retryable) {
+        break
+      }
     }
 
-    if (!response.ok) {
+    if ((!response || !response.ok) && provider === 'xai' && keys.openaiKey?.trim()) {
+      return runChat(body, { openaiKey: keys.openaiKey })
+    }
+
+    if (!response || !response.ok) {
       return {
-        status: response.status,
+        status: response?.status ?? 502,
         body: {
           content: '',
           profileUpdates: null,
-          error: formatAIError(provider, data.error?.message),
+          error: formatAIError(provider, lastError || data.error?.message),
         },
       }
     }

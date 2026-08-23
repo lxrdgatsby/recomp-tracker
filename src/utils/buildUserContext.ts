@@ -1,7 +1,9 @@
 import { formatPeptideSelectionsForAI } from '../constants/peptideCatalog'
 import { getCheckInHistory, getLastCheckIn } from './checkInStorage'
 import { AUTHORITATIVE_PEPTIDE_KNOWLEDGE } from '../constants/peptideKnowledge'
+import { SEED_USER } from '../lib/protocolSeed'
 import { formatProtocolContextForAI } from './recompProtocol'
+import { computeAdherence } from './adherence'
 import { getDaysIntoCycle } from './calculations'
 import type { TrackerState } from '../types'
 import type { UserProfile } from '../types/auth'
@@ -61,7 +63,62 @@ export function buildUserContextForChat(
     formatCheckInContextForAI(),
     '',
     AUTHORITATIVE_PEPTIDE_KNOWLEDGE,
+    '',
+    'CONTEXT JSON:',
+    JSON.stringify(buildAssistantContextJson(p, t)),
   ]
     .filter(Boolean)
     .join('\n')
+}
+
+function buildAssistantContextJson(p: UserProfile, t: TrackerState) {
+  const cutoff = Date.now() - 14 * 86_400_000
+  const recentDoseLogs = (t.injectionLogs ?? []).filter((l) => {
+    const ts = Date.parse(l.date)
+    return Number.isFinite(ts) && ts >= cutoff
+  })
+  const checkIns = getCheckInHistory().filter((c) => {
+    const ts = Date.parse(c.date)
+    return Number.isFinite(ts) && ts >= cutoff
+  })
+  const adherence = computeAdherence(t)
+  const daysIn = getDaysIntoCycle(t.profile.startDate)
+  return {
+    user: p.username ?? SEED_USER,
+    startDate: t.profile.startDate,
+    stack: t.peptides.map((pep) => ({
+      id: pep.id,
+      name: pep.name,
+      dose: pep.dose,
+      frequency: pep.frequency,
+      timing: pep.timing,
+      units: pep.protocol?.startingSyringeUnits,
+      notes: pep.notes,
+    })),
+    vials: t.peptides.map((pep) => ({
+      name: pep.name,
+      vialSize: pep.vialSize,
+      concentration: pep.protocol?.concentrationLabel,
+      mix:
+        pep.protocol && pep.protocol.vialMg > 0
+          ? `${pep.protocol.vialMg}mg / ${pep.protocol.bacWaterMl}mL`
+          : 'unknown',
+    })),
+    recentDoseLogs,
+    checkIns,
+    adherence7d: {
+      scheduled: adherence.expectedInjections,
+      logged: adherence.completedInjections,
+      pct: adherence.injectionPct ?? null,
+    },
+    planHealth: {
+      week: Math.max(0, Math.ceil(daysIn / 7)),
+      started: daysIn > 0,
+      phaseLabel: daysIn <= 0 ? 'Starts Sunday — weeks 1–4 loaded' : `Day ${daysIn}`,
+      warnings: [
+        'Confirm Test Cyp mg/mL on the vial before locking units.',
+        'KLOW is stored as a 10 mg product, not an 80 mg blend.',
+      ],
+    },
+  }
 }

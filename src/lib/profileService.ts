@@ -77,6 +77,26 @@ function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
       userProfile.weeklyLossTarget ?? DEFAULT_PROFILE.weeklyLossTarget,
   }
 
+  if (saved?.peptides?.length) {
+    return {
+      profile: {
+        ...profile,
+        ...(saved.profile ?? {}),
+        currentWeight:
+          saved.profile?.currentWeight ?? profile.currentWeight,
+        goalWeight: saved.profile?.goalWeight ?? profile.goalWeight,
+        startDate: saved.profile?.startDate ?? profile.startDate,
+        weeklyLossTarget:
+          saved.profile?.weeklyLossTarget ?? profile.weeklyLossTarget,
+      },
+      peptides: saved.peptides,
+      recompPlan: saved.recompPlan,
+      weightHistory: saved.weightHistory ?? [],
+      injectionLogs: saved.injectionLogs ?? [],
+      workoutCompletions: saved.workoutCompletions ?? [],
+    }
+  }
+
   const selections = (userProfile.peptideSelections ?? []).map(normalizeSelection)
 
   if (selections.length > 0) {
@@ -293,6 +313,23 @@ export async function saveProfileToDb(
   }
 
   return persistPeptideData(userId, profile, nextState, selections, extras)
+}
+
+export async function persistSeededProtocol(
+  userId: string,
+  trackerState: TrackerState,
+  extras?: {
+    mainGoal?: string | null
+    additionalInfo?: string | null
+  }
+): Promise<{ error: string | null }> {
+  return persistPeptideData(
+    userId,
+    trackerState.profile,
+    trackerState,
+    [],
+    extras
+  )
 }
 
 export async function applyProfileUpdates(

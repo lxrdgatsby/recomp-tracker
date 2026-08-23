@@ -17,6 +17,8 @@ export interface AppDataExport {
   injectionSites: unknown
   workoutLogs: ReturnType<typeof getWorkoutLogs>
   workoutSetLogs: ReturnType<typeof getWorkoutSetLogs>
+  reminderSettings: unknown
+  reminderLastFired: unknown
   chat?: ReturnType<typeof loadLocalChat>
 }
 
@@ -57,6 +59,8 @@ export function exportAllLocalData(
     injectionSites: readJson('injectionSites'),
     workoutLogs: getWorkoutLogs(),
     workoutSetLogs: getWorkoutSetLogs(),
+    reminderSettings: readJson('reminderSettings'),
+    reminderLastFired: readJson('reminderLastFired'),
   }
 
   if (userId) {
@@ -81,6 +85,8 @@ export function getAppLocalStorageKeys(userId?: string | null): string[] {
     'injectionSites',
     'workoutLogs',
     'workoutSetLogs',
+    'reminderSettings',
+    'reminderLastFired',
   ])
 
   if (userId) {

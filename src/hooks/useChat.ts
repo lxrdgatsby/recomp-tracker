@@ -323,13 +323,19 @@ export function useChat() {
         )
       } catch (err) {
         console.error('chat send:', err)
+        const apiMessage = err instanceof Error ? err.message : ''
+        const isConfigError = /AI key not configured|not configured|XAI_API_KEY|VITE_XAI_API_KEY/i.test(
+          apiMessage
+        )
         const isApiError =
-          err instanceof Error &&
-          (/AI|fetch|network|connect/i.test(err.message) ||
-            err.message.includes('503'))
-        const fallbackContent = isApiError
-          ? CHAT_CONNECTION_ERROR
-          : getFallbackAssistantResponse(trimmed, getAssistantContext())
+          isConfigError ||
+          (/AI|fetch|network|connect/i.test(apiMessage) ||
+            apiMessage.includes('503'))
+        const fallbackContent = isConfigError
+          ? apiMessage
+          : isApiError
+            ? CHAT_CONNECTION_ERROR
+            : getFallbackAssistantResponse(trimmed, getAssistantContext())
         const errMsg: ChatMsg = {
           id: `e-${Date.now()}`,
           role: 'assistant',

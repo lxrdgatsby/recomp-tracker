@@ -9,6 +9,17 @@ export function computeAdherence(state: TrackerState) {
   const { profile, injectionLogs, workoutCompletions, peptides } = state
   const daysIn = getDaysIntoCycle(profile.startDate)
   const start = parseISO(profile.startDate)
+  if (daysIn <= 0) {
+    return {
+      injectionPct: 0,
+      workoutPct: 0,
+      overall: 0,
+      completedInjections: 0,
+      expectedInjections: 0,
+      completedWorkouts: 0,
+      expectedWorkouts: 0,
+    }
+  }
   const end = addDays(start, Math.min(daysIn, CYCLE_DAYS) - 1)
 
   let expectedInjections = 0

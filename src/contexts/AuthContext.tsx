@@ -9,7 +9,12 @@ import {
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth'
-import { fetchProfile, profileToTrackerState } from '../lib/profileService'
+import {
+  fetchProfile,
+  persistSeededProtocol,
+  profileToTrackerState,
+} from '../lib/profileService'
+import { applyLxrdgatsbyProtocolSeed } from '../lib/protocolSeed'
 import { getAuthCallbackUrl } from '../lib/authRedirect'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import type { TrackerState } from '../types'
@@ -47,7 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profile = await fetchProfile(userId)
     setUserProfile(profile)
     if (profile) {
-      setTrackerState(profileToTrackerState(profile))
+      let next = profileToTrackerState(profile)
+      const seeded = applyLxrdgatsbyProtocolSeed(next, profile.username)
+      if (seeded) {
+        next = seeded
+        try {
+          await persistSeededProtocol(userId, seeded, {
+            mainGoal: profile.mainGoal ?? seeded.recompPlan?.summary?.[1],
+            additionalInfo: profile.additionalInfo,
+          })
+        } catch (err) {
+          console.error('persist seeded protocol:', err)
+        }
+      }
+      setTrackerState(next)
     }
   }, [])
 

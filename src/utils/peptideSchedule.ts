@@ -17,19 +17,23 @@ export function getInjectionsForDate(
   startDate: string
 ): ScheduledInjection[] {
   const start = parseISO(startDate)
-  const dayInCycle = Math.max(0, differenceInDays(date, start))
+  const preview = date < start
+  const scheduleDate = preview ? start : date
+  const dayInCycle = Math.max(0, differenceInDays(scheduleDate, start))
 
   return peptides
     .filter((p) => {
-      if (date < start) return false
+      const dow = scheduleDate.getDay()
       if (p.frequency === 'daily') return true
-      return isWeeklyInjectionDay(date, start)
+      if (p.frequency === 'mwf') return dow === 1 || dow === 3 || dow === 5
+      return isWeeklyInjectionDay(scheduleDate, start)
     })
     .map((p) => {
       const tier = getTitrationForDay(p, dayInCycle)
       const syringeUnits = tier?.syringeUnits ?? p.protocol?.startingSyringeUnits
-      const dose =
-        syringeUnits != null
+      const dose = /ml/i.test(p.dose)
+        ? p.dose
+        : syringeUnits != null
           ? formatSyringeUnits(syringeUnits)
           : tier?.doseLabel ?? p.dose
       const titrationNote = tier?.notes

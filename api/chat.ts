@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const result = await runChat(req.body as ChatRequestBody, {
     openaiKey: process.env.OPENAI_API_KEY,
-    xaiKey: process.env.XAI_API_KEY,
+    xaiKey: process.env.XAI_API_KEY || process.env.VITE_XAI_API_KEY,
   })
 
   if (result.body.error) {

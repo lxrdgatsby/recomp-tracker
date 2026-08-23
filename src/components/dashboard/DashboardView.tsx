@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
 import {
   Award,
+  Bell,
   Calendar,
   Dumbbell,
   Syringe,
@@ -8,7 +9,13 @@ import {
   TrendingUp,
   User,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { RemindersCard } from '../reminders/RemindersCard'
+import {
+  getReminderBellText,
+  REMINDER_CHANGED_EVENT,
+} from '../../lib/reminders'
 import { useAuth } from '../../contexts/AuthContext'
 import { inferWeightGoalMode } from '../../constants/onboardingGoals'
 import type { TrackerState } from '../../types'
@@ -17,6 +24,8 @@ import {
   getWeightToLose,
 } from '../../utils/calculations'
 import { getOnboardingData } from '../../utils/onboardingStorage'
+import { ProtocolCard } from '../protocol/ProtocolCard'
+import { SAFETY_COPY, hasSeededProtocol } from '../../lib/protocolSeed'
 import { getGreeting, getTodayDashboardData } from '../../utils/todayActions'
 
 interface DashboardViewProps {
@@ -37,8 +46,9 @@ export function DashboardView({
   const currentWeight = getLatestWeight(profile, state.weightHistory)
   const weightDelta = Math.abs(currentWeight - profile.goalWeight)
   const weightToLose = getWeightToLose(currentWeight, profile.goalWeight)
-  const { dayInCycle, totalDays, primaryInjection, workout } =
+  const { dayInCycle, totalDays, injections, workout } =
     getTodayDashboardData(state)
+  const seeded = hasSeededProtocol()
   const progress = Math.round((dayInCycle / totalDays) * 100)
 
   const displayName = username
@@ -57,6 +67,26 @@ export function DashboardView({
   )
 
   const weeklyTarget = Math.round(profile.weeklyLossTarget * 10) / 10
+  const [bellText, setBellText] = useState(getReminderBellText)
+
+  useEffect(() => {
+    const sync = () => setBellText(getReminderBellText())
+    const scrollHash = () => {
+      const id = window.location.hash.replace('#', '')
+      if (id === 'today' || id === 'reminders') {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+    window.addEventListener(REMINDER_CHANGED_EVENT, sync)
+    window.addEventListener('storage', sync)
+    window.addEventListener('hashchange', scrollHash)
+    scrollHash()
+    return () => {
+      window.removeEventListener(REMINDER_CHANGED_EVENT, sync)
+      window.removeEventListener('storage', sync)
+      window.removeEventListener('hashchange', scrollHash)
+    }
+  }, [])
 
   const goalWeightSubtext =
     weightMode === 'gain'
@@ -153,40 +183,57 @@ export function DashboardView({
         </div>
       </div>
 
-      <div className="mb-6">
-        <h2 className="mb-3 px-1 text-sm tracking-[2px] text-slate-400 uppercase">
-          Today&apos;s Actions
-        </h2>
+      <div className="mb-6" id="today">
+        <div className="mb-3 flex items-start justify-between gap-3 px-1">
+          <h2 className="text-sm tracking-[2px] text-slate-400 uppercase">
+            Today&apos;s Actions
+          </h2>
+          <button
+            type="button"
+            onClick={() =>
+              document.getElementById('reminders')?.scrollIntoView({
+                behavior: 'smooth',
+              })
+            }
+            className="inline-flex max-w-[58%] items-center justify-end gap-1.5 text-right text-[11px] leading-snug text-emerald-400/90"
+          >
+            <Bell size={12} className="shrink-0" />
+            <span>{bellText}</span>
+          </button>
+        </div>
 
-        {primaryInjection ? (
-          <div className="mb-3 rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10">
-                  <Syringe className="text-emerald-400" size={18} />
-                </div>
-                <div>
-                  <div className="font-medium">{primaryInjection.peptideName}</div>
-                  <div className="text-sm text-emerald-400">
-                    {primaryInjection.dose}
+        {injections.length > 0 ? (
+          <div className="mb-3 space-y-2">
+            {injections.map((inj) => (
+              <div
+                key={inj.peptideId}
+                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10">
+                      <Syringe className="text-emerald-400" size={18} />
+                    </div>
+                    <div>
+                      <div className="font-medium">{inj.peptideName}</div>
+                      <div className="text-sm text-emerald-400">{inj.dose}</div>
+                      <div className="text-xs text-slate-400">{inj.timing}</div>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => onToggleInjection(today, inj.peptideId)}
+                    className={`shrink-0 rounded-full px-4 py-1.5 text-sm transition-colors ${
+                      inj.done
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-white text-black hover:bg-white/90'
+                    }`}
+                  >
+                    {inj.done ? 'Logged' : 'Log Dose'}
+                  </button>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  onToggleInjection(today, primaryInjection.peptideId)
-                }
-                className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
-                  primaryInjection.done
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-white text-black hover:bg-white/90'
-                }`}
-              >
-                {primaryInjection.done ? 'Done' : 'Mark Done'}
-              </button>
-            </div>
-            <div className="text-xs text-slate-400">{primaryInjection.timing}</div>
+            ))}
           </div>
         ) : (
           <div className="mb-3 rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -228,6 +275,16 @@ export function DashboardView({
           </div>
         )}
       </div>
+
+      <div className="mb-6">
+        <RemindersCard />
+      </div>
+
+      {seeded && <ProtocolCard state={state} compact />}
+
+      {seeded && (
+        <p className="mb-6 text-[11px] leading-relaxed text-amber-200/90">{SAFETY_COPY}</p>
+      )}
 
       <div>
         <h2 className="mb-3 px-1 text-sm tracking-[2px] text-slate-400 uppercase">

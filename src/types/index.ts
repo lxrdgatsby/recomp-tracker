@@ -1,5 +1,5 @@
-export type PeptideFrequency = 'daily' | 'weekly'
-export type BacWaterUnits = 100 | 200 | 300
+export type PeptideFrequency = 'daily' | 'weekly' | 'mwf'
+export type BacWaterUnits = 100 | 200 | 300 | 500
 
 export interface TitrationWeek {
   weeks: string

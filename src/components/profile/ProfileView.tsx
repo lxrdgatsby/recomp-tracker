@@ -24,6 +24,7 @@ import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { Input } from '../ui/Input'
 import { PeptideBenefitsAccordion } from './PeptideBenefitsAccordion'
+import { RemindersCard } from '../reminders/RemindersCard'
 
 interface ProfileViewProps {
   state: TrackerState
@@ -259,6 +260,8 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
           )}
         </div>
       </div>
+
+      <RemindersCard />
 
       <Card title="Goals & Background">
         <div className="grid gap-4 sm:grid-cols-2">

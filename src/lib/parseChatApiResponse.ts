@@ -6,8 +6,8 @@ export async function parseChatApiResponse(
   if (!text.trim()) {
     throw new Error(
       res.status === 404
-        ? 'AI API route not found. On Vercel, add OPENAI_API_KEY under Settings → Environment Variables, then redeploy.'
-        : 'AI assistant is unavailable. Add OPENAI_API_KEY to .env.local (local) or Vercel env vars (production), then restart and try again.'
+        ? 'AI API route not found. On Vercel, add XAI_API_KEY or VITE_XAI_API_KEY under Settings → Environment Variables, then redeploy.'
+        : 'AI key not configured. Add VITE_XAI_API_KEY to .env.local and redeploy.'
     )
   }
 
@@ -29,11 +29,11 @@ export async function parseChatApiResponse(
   } catch {
     if (looksLikeHtml) {
       throw new Error(
-        'AI API returned the app page instead of a response. On Vercel, set OPENAI_API_KEY and redeploy. Locally, use npm run dev (not npm run preview).'
+        'AI API returned the app page instead of a response. On Vercel, set XAI_API_KEY or VITE_XAI_API_KEY and redeploy. Locally, use npm run dev (not npm run preview).'
       )
     }
     throw new Error(
-      `AI assistant returned an invalid response (HTTP ${res.status}). Check OPENAI_API_KEY on Vercel and redeploy.`
+      `AI assistant returned an invalid response (HTTP ${res.status}). Check XAI_API_KEY / VITE_XAI_API_KEY on Vercel and redeploy.`
     )
   }
 

@@ -17,6 +17,8 @@ import {
   isInjectionDone,
 } from '../../utils/peptideSchedule'
 import { getCheckInHistory } from '../../utils/checkInStorage'
+import { ProtocolCard } from '../protocol/ProtocolCard'
+import { SAFETY_COPY, hasSeededProtocol } from '../../lib/protocolSeed'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { ProgressBar } from '../ui/ProgressBar'
@@ -67,6 +69,7 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
       `90-day recomp targeting ${profile.weeklyLossTarget} lb/week.`,
       `${peptides.length} peptide(s) on your configured schedule.`,
     ]
+  const seeded = hasSeededProtocol()
 
   return (
     <div className="space-y-6 pb-4">
@@ -88,6 +91,11 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
           Export PDF
         </Button>
       </div>
+
+      {seeded && <ProtocolCard state={state} />}
+      {seeded && (
+        <p className="text-[11px] leading-relaxed text-amber-200/90">{SAFETY_COPY}</p>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="!p-4">

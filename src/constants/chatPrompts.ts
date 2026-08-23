@@ -2,10 +2,10 @@ import { getCatalogEntry, getCatalogEntryByName } from './peptideCatalog'
 import { RECONSTITUTION_FAQ_QUESTION } from './reconstitutionGuide'
 
 export const CHAT_SUGGESTIONS = [
-  'What are peptides?',
-  'How do peptides work?',
-  'Review my current peptide stack',
-  'Help me plan my 90-day recomp',
+  "What's on my stack today?",
+  'Walk me through Sunday draws in units',
+  'Any vial warnings I should confirm?',
+  'What changes in weeks 5–8?',
 ] as const
 
 export const ASSISTANT_TITLE = 'Peptide Protocol Assistant'

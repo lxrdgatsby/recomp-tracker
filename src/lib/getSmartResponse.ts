@@ -1,6 +1,5 @@
 import {
   getAssistantContext,
-  simulateSmartResponse,
   type AssistantContext,
 } from '../utils/assistantFallback'
 import { parseChatApiResponse } from './parseChatApiResponse'
@@ -42,14 +41,7 @@ export async function fetchChatResponse(params: {
     }
   } catch (err) {
     console.error('fetchChatResponse:', err)
-    const lastUser = [...params.messages].reverse().find((m) => m.role === 'user')
-    return {
-      content: simulateSmartResponse(
-        lastUser?.content ?? '',
-        getAssistantContext()
-      ),
-      profileUpdates: null,
-    }
+    throw err
   }
 }
 
@@ -68,18 +60,15 @@ export async function getSmartResponse(
 
 /** API call with context — uses xAI when XAI_API_KEY is set server-side. */
 export async function callGrokAPI(
-  message: string,
+  messages: { role: string; content: string }[] | string,
   context: AssistantContext = getAssistantContext()
 ): Promise<string> {
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messages: [{ role: 'user', content: message }],
-      userContext: `${buildContextString(context)}\n\n${DISCLAIMER}`,
-    }),
+  const payload = Array.isArray(messages)
+    ? messages
+    : [{ role: 'user', content: messages }]
+  const result = await fetchChatResponse({
+    messages: payload,
+    userContext: `${buildContextString(context)}\n\n${DISCLAIMER}`,
   })
-
-  const data = await parseChatApiResponse(res)
-  return data.content ?? "Sorry, I couldn't process that."
+  return result.content
 }

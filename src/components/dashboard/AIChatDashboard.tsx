@@ -8,6 +8,7 @@ import {
   ASSISTANT_WELCOME,
   CHAT_SUGGESTIONS,
 } from '../../constants/chatPrompts'
+import { SAFETY_COPY } from '../../lib/protocolSeed'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import { useChat } from '../../hooks/useChat'
 import { ChatHistorySidebar } from './ChatHistorySidebar'
@@ -260,8 +261,15 @@ export function AIChatDashboard() {
             </button>
           </div>
 
+          {messages.some((m) =>
+            /AI key not configured/i.test(m.content)
+          ) && (
+            <p className="mt-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-center text-xs text-rose-200">
+              AI key not configured. Add VITE_XAI_API_KEY to .env.local and redeploy.
+            </p>
+          )}
           <p className="mt-3 text-center text-[10px] text-slate-500">
-            Not medical advice. Always consult your healthcare provider.
+            {SAFETY_COPY}
           </p>
         </div>
       </div>

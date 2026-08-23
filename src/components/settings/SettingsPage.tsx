@@ -1,27 +1,14 @@
-import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppContext } from '../../pages/AppLayout'
+import { RemindersCard } from '../reminders/RemindersCard'
 import {
   clearAllLocalData,
   exportAllLocalData,
 } from '../../utils/appDataStorage'
-import {
-  getNotificationPermission,
-  requestNotificationPermission,
-} from '../../utils/notifications'
 
 export function SettingsPage() {
   const { user } = useAuth()
   const { state } = useAppContext()
-  const [notificationPermission, setNotificationPermission] = useState(
-    getNotificationPermission()
-  )
-
-  useEffect(() => {
-    if ('Notification' in window) {
-      void requestNotificationPermission().then(setNotificationPermission)
-    }
-  }, [])
 
   const handleExportJson = () => {
     exportAllLocalData(state, user?.id)
@@ -30,11 +17,6 @@ export function SettingsPage() {
   const handleExportPdf = async () => {
     const { exportFullReport } = await import('../../lib/exportPDF')
     exportFullReport()
-  }
-
-  const handleEnableNotifications = async () => {
-    const permission = await requestNotificationPermission()
-    setNotificationPermission(permission)
   }
 
   const handleClear = () => {
@@ -53,30 +35,8 @@ export function SettingsPage() {
         <p className="text-slate-400">Manage local data and exports</p>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-4">
-        <h2 className="text-sm font-medium">Daily Check-in Reminders</h2>
-        <p className="mt-1 text-xs text-slate-400">
-          Status:{' '}
-          <span className="text-slate-300">
-            {notificationPermission === 'granted'
-              ? 'Enabled'
-              : notificationPermission === 'denied'
-                ? 'Blocked'
-                : notificationPermission === 'unsupported'
-                  ? 'Not supported'
-                  : 'Not requested'}
-          </span>
-        </p>
-        {notificationPermission !== 'granted' &&
-          notificationPermission !== 'unsupported' && (
-            <button
-              type="button"
-              onClick={handleEnableNotifications}
-              className="mt-3 w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-sm font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
-            >
-              Enable Notifications
-            </button>
-          )}
+      <div className="mb-6">
+        <RemindersCard />
       </div>
 
       <div className="space-y-4">
