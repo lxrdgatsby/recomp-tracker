@@ -134,17 +134,17 @@ export function AIChatDashboard() {
       )}
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#0a0a0a]">
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-[#0a0a0a] px-4 pt-2 pb-3 lg:hidden">
+        <div className="pt-top-header sticky top-0 z-40 flex shrink-0 items-center justify-between border-b border-white/10 bg-[#0a0a0a] px-4 pb-3 lg:hidden">
           <Link
             to="/app"
-            className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
+            className="cursor-pointer rounded-lg"
             aria-label="Back to home"
           >
             <div className="text-lg font-bold tracking-tight text-white">
-              Peptide<span className="text-teal-400">Tracker</span>
+              Peptide<span className="text-emerald-400">Tracker</span>
             </div>
             {userProfile?.username && (
-              <div className="text-[10px] text-slate-500">
+              <div className="text-[10px] text-emerald-400">
                 @{userProfile.username}
               </div>
             )}

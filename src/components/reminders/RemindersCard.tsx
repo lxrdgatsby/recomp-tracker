@@ -70,13 +70,13 @@ export function RemindersCard() {
           aria-label="Toggle reminders"
           disabled={busy || unsupported}
           onClick={() => void run(() => setRemindersEnabled(!settings.enabled))}
-          className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
-            settings.enabled ? 'bg-emerald-500' : 'bg-white/10'
+          className={`relative inline-flex h-7 w-12 shrink-0 items-center overflow-hidden rounded-full border-0 p-0 transition disabled:opacity-50 ${
+            settings.enabled ? 'bg-emerald-500' : 'bg-zinc-700'
           }`}
         >
           <span
-            className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition-transform ${
-              settings.enabled ? 'translate-x-5' : 'translate-x-0.5'
+            className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+              settings.enabled ? 'translate-x-6' : 'translate-x-1'
             }`}
           />
         </button>

@@ -38,9 +38,20 @@ body {
 .pt-app-shell {
   min-height: 100dvh;
   min-height: 100svh;
-  padding-top: max(12px, env(safe-area-inset-top, 0px));
+  padding-top: 0;
   padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
+}
+
+.pt-top-header {
+  background-color: #0a0a0a;
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
+}
+
+@media (display-mode: standalone) {
+  .pt-top-header {
+    padding-top: max(52px, calc(env(safe-area-inset-top, 0px) + 8px));
+  }
 }
 
 @media (min-width: 1024px) {

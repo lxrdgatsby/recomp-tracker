@@ -200,20 +200,20 @@ export function AppLayout() {
 
       <div className="pt-app-shell flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className={`no-print flex shrink-0 items-center justify-between border-b border-slate-800/80 bg-[#0a0a0a] px-4 pt-2 pb-3 lg:hidden ${
+          className={`pt-top-header no-print sticky top-0 z-40 flex shrink-0 items-center justify-between border-b border-white/10 bg-[#0a0a0a] px-4 pb-3 lg:hidden ${
             activeView === 'assistant' ? 'hidden' : ''
           }`}
         >
           <Link
             to="/app"
-            className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
+            className="cursor-pointer rounded-lg"
             aria-label="Back to home"
           >
             <h1 className="text-lg font-bold text-white">
-              Peptide<span className="text-teal-400">Tracker</span>
+              Peptide<span className="text-emerald-400">Tracker</span>
             </h1>
             {userProfile?.username && (
-              <p className="text-[10px] text-slate-500">@{userProfile.username}</p>
+              <p className="text-[10px] text-emerald-400">@{userProfile.username}</p>
             )}
           </Link>
           <div className="flex items-center gap-2">
@@ -221,7 +221,7 @@ export function AppLayout() {
             <button
               type="button"
               onClick={signOut}
-              className="rounded-lg border border-slate-700 p-2 text-slate-400"
+              className="rounded-lg border border-white/15 p-2 text-white"
               aria-label="Sign out"
             >
               <LogOut size={16} />
