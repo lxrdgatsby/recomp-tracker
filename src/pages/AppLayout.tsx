@@ -189,7 +189,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen min-w-0 bg-navy-950">
+    <div className="flex min-h-dvh min-w-0 bg-[#0a0a0a] lg:bg-navy-950">
       <Sidebar
         active={activeView}
         onNavigate={navigateTo}
@@ -198,9 +198,9 @@ export function AppLayout() {
         onSignOut={signOut}
       />
 
-      <div className="flex h-svh min-h-0 min-w-0 flex-1 flex-col lg:min-h-screen lg:h-auto">
+      <div className="pt-app-shell flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className={`no-print flex items-center justify-between border-b border-slate-800/80 bg-navy-900/50 px-4 py-3 lg:hidden ${
+          className={`no-print flex shrink-0 items-center justify-between border-b border-slate-800/80 bg-[#0a0a0a] px-4 pt-2 pb-3 lg:hidden ${
             activeView === 'assistant' ? 'hidden' : ''
           }`}
         >
@@ -230,10 +230,10 @@ export function AppLayout() {
         </header>
 
         <main
-          className={`flex-1 ${
+          className={`min-h-0 min-w-0 flex-1 ${
             activeView === 'assistant'
-              ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
-              : 'min-w-0 overflow-x-hidden overflow-y-auto px-4 pt-6 pb-[var(--mobile-nav-height)] lg:px-8 lg:pb-8'
+              ? 'flex flex-col overflow-hidden'
+              : 'overflow-x-hidden overflow-y-auto px-4 lg:px-8 lg:pb-8'
           }`}
         >
           {activeView === 'assistant' ? (
