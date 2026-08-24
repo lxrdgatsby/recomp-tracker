@@ -34,6 +34,7 @@ export default function PeptidesPage() {
   const state = useTrackerStore((store) => store.state)
   const addInjectionLog = useTrackerStore((store) => store.addInjectionLog)
   const saveActiveProtocol = useTrackerStore((store) => store.saveActiveProtocol)
+  const setPeptides = useTrackerStore((store) => store.setPeptides)
   const { userProfile } = useAuth()
 
   const { peptides, injectionLogs, profile } = state
@@ -107,6 +108,15 @@ export default function PeptidesPage() {
           peptides={peptides}
           onLogDose={handleLogDose}
           onSaveProtocol={(protocol) => void saveActiveProtocol({ ...protocol })}
+          onAddPeptideToStack={(peptide) => {
+            const exists = peptides.some(
+              (p) =>
+                p.id === peptide.id ||
+                p.name.toLowerCase() === peptide.name.toLowerCase()
+            )
+            if (exists) return
+            void setPeptides([...peptides, peptide])
+          }}
           {...calculatorDefaults}
         />
       </div>

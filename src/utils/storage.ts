@@ -1,4 +1,5 @@
 import { DEFAULT_STATE, STORAGE_KEY } from '../constants/defaults'
+import { runVialSizeMigrationV2 } from '../lib/vialInventory'
 import type { TrackerState } from '../types'
 
 export function loadState(): TrackerState {
@@ -6,7 +7,7 @@ export function loadState(): TrackerState {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return { ...DEFAULT_STATE, peptides: [...DEFAULT_STATE.peptides] }
     const parsed = JSON.parse(raw) as TrackerState
-    return {
+    const loaded = {
       ...DEFAULT_STATE,
       ...parsed,
       profile: { ...DEFAULT_STATE.profile, ...parsed.profile },
@@ -15,6 +16,7 @@ export function loadState(): TrackerState {
       injectionLogs: parsed.injectionLogs ?? [],
       workoutCompletions: parsed.workoutCompletions ?? [],
     }
+    return runVialSizeMigrationV2(loaded) ?? loaded
   } catch {
     return { ...DEFAULT_STATE, peptides: [...DEFAULT_STATE.peptides] }
   }

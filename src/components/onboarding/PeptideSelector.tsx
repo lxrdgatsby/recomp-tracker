@@ -4,6 +4,7 @@ import {
   PEPTIDE_CATALOG,
   recommendedBacWaterForVial,
   getCatalogEntry,
+  peptideVialSizeOptionLabels,
   type PeptideSelection,
   type PeptideUsageStatus,
 } from '../../constants/peptideCatalog'
@@ -153,7 +154,7 @@ export function PeptideSelector({
                       className={doseClass}
                       aria-label={`${entry.name} vial size`}
                     >
-                      {entry.doseOptions.map((dose) => (
+                      {peptideVialSizeOptionLabels(entry.doseOptions).map((dose) => (
                         <option key={dose} value={dose}>
                           {dose} vial
                         </option>

@@ -19,6 +19,7 @@ export interface AppDataExport {
   workoutSetLogs: ReturnType<typeof getWorkoutSetLogs>
   reminderSettings: unknown
   reminderLastFired: unknown
+  vials: unknown
   chat?: ReturnType<typeof loadLocalChat>
 }
 
@@ -61,6 +62,7 @@ export function exportAllLocalData(
     workoutSetLogs: getWorkoutSetLogs(),
     reminderSettings: readJson('reminderSettings'),
     reminderLastFired: readJson('reminderLastFired'),
+    vials: readJson('vials'),
   }
 
   if (userId) {
@@ -87,6 +89,8 @@ export function getAppLocalStorageKeys(userId?: string | null): string[] {
     'workoutSetLogs',
     'reminderSettings',
     'reminderLastFired',
+    'vials',
+    'migration_vial_sizes_v2',
   ])
 
   if (userId) {

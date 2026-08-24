@@ -16,10 +16,13 @@ import {
 import jsPDF from 'jspdf'
 import {
   BAC_WATER_OPTIONS,
-  defaultCalculatorTargetDoseMg,
   getCatalogEntry,
   PEPTIDE_CATALOG,
   recommendedBacWaterForVialMg,
+  VIAL_SIZE_OPTIONS_MG,
+  formatVialSizeLabel,
+  normalizeVialSizeMg,
+  type VialSizeOptionMg,
 } from '../constants/peptideCatalog'
 import type { FamiliarityLevel } from '../types/auth'
 import type { BacWaterUnits, Peptide, TitrationWeek } from '../types'
@@ -28,8 +31,18 @@ import {
   buildPeptideWithProtocol,
   buildReconstitutionSteps,
 } from '../utils/recompProtocol'
+import { AddVialModal } from './peptides/AddVialModal'
+import {
+  displayPeptideName,
+  loadInventoryVials,
+  peptideHelperText,
+  PROTOCOL_PEPTIDE_OPTIONS,
+  removeInventoryVial,
+  runVialSizeMigrationV2,
+  saveInventoryVials,
+  type InventoryVial,
+} from '../lib/vialInventory'
 
-const VIAL_OPTIONS = [5, 10, 15, 30] as const
 const STORAGE_KEY = 'doseCalculator'
 
 const DEFAULT_TITRATION_STEPS: TitrationWeek[] = [
@@ -63,12 +76,8 @@ export interface DoseLog {
   date: string
 }
 
-export interface Vial {
-  id: string
-  peptideId: string
-  vialMg: number
-  remainingMg: number
-  dateAdded: string
+export interface Vial extends InventoryVial {
+  dateAdded?: string
 }
 
 export interface SavedProtocolData {
@@ -91,12 +100,14 @@ interface DoseCalculatorProps {
   familiarity?: FamiliarityLevel
   onLogDose?: (log: DoseLog) => void
   onSaveProtocol?: (protocol: SavedProtocolData) => void
+  onAddPeptideToStack?: (peptide: Peptide) => void
   className?: string
 }
 
 function catalogVialDose(catalogId: string): string {
   const entry = getCatalogEntry(catalogId)
   if (!entry) return '10mg'
+  if (/mg$/i.test(entry.defaultDose.trim())) return entry.defaultDose
   const mgOption = entry.doseOptions.find((d) => /mg$/i.test(d.trim()))
   return mgOption ?? '10mg'
 }
@@ -118,11 +129,8 @@ function buildCatalogPeptides(familiarity: FamiliarityLevel): Peptide[] {
   ).filter((p): p is Peptide => p !== null)
 }
 
-function normalizeVialMg(value: number): (typeof VIAL_OPTIONS)[number] {
-  if (VIAL_OPTIONS.includes(value as (typeof VIAL_OPTIONS)[number])) {
-    return value as (typeof VIAL_OPTIONS)[number]
-  }
-  return 10
+function normalizeVialMg(value: number): VialSizeOptionMg {
+  return normalizeVialSizeMg(value)
 }
 
 function normalizeBacUnits(value: number): BacWaterUnits {
@@ -132,13 +140,20 @@ function normalizeBacUnits(value: number): BacWaterUnits {
   return 200
 }
 
-function createVial(peptideId: string, sizeMg: number): Vial {
+function createVial(peptideId: string, sizeMg: number, compoundName = 'Peptide'): Vial {
+  const createdAt = new Date().toISOString()
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     peptideId,
+    compoundName,
     vialMg: sizeMg,
+    bacWaterMl: 0,
+    concentrationMgPerMl: 0,
+    mixedDate: createdAt.slice(0, 10),
+    isPowder: false,
     remainingMg: sizeMg,
-    dateAdded: new Date().toISOString(),
+    createdAt,
+    dateAdded: createdAt,
   }
 }
 
@@ -152,14 +167,21 @@ export function DoseCalculator({
   familiarity = 'beginner',
   onLogDose,
   onSaveProtocol,
+  onAddPeptideToStack,
   className = '',
 }: DoseCalculatorProps) {
   const catalogPeptides = useMemo(
     () => buildCatalogPeptides(familiarity),
     [familiarity]
   )
+  const [extraPeptides, setExtraPeptides] = useState<Peptide[]>([])
+  const [showAddVial, setShowAddVial] = useState(false)
 
-  const availablePeptides = peptides.length > 0 ? peptides : catalogPeptides
+  const availablePeptides = useMemo(() => {
+    const base = peptides.length > 0 ? peptides : catalogPeptides
+    const ids = new Set(base.map((p) => p.id))
+    return [...base, ...extraPeptides.filter((p) => !ids.has(p.id))]
+  }, [peptides, catalogPeptides, extraPeptides])
 
   const defaultPeptideId =
     initialPeptideId ??
@@ -187,12 +209,31 @@ export function DoseCalculator({
   )
 
   useEffect(() => {
-    if (selectedPeptide?.protocol) {
-      setVialMg(normalizeVialMg(selectedPeptide.protocol.vialMg || 5))
-      setBacWaterMl(selectedPeptide.protocol.bacWaterMl || 2)
-      setTargetDoseMg(selectedPeptide.protocol.startingDoseMg || 0.25)
+    if (!ready || !selectedPeptide) return
+
+    const inventoryVial = loadInventoryVials().find(
+      (v) => v.peptideId === selectedPeptide.id && v.vialMg > 0
+    )
+    const preset = PROTOCOL_PEPTIDE_OPTIONS.find((p) => p.id === selectedPeptide.id)
+    const proto = selectedPeptide.protocol
+
+    if (inventoryVial) {
+      setVialMg(normalizeVialMg(inventoryVial.vialMg))
+      if (inventoryVial.bacWaterMl > 0) setBacWaterMl(inventoryVial.bacWaterMl)
+    } else if (proto && proto.vialMg > 0) {
+      setVialMg(normalizeVialMg(proto.vialMg))
+      if (proto.bacWaterMl > 0) setBacWaterMl(proto.bacWaterMl)
+    } else if (preset && preset.defaultVialMg > 0) {
+      setVialMg(normalizeVialMg(preset.defaultVialMg))
+      if (preset.defaultBacMl > 0) setBacWaterMl(preset.defaultBacMl)
     }
-  }, [selectedPeptide])
+
+    if (proto && proto.startingDoseMg > 0) {
+      setTargetDoseMg(proto.startingDoseMg)
+    } else if (preset && preset.targetDoseMg > 0) {
+      setTargetDoseMg(preset.targetDoseMg)
+    }
+  }, [selectedPeptide?.id, selectedPeptide?.protocol?.vialMg, ready])
 
   useEffect(() => {
     setCurrentTitrationWeek(0)
@@ -265,18 +306,22 @@ export function DoseCalculator({
     }
   }, [vialMg, bacWaterMl, targetDoseMg, syringeType, activeVial?.remainingMg])
 
-  const applyVialSelection = (nextVialMg: (typeof VIAL_OPTIONS)[number]) => {
-    const nextBac = recommendedBacWaterForVialMg(nextVialMg)
+  const applyVialSelection = (nextVialMg: VialSizeOptionMg) => {
     setVialMg(nextVialMg)
-    setBacWaterMl(nextBac / 100)
-    if (selectedPeptide?.protocol) {
-      setTargetDoseMg(selectedPeptide.protocol.startingDoseMg)
-    } else {
-      setTargetDoseMg(defaultCalculatorTargetDoseMg(nextVialMg))
+    const preset = PROTOCOL_PEPTIDE_OPTIONS.find((p) => p.id === selectedPeptide?.id)
+    if (preset && preset.defaultVialMg === nextVialMg && preset.defaultBacMl > 0) {
+      setBacWaterMl(preset.defaultBacMl)
+      return
     }
+    if (selectedPeptide?.protocol?.vialMg === nextVialMg && selectedPeptide.protocol.bacWaterMl > 0) {
+      setBacWaterMl(selectedPeptide.protocol.bacWaterMl)
+      return
+    }
+    setBacWaterMl(recommendedBacWaterForVialMg(nextVialMg) / 100)
   }
 
   useEffect(() => {
+    runVialSizeMigrationV2()
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
@@ -321,8 +366,19 @@ export function DoseCalculator({
           setSyringeType(data.syringeType)
         }
 
-        if (Array.isArray(data.vials)) {
-          setVials(data.vials)
+        const inventory = loadInventoryVials()
+        if (inventory.length > 0) {
+          setVials(inventory)
+        } else if (Array.isArray(data.vials)) {
+          setVials(data.vials.map((row) => ({
+            ...row,
+            compoundName: row.compoundName ?? 'Peptide',
+            bacWaterMl: row.bacWaterMl ?? 0,
+            concentrationMgPerMl: row.concentrationMgPerMl ?? 0,
+            mixedDate: row.mixedDate ?? row.dateAdded?.slice(0, 10) ?? '',
+            isPowder: false as const,
+            createdAt: row.createdAt ?? row.dateAdded ?? new Date().toISOString(),
+          })))
         }
 
         if (typeof data.activeVialId === 'string') {
@@ -344,6 +400,7 @@ export function DoseCalculator({
 
   useEffect(() => {
     if (!ready) return
+    saveInventoryVials(vials)
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -414,14 +471,27 @@ export function DoseCalculator({
     alert(`✅ Logged ${targetDoseMg}mg for ${selectedPeptide.name}`)
   }
 
-  const addNewVial = () => {
-    if (!selectedPeptide) return
-    const newVial = createVial(selectedPeptide.id, vialMg)
-    setVials((prev) => [...prev, newVial])
-    setActiveVialId(newVial.id)
+  const handleSavedVial = (vial: InventoryVial, peptide: Peptide) => {
+    setVials((prev) => [...prev.filter((v) => v.id !== vial.id), vial])
+    setActiveVialId(vial.id)
+    setSelectedPeptideId(peptide.id)
+    setExtraPeptides((prev) =>
+      prev.some((p) => p.id === peptide.id) ? prev : [...prev, peptide]
+    )
+    const alreadyInStack = [...peptides, ...extraPeptides].some(
+      (p) =>
+        p.id === peptide.id ||
+        p.name.toLowerCase() === peptide.name.toLowerCase()
+    )
+    if (!alreadyInStack) onAddPeptideToStack?.(peptide)
+    if (vial.vialMg > 0) {
+      setVialMg(normalizeVialMg(vial.vialMg))
+    }
+    if (vial.bacWaterMl > 0) setBacWaterMl(vial.bacWaterMl)
   }
 
   const deleteVial = (id: string) => {
+    removeInventoryVial(id)
     setVials((prev) => {
       const next = prev.filter((v) => v.id !== id)
       if (activeVialId === id) {
@@ -546,12 +616,14 @@ export function DoseCalculator({
         >
           {availablePeptides.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name} — {p.dose}
+              {displayPeptideName(p)}
             </option>
           ))}
         </select>
-        {selectedPeptide?.notes && (
-          <p className="mt-1 text-xs text-zinc-500">{selectedPeptide.notes}</p>
+        {selectedPeptide && peptideHelperText(selectedPeptide) && (
+          <p className="mt-1 text-xs text-zinc-500">
+            {peptideHelperText(selectedPeptide)}
+          </p>
         )}
       </div>
 
@@ -561,13 +633,13 @@ export function DoseCalculator({
           <select
             value={vialMg}
             onChange={(e) =>
-              applyVialSelection(Number(e.target.value) as (typeof VIAL_OPTIONS)[number])
+              applyVialSelection(normalizeVialMg(Number(e.target.value)))
             }
             className={SELECT_CLASS}
           >
-            {VIAL_OPTIONS.map((size) => (
+            {VIAL_SIZE_OPTIONS_MG.map((size) => (
               <option key={size} value={size}>
-                {size}mg
+                {formatVialSizeLabel(size)}
               </option>
             ))}
           </select>
@@ -626,7 +698,7 @@ export function DoseCalculator({
           </div>
           <button
             type="button"
-            onClick={addNewVial}
+            onClick={() => setShowAddVial(true)}
             className="flex items-center gap-1 text-sm text-emerald-400 transition-colors hover:text-emerald-300"
           >
             <Plus size={16} />
@@ -637,7 +709,10 @@ export function DoseCalculator({
         {peptideVials.length > 0 ? (
           <div className="space-y-2">
             {peptideVials.map((vial) => {
-              const percentLeft = Math.round((vial.remainingMg / vial.vialMg) * 100)
+              const percentLeft =
+                vial.vialMg > 0
+                  ? Math.round((vial.remainingMg / vial.vialMg) * 100)
+                  : 0
               const isActive = vial.id === activeVialId
               return (
                 <div
@@ -656,7 +731,9 @@ export function DoseCalculator({
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="font-medium">{vial.vialMg}mg vial</div>
+                      <div className="font-medium">
+                        {vial.compoundName} · {vial.vialMg}mg vial
+                      </div>
                       <div className="text-sm text-zinc-400">
                         {vial.remainingMg.toFixed(1)}mg remaining ({percentLeft}%)
                       </div>
@@ -885,6 +962,14 @@ export function DoseCalculator({
           </div>
         </div>
       )}
+
+      <AddVialModal
+        open={showAddVial}
+        onClose={() => setShowAddVial(false)}
+        familiarity={familiarity}
+        existingPeptides={availablePeptides}
+        onSave={handleSavedVial}
+      />
     </div>
   )
 }

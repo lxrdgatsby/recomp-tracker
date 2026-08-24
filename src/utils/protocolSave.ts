@@ -13,7 +13,8 @@ function bacWaterUnitsFromMl(bacWaterMl: number): BacWaterUnits {
   const units = Math.round(bacWaterMl * 100)
   if (units <= 100) return 100
   if (units <= 200) return 200
-  return 300
+  if (units <= 300) return 300
+  return 500
 }
 
 export function applyProtocolSave(

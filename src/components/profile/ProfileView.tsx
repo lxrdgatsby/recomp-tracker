@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   getCatalogEntry,
   getCatalogEntryByName,
+  peptideVialSizeOptionLabels,
 } from '../../constants/peptideCatalog'
 import type { FamiliarityLevel, Gender } from '../../types/auth'
 import {
@@ -465,13 +466,13 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
                 </button>
               </div>
 
-              {catalogEntry && catalogEntry.doseOptions.length > 0 && (
+              {catalogEntry && (
                 <div className="mb-3 space-y-2">
                   <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">
                     Vial size
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    {catalogEntry.doseOptions.map((option) => (
+                    {peptideVialSizeOptionLabels(catalogEntry.doseOptions).map((option) => (
                       <button
                         key={option}
                         type="button"

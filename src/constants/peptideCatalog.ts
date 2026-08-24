@@ -1,13 +1,40 @@
 import type { BacWaterUnits, Peptide, PeptideFrequency } from '../types'
 
-export const BAC_WATER_OPTIONS: BacWaterUnits[] = [100, 200, 300]
+export const BAC_WATER_OPTIONS: BacWaterUnits[] = [100, 200, 300, 500]
 export const DEFAULT_BAC_WATER: BacWaterUnits = 200
 
-/** Standard BAC pairing: 5mg→100u, 10mg→200u, 15mg+→300u (U-100 syringe). */
+export const VIAL_SIZE_OPTIONS_MG = [5, 10, 15, 20, 30, 50, 100, 1000] as const
+export type VialSizeOptionMg = (typeof VIAL_SIZE_OPTIONS_MG)[number]
+
+export function formatVialSizeLabel(mg: number): string {
+  return `${mg}mg`
+}
+
+export function isVialSizeOption(mg: number): mg is VialSizeOptionMg {
+  return (VIAL_SIZE_OPTIONS_MG as readonly number[]).includes(mg)
+}
+
+export function normalizeVialSizeMg(value: number): VialSizeOptionMg {
+  if (isVialSizeOption(value)) return value
+  return VIAL_SIZE_OPTIONS_MG.reduce((best, n) =>
+    Math.abs(n - value) < Math.abs(best - value) ? n : best
+  )
+}
+
+export function peptideVialSizeOptionLabels(
+  extra: string[] = []
+): string[] {
+  const global = VIAL_SIZE_OPTIONS_MG.map(formatVialSizeLabel)
+  const more = extra.filter((d) => !global.includes(d))
+  return [...global, ...more]
+}
+
+/** Standard BAC pairing: 5mg→100u, 10mg→200u, 15–999mg→300u, 1000mg→500u. */
 export function recommendedBacWaterForVial(dose: string): BacWaterUnits {
   const match = dose.trim().toLowerCase().match(/^([\d.]+)\s*mg$/)
   const mg = match ? parseFloat(match[1]) : parseFloat(dose)
   if (!mg || isNaN(mg)) return DEFAULT_BAC_WATER
+  if (mg >= 1000) return 500
   if (mg <= 5) return 100
   if (mg <= 10) return 200
   return 300
@@ -51,7 +78,7 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     id: 'retatrutide',
     name: 'Retatrutide',
     tagline: 'Triple agonist — trending for recomp',
-    doseOptions: ['5mg', '10mg', '15mg', '30mg'],
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
     defaultDose: '10mg',
     frequency: 'weekly',
     timing: 'Weekly, same day each week',
@@ -81,8 +108,8 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     id: 'tesamorelin',
     name: 'Tesamorelin',
     tagline: 'GH secretagogue — visceral fat focus',
-    doseOptions: ['5mg', '10mg'],
-    defaultDose: '5mg',
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
+    defaultDose: '20mg',
     frequency: 'daily',
     timing: 'Before bed, fasted',
     notes: 'Abdominal SubQ preferred. Often stacked with AOD-9604.',
@@ -111,8 +138,8 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     id: 'bpc157',
     name: 'BPC-157',
     tagline: 'Healing & gut — staple recovery peptide',
-    doseOptions: ['5mg', '10mg', '15mg'],
-    defaultDose: '5mg',
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
+    defaultDose: '10mg',
     frequency: 'daily',
     timing: 'Morning or post-workout',
     notes: 'SubQ near injury site when applicable.',
@@ -131,8 +158,8 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     id: 'aod9604',
     name: 'AOD-9604',
     tagline: 'Fat mobilization fragment — recomp favorite',
-    doseOptions: ['5mg', '10mg', '15mg'],
-    defaultDose: '5mg',
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
+    defaultDose: '10mg',
     frequency: 'daily',
     timing: 'Morning, fasted',
     notes: 'Take 20–30 min before food for best effect.',
@@ -141,8 +168,8 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     id: 'ghkcu',
     name: 'GHK-Cu',
     tagline: 'Skin, hair & recovery — longevity crowd favorite',
-    doseOptions: ['5mg', '10mg', '15mg'],
-    defaultDose: '5mg',
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
+    defaultDose: '100mg',
     frequency: 'daily',
     timing: 'Morning or evening SubQ',
     notes: 'Also popular topically. Copper peptide — track skin response.',
@@ -151,7 +178,7 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     id: 'motsc',
     name: 'MOTS-c',
     tagline: 'Mitochondrial peptide — metabolic performance',
-    doseOptions: ['5mg', '10mg', '15mg'],
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
     defaultDose: '10mg',
     frequency: 'weekly',
     timing: '1–2× weekly, fasted',
@@ -161,8 +188,8 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     id: 'ss31',
     name: 'SS-31 (Elamipretide)',
     tagline: 'Mitochondrial support — endurance & recovery',
-    doseOptions: ['5mg', '10mg', '20mg'],
-    defaultDose: '10mg',
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
+    defaultDose: '50mg',
     frequency: 'daily',
     timing: 'Morning SubQ',
     notes: 'Emerging longevity stack component.',

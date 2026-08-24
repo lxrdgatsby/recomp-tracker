@@ -15,6 +15,7 @@ import {
   profileToTrackerState,
 } from '../lib/profileService'
 import { applyLxrdgatsbyProtocolSeed } from '../lib/protocolSeed'
+import { runVialSizeMigrationV2 } from '../lib/vialInventory'
 import { getAuthCallbackUrl } from '../lib/authRedirect'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import type { TrackerState } from '../types'
@@ -65,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('persist seeded protocol:', err)
         }
       }
+      next = runVialSizeMigrationV2(next) ?? next
       setTrackerState(next)
     }
   }, [])

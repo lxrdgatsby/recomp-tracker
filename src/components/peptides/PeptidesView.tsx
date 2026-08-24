@@ -434,6 +434,18 @@ export function PeptidesView({
               peptides={peptides}
               onLogDose={(log) => addInjectionLog({ ...log })}
               onSaveProtocol={(protocol) => saveActiveProtocol({ ...protocol })}
+              onAddPeptideToStack={(peptide) => {
+                const exists = peptides.some(
+                  (p) =>
+                    p.id === peptide.id ||
+                    p.name.toLowerCase() === peptide.name.toLowerCase()
+                )
+                if (exists) return
+                setTrackerState({
+                  ...state,
+                  peptides: [...peptides, peptide],
+                })
+              }}
               {...calculatorDefaults}
             />
           </div>

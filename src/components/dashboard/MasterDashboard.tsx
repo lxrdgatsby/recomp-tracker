@@ -25,6 +25,7 @@ interface MasterDashboardProps {
 export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
   const addInjectionLog = useTrackerStore((store) => store.addInjectionLog)
   const saveActiveProtocol = useTrackerStore((store) => store.saveActiveProtocol)
+  const setPeptides = useTrackerStore((store) => store.setPeptides)
   const [plan, setPlan] = useState<Generated90DayPlan | null>(null)
   const [checkInVersion, setCheckInVersion] = useState(0)
 
@@ -85,6 +86,15 @@ export function MasterDashboard({ state, onLogWeight }: MasterDashboardProps) {
             peptides={state.peptides}
             onLogDose={(log) => addInjectionLog({ ...log })}
             onSaveProtocol={(protocol) => saveActiveProtocol({ ...protocol })}
+            onAddPeptideToStack={(peptide) => {
+              const exists = state.peptides.some(
+                (p) =>
+                  p.id === peptide.id ||
+                  p.name.toLowerCase() === peptide.name.toLowerCase()
+              )
+              if (exists) return
+              void setPeptides([...state.peptides, peptide])
+            }}
           />
           <InjectionSiteMap />
         </div>
