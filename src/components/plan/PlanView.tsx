@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { Check, Download, Flag, Printer } from 'lucide-react'
+import { Check, Download, Printer } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { CYCLE_DAYS } from '../../constants/defaults'
@@ -7,9 +7,7 @@ import type { TrackerState } from '../../types'
 import {
   getDaysIntoCycle,
   getLatestWeight,
-  getMilestones,
   getProjectedGoalDate,
-  getStartWeight,
 } from '../../utils/calculations'
 import {
   getInjectionsForDate,
@@ -18,7 +16,7 @@ import {
 } from '../../utils/peptideSchedule'
 import { getCheckInHistory } from '../../utils/checkInStorage'
 import { ProtocolCard } from '../protocol/ProtocolCard'
-import { SAFETY_COPY, hasSeededProtocol } from '../../lib/protocolSeed'
+import { hasSeededProtocol } from '../../lib/protocolSeed'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { ProgressBar } from '../ui/ProgressBar'
@@ -53,14 +51,12 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
     export90DayPlan(getPlanForExport(state), getCheckInHistory())
   }
   const current = getLatestWeight(profile, weightHistory)
-  const start = getStartWeight(profile, weightHistory)
   const daysIn = getDaysIntoCycle(profile.startDate)
   const projected = getProjectedGoalDate(
     current,
     profile.goalWeight,
     profile.weeklyLossTarget
   )
-  const milestones = getMilestones(profile, start)
   const cycleProgress = Math.round((daysIn / CYCLE_DAYS) * 100)
 
   const summary =
@@ -93,9 +89,6 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
       </div>
 
       {seeded && <ProtocolCard state={state} />}
-      {seeded && (
-        <p className="text-[11px] leading-relaxed text-amber-200/90">{SAFETY_COPY}</p>
-      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="!p-4">
@@ -161,56 +154,6 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
             </div>
           </div>
         </div>
-      </div>
-
-      <Card title="Key Milestones">
-        <div className="space-y-3">
-          {milestones.map((m) => (
-            <div
-              key={m.week}
-              className="flex items-center gap-4 rounded-lg border border-slate-800/60 bg-navy-950/30 px-4 py-3"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-500/10 text-teal-400">
-                <Flag size={16} />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-white">{m.label}</p>
-                <p className="text-xs text-slate-500">{m.date}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-emerald-400">
-                  ~{m.projectedWeight} lbs
-                </p>
-                <p className="text-xs text-slate-600">projected</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card title="Nutrition">
-          <ul className="space-y-2 text-sm text-slate-400">
-            {(recompPlan?.nutritionNotes ?? [
-              'High protein to preserve muscle during deficit.',
-              'Weigh weekly and adjust calories to hit loss target.',
-            ]).map((note) => (
-              <li key={note}>· {note}</li>
-            ))}
-          </ul>
-        </Card>
-        <Card title="Training">
-          <ul className="space-y-2 text-sm text-slate-400">
-            {(recompPlan?.trainingNotes ?? [
-              '5 training days / 2 rest with 10k steps daily.',
-            ]).map((note) => (
-              <li key={note}>· {note}</li>
-            ))}
-          </ul>
-          {recompPlan?.checkInCadence && (
-            <p className="mt-3 text-xs text-slate-500">{recompPlan.checkInCadence}</p>
-          )}
-        </Card>
       </div>
 
       <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

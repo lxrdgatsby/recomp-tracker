@@ -1,4 +1,5 @@
-import { Syringe } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, Syringe } from 'lucide-react'
 import { RECONSTITUTION_FAQ_QUESTION } from '../../constants/reconstitutionGuide'
 
 export { RECONSTITUTION_FAQ_QUESTION }
@@ -101,18 +102,53 @@ export function ReconstitutionGuide({
     )
   }
 
+  return <PeptidesGuideAccordion />
+}
+
+function PeptidesGuideAccordion() {
+  const [open, setOpen] = useState(false)
+
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-500/10">
-          <Syringe className="text-emerald-400" size={20} />
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="reconstitution-guide-panel"
+        className="flex w-full cursor-pointer items-center justify-between gap-3 text-left transition-opacity duration-200 hover:opacity-90 active:opacity-75"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-500/10">
+            <Syringe className="text-emerald-400" size={20} />
+          </div>
+          <div>
+            <span className="block font-medium text-white">Reconstitution Guide</span>
+            <span className="block text-xs text-slate-400">
+              U-100 syringe • 100 units = 1mL
+            </span>
+          </div>
         </div>
-        <div>
-          <h3 className="font-medium text-white">Reconstitution Guide</h3>
-          <p className="text-xs text-slate-400">U-100 syringe • 100 units = 1mL</p>
+        <ChevronDown
+          className={`shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          size={20}
+          aria-hidden="true"
+        />
+      </button>
+
+      <div
+        id="reconstitution-guide-panel"
+        role="region"
+        aria-hidden={!open}
+        className={`grid transition-[grid-template-rows,opacity] duration-200 ${
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="mt-4">
+            <GuideSections />
+          </div>
         </div>
       </div>
-      <GuideSections />
     </div>
   )
 }

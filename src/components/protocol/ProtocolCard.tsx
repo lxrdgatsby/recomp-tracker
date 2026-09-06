@@ -1,7 +1,8 @@
-import { differenceInCalendarDays, format, parseISO } from 'date-fns'
+import { differenceInCalendarDays, parseISO } from 'date-fns'
 import { PHASE_NOTES, SAFETY_COPY } from '../../lib/protocolSeed'
 import type { TrackerState } from '../../types'
 import { getInjectionsForDate } from '../../utils/peptideSchedule'
+import { getProtocolHeader } from '../../utils/protocolHeader'
 
 export function ProtocolCard({
   state,
@@ -10,11 +11,11 @@ export function ProtocolCard({
   state: TrackerState
   compact?: boolean
 }) {
+  const { dateLabel, week } = getProtocolHeader(state.profile.startDate)
   const start = parseISO(state.profile.startDate)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const diff = differenceInCalendarDays(today, start)
-  const week = diff < 0 ? 0 : Math.floor(diff / 7) + 1
   const preview = diff < 0
   const injections = getInjectionsForDate(state.peptides, today, state.profile.startDate)
 
@@ -24,14 +25,14 @@ export function ProtocolCard({
         <div>
           <p className="text-xs tracking-[2px] text-emerald-400 uppercase">Protocol</p>
           <h2 className="mt-1 text-lg font-semibold text-white">
-            90-Day Research Protocol — starts Sunday
+            90-Day Research Protocol
           </h2>
           <p className="mt-1 text-sm text-slate-400">
-            {format(start, 'EEE, MMM d')} · {preview ? 'Week 1 pending' : `Week ${week}`}
+            {dateLabel} · Week {week}
           </p>
         </div>
         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-          {preview ? 'Starts Sunday' : `Week ${week}`}
+          Week {week}
         </span>
       </div>
 

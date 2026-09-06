@@ -5,6 +5,7 @@ import type { TrackerState, WorkoutDay } from '../../types'
 import { getWorkoutDate, WORKOUT_PLAN } from '../../utils/workoutPlan'
 import { getWorkoutQuickLog } from '../../utils/workoutLogStorage'
 import { getWorkoutSessionLog } from '../../utils/workoutSetStorage'
+import { Card } from '../ui/Card'
 import { WorkoutLogModal } from './WorkoutLogModal'
 import { WorkoutQuickLogModal } from './WorkoutQuickLogModal'
 
@@ -26,7 +27,7 @@ function getCurrentWeek(startDate: string): number {
 }
 
 export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
-  const { profile, workoutCompletions } = state
+  const { profile, workoutCompletions, recompPlan } = state
   const [selectedWeek, setSelectedWeek] = useState(() =>
     getCurrentWeek(profile.startDate)
   )
@@ -189,6 +190,31 @@ export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400 sm:rounded-3xl sm:p-5 sm:text-sm">
         Days 6 & 7 are rest days — aim for 10k+ steps, mobility, and recovery.
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <Card title="Nutrition">
+          <ul className="space-y-2 text-sm text-slate-400">
+            {(recompPlan?.nutritionNotes ?? [
+              'High protein to preserve muscle during deficit.',
+              'Weigh weekly and adjust calories to hit loss target.',
+            ]).map((note) => (
+              <li key={note}>· {note}</li>
+            ))}
+          </ul>
+        </Card>
+        <Card title="Training">
+          <ul className="space-y-2 text-sm text-slate-400">
+            {(recompPlan?.trainingNotes ?? [
+              '5 training days / 2 rest with 10k steps daily.',
+            ]).map((note) => (
+              <li key={note}>· {note}</li>
+            ))}
+          </ul>
+          {recompPlan?.checkInCadence && (
+            <p className="mt-3 text-xs text-slate-500">{recompPlan.checkInCadence}</p>
+          )}
+        </Card>
       </div>
 
       {quickLogModal && (

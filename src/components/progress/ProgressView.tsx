@@ -1,5 +1,5 @@
-import { differenceInCalendarDays, format, parse, parseISO } from 'date-fns'
-import { Calendar, Download, Target, TrendingUp, X } from 'lucide-react'
+import { differenceInCalendarDays, format, parseISO } from 'date-fns'
+import { Download, Flag, Target, TrendingUp, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
+import { Card } from '../ui/Card'
 import { AdvancedAnalytics } from './AdvancedAnalytics'
 import { ProgressCorrelation } from './ProgressCorrelation'
 import type { TrackerState } from '../../types'
@@ -37,20 +38,10 @@ const ADHERENCE_STATS = [
   { key: 'workout' as const, label: 'Workouts', colorClass: 'text-blue-400' },
 ]
 
-const UPCOMING_WEEKS = [2, 4, 8]
-
 interface ChartPoint {
   date: string
   weight: number
   goal: number
-}
-
-interface UpcomingMilestone {
-  week: string
-  date: string
-  target: string
-  status: string
-  statusClass: string
 }
 
 function buildChartData(state: TrackerState): ChartPoint[] {
@@ -105,42 +96,6 @@ function getYDomain(chartData: ChartPoint[], goalWeight: number): [number, numbe
   return [min, Math.max(max, min + 8)]
 }
 
-function buildUpcomingMilestones(state: TrackerState): UpcomingMilestone[] {
-  const { profile, weightHistory } = state
-  const startWeight = getStartWeight(profile, weightHistory)
-  const currentWeight = getLatestWeight(profile, weightHistory)
-  const today = new Date()
-  const milestones = getMilestones(profile, startWeight)
-
-  return UPCOMING_WEEKS.map((weekNum) => {
-    const milestone = milestones.find((m) => m.week === weekNum)
-    if (!milestone) return null
-
-    const milestoneDate = parse(milestone.date, 'MMM d, yyyy', new Date())
-    const shortDate = format(milestoneDate, 'MMM d')
-    const achieved = currentWeight <= milestone.projectedWeight
-    const isPast = milestoneDate < today
-
-    let status = 'Upcoming'
-    let statusClass = 'text-emerald-400'
-    if (isPast && achieved) {
-      status = 'Achieved'
-      statusClass = 'text-emerald-400'
-    } else if (isPast) {
-      status = 'In progress'
-      statusClass = 'text-amber-400'
-    }
-
-    return {
-      week: `Week ${weekNum}`,
-      date: shortDate,
-      target: `~${milestone.projectedWeight} lbs`,
-      status,
-      statusClass,
-    }
-  }).filter((m): m is UpcomingMilestone => m != null)
-}
-
 export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
   const { profile, weightHistory } = state
   const [showLogModal, setShowLogModal] = useState(false)
@@ -163,10 +118,7 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
     () => getYDomain(chartData, profile.goalWeight),
     [chartData, profile.goalWeight]
   )
-  const upcomingMilestones = useMemo(
-    () => buildUpcomingMilestones(state),
-    [state]
-  )
+  const milestones = getMilestones(profile, startWeight)
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const hasLoggedWeights = weightHistory.length > 0
@@ -305,30 +257,30 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-4 flex items-center gap-2 font-medium">
-          <Calendar size={18} /> Upcoming Milestones
-        </h2>
-
+      <Card title="Key Milestones">
         <div className="space-y-3">
-          {upcomingMilestones.map((milestone) => (
+          {milestones.map((m) => (
             <div
-              key={milestone.week}
-              className="flex items-center justify-between rounded-2xl bg-white/5 p-5"
+              key={m.week}
+              className="flex items-center gap-4 rounded-lg border border-slate-800/60 bg-navy-950/30 px-4 py-3"
             >
-              <div>
-                <div className="font-medium">{milestone.week} Check-in</div>
-                <div className="text-xs text-slate-400">
-                  {milestone.date} • {milestone.target}
-                </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-500/10 text-teal-400">
+                <Flag size={16} />
               </div>
-              <div className={`text-right text-sm ${milestone.statusClass}`}>
-                {milestone.status}
+              <div className="flex-1">
+                <p className="font-medium text-white">{m.label}</p>
+                <p className="text-xs text-slate-500">{m.date}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-emerald-400">
+                  ~{m.projectedWeight} lbs
+                </p>
+                <p className="text-xs text-slate-600">projected</p>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
 
       <button
         type="button"
