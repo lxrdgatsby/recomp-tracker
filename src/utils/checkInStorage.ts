@@ -109,3 +109,18 @@ export function getCheckInHistory(): CheckInData[] {
     return []
   }
 }
+
+export function hasCheckInOnCalendarDate(
+  ymd: string,
+  timeZone = 'America/Los_Angeles',
+): boolean {
+  const matches = (entry: CheckInData | null): boolean => {
+    if (!entry?.date) return false
+    if (entry.date.split('T')[0] === ymd) return true
+    const parsed = new Date(entry.date)
+    if (Number.isNaN(parsed.getTime())) return false
+    return parsed.toLocaleDateString('en-CA', { timeZone }) === ymd
+  }
+  if (matches(getLastCheckIn())) return true
+  return getCheckInHistory().some(matches)
+}

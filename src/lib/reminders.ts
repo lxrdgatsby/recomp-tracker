@@ -392,16 +392,19 @@ export async function showReminderNotification(payload: {
   title: string
   body: string
   tag?: string
+  url?: string
 }): Promise<void> {
   const permission = resolvePermission(getReminderSettings().permission)
-  if (permission !== 'granted') return
+  const live = isNotificationSupported() ? Notification.permission : 'unsupported'
+  if (permission !== 'granted' && live !== 'granted') return
   const tag = payload.tag ?? `peptide-${Date.now()}`
+  const url = payload.url ?? REMINDER_HOME_URL
   const options = {
     body: payload.body,
     tag,
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    data: { url: REMINDER_HOME_URL },
+    data: { url },
     silent: false,
   } as NotificationOptions & { data: { url: string } }
   try {
@@ -430,9 +433,9 @@ async function showTestNotification() {
   })
 }
 
-export async function requestNotificationPermission(): Promise<
-  NotificationPermission | 'unsupported'
-> {
+export async function requestNotificationPermission(options?: {
+  silent?: boolean
+}): Promise<NotificationPermission | 'unsupported'> {
   const native = await getCapacitorLocalNotifications()
   if (native) {
     const result = await native.requestPermissions()
@@ -441,7 +444,7 @@ export async function requestNotificationPermission(): Promise<
       display === 'granted' ? 'granted' : display === 'denied' ? 'denied' : 'default'
     const current = getReminderSettings()
     saveReminderSettings({ ...current, permission })
-    if (permission === 'granted') await showTestNotification()
+    if (permission === 'granted' && !options?.silent) await showTestNotification()
     return permission
   }
 
@@ -456,7 +459,7 @@ export async function requestNotificationPermission(): Promise<
       : Notification.permission
   const current = getReminderSettings()
   saveReminderSettings({ ...current, permission })
-  if (permission === 'granted') await showTestNotification()
+  if (permission === 'granted' && !options?.silent) await showTestNotification()
   return permission
 }
 

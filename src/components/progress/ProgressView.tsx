@@ -16,6 +16,7 @@ import { AdvancedAnalytics } from './AdvancedAnalytics'
 import { ProgressCorrelation } from './ProgressCorrelation'
 import type { TrackerState } from '../../types'
 import type { CheckInData } from '../../utils/checkInStorage'
+import type { CheckInSchedule } from '../../utils/checkInSchedule'
 import { computeAdherence } from '../../utils/adherence'
 import {
   getLatestWeight,
@@ -26,6 +27,7 @@ import {
 interface ProgressViewProps {
   state: TrackerState
   onLogWeight: (date: string, weight: number) => void
+  onCheckInScheduleChange?: (schedule: CheckInSchedule) => void
 }
 
 const ADHERENCE_STATS = [
@@ -96,7 +98,11 @@ function getYDomain(chartData: ChartPoint[], goalWeight: number): [number, numbe
   return [min, Math.max(max, min + 8)]
 }
 
-export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
+export function ProgressView({
+  state,
+  onLogWeight,
+  onCheckInScheduleChange,
+}: ProgressViewProps) {
   const { profile, weightHistory } = state
   const [showLogModal, setShowLogModal] = useState(false)
   const [weightInput, setWeightInput] = useState('')
@@ -169,7 +175,9 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
       <div className="mb-4">
         <SmartCheckIn
           defaultWeight={String(currentWeight)}
+          profile={profile}
           onSubmit={handleCheckIn}
+          onScheduleChange={onCheckInScheduleChange}
         />
       </div>
 

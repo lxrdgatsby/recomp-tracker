@@ -44,12 +44,17 @@ export interface RecompPlan {
   reconstitutionReminder?: string
 }
 
+export type CheckInCadence = 'daily' | 'weekly'
+
 export interface Profile {
   currentWeight: number
   goalWeight: number
   height?: string
   startDate: string
   weeklyLossTarget: number
+  checkInCadence?: CheckInCadence
+  weeklyWeighInDay?: number
+  weighInReminderEnabled?: boolean
 }
 
 export interface WeightEntry {

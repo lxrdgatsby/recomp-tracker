@@ -9,6 +9,7 @@ import { PlanView } from '../components/plan/PlanView'
 import { WorkoutsView } from '../components/workouts/WorkoutsView'
 import { ProgressView } from '../components/progress/ProgressView'
 import { useAuth } from '../contexts/AuthContext'
+import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { useAppContext } from './AppLayout'
 
 export function DashboardRoute() {
@@ -60,5 +61,22 @@ export function WorkoutsRoute() {
 
 export function ProgressRoute() {
   const { state, logWeight } = useAppContext()
-  return <ProgressView state={state} onLogWeight={logWeight} />
+  const { persistState } = usePersistTrackerState()
+  return (
+    <ProgressView
+      state={state}
+      onLogWeight={logWeight}
+      onCheckInScheduleChange={(schedule) => {
+        void persistState({
+          ...state,
+          profile: {
+            ...state.profile,
+            checkInCadence: schedule.cadence,
+            weeklyWeighInDay: schedule.weeklyWeighInDay,
+            weighInReminderEnabled: schedule.reminderEnabled,
+          },
+        })
+      }}
+    />
+  )
 }

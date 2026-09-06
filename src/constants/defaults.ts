@@ -10,6 +10,9 @@ export const DEFAULT_PROFILE: Profile = {
   height: '',
   startDate: new Date().toISOString().slice(0, 10),
   weeklyLossTarget: 0.875,
+  checkInCadence: 'daily',
+  weeklyWeighInDay: 0,
+  weighInReminderEnabled: false,
 }
 
 export const DEFAULT_PEPTIDES: Peptide[] = [
