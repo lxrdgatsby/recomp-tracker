@@ -199,34 +199,7 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
 
   return (
     <div className="pb-8 text-white">
-      <div className="flex items-start justify-between gap-3 pb-6 pt-2">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
-          <p className="text-slate-400">Track your recomp journey</p>
-        </div>
-        <button
-          type="button"
-          onClick={handleExportPdf}
-          className="flex shrink-0 items-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-400"
-        >
-          <Download size={14} />
-          Export Full Report (PDF)
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <SmartCheckIn
-          defaultWeight={String(currentWeight)}
-          onSubmit={handleCheckIn}
-        />
-      </div>
-
-      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ProgressCorrelation refreshKey={checkInVersion} />
-        <AdvancedAnalytics refreshKey={checkInVersion} />
-      </div>
-
-      <div className="mb-8 grid grid-cols-3 gap-3">
+      <div className="mb-4 grid grid-cols-3 gap-3 pt-[max(0.5rem,env(safe-area-inset-top))]">
         {ADHERENCE_STATS.map((stat) => (
           <div
             key={stat.key}
@@ -240,6 +213,18 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
             <div className="mt-1 text-xs text-slate-400">{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="mb-4">
+        <SmartCheckIn
+          defaultWeight={String(currentWeight)}
+          onSubmit={handleCheckIn}
+        />
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ProgressCorrelation refreshKey={checkInVersion} />
+        <AdvancedAnalytics refreshKey={checkInVersion} />
       </div>
 
       <div className="mb-8">
@@ -303,6 +288,21 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      <div className="mb-8 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
+          <p className="text-slate-400">Track your recomp journey</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExportPdf}
+          className="flex shrink-0 items-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-400"
+        >
+          <Download size={14} />
+          Export Full Report (PDF)
+        </button>
       </div>
 
       <div>
