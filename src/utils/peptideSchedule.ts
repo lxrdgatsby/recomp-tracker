@@ -61,3 +61,18 @@ export function getScheduleDates(startDate: string, count: number): string[] {
     format(addDays(start, i), 'yyyy-MM-dd')
   )
 }
+
+/** Last `count` calendar days ending today, skipping dates before the cycle start. Oldest first. */
+export function getRecentScheduleDates(
+  startDate: string,
+  count: number
+): string[] {
+  const start = parseISO(startDate)
+  const today = new Date()
+  const dates: string[] = []
+  for (let i = count - 1; i >= 0; i--) {
+    const date = addDays(today, -i)
+    if (date >= start) dates.push(format(date, 'yyyy-MM-dd'))
+  }
+  return dates
+}

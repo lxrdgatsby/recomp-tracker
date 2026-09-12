@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
 import { AdvancedAnalytics } from './AdvancedAnalytics'
+import { InjectionHistory } from './InjectionHistory'
 import { ProgressCorrelation } from './ProgressCorrelation'
 import type { TrackerState } from '../../types'
 import type { CheckInData } from '../../utils/checkInStorage'
@@ -25,6 +26,7 @@ import {
 interface ProgressViewProps {
   state: TrackerState
   onLogWeight: (date: string, weight: number) => void
+  onToggleInjection: (date: string, peptideId: string) => void
 }
 
 const ADHERENCE_STATS = [
@@ -141,7 +143,11 @@ function buildUpcomingMilestones(state: TrackerState): UpcomingMilestone[] {
   }).filter((m): m is UpcomingMilestone => m != null)
 }
 
-export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
+export function ProgressView({
+  state,
+  onLogWeight,
+  onToggleInjection,
+}: ProgressViewProps) {
   const { profile, weightHistory } = state
   const [showLogModal, setShowLogModal] = useState(false)
   const [weightInput, setWeightInput] = useState('')
@@ -226,6 +232,8 @@ export function ProgressView({ state, onLogWeight }: ProgressViewProps) {
         <ProgressCorrelation refreshKey={checkInVersion} />
         <AdvancedAnalytics refreshKey={checkInVersion} />
       </div>
+
+      <InjectionHistory state={state} onToggleInjection={onToggleInjection} />
 
       <div className="mb-8">
         <div className="mb-4 flex items-center justify-between">

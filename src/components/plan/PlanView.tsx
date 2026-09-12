@@ -1,6 +1,5 @@
-import { format, parseISO } from 'date-fns'
-import { Check, Download, Flag, Printer } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { format } from 'date-fns'
+import { Check, Download, Flag } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { CYCLE_DAYS } from '../../constants/defaults'
 import type { TrackerState } from '../../types'
@@ -11,11 +10,7 @@ import {
   getProjectedGoalDate,
   getStartWeight,
 } from '../../utils/calculations'
-import {
-  getInjectionsForDate,
-  getScheduleDates,
-  isInjectionDone,
-} from '../../utils/peptideSchedule'
+import { getInjectionsForDate, isInjectionDone } from '../../utils/peptideSchedule'
 import { getCheckInHistory } from '../../utils/checkInStorage'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
@@ -29,13 +24,7 @@ interface PlanViewProps {
 export function PlanView({ state, onToggleInjection }: PlanViewProps) {
   const { userProfile } = useAuth()
   const { profile, weightHistory, peptides, recompPlan, injectionLogs } = state
-  const [range, setRange] = useState<7 | 30>(7)
   const today = format(new Date(), 'yyyy-MM-dd')
-
-  const scheduleDates = useMemo(
-    () => getScheduleDates(profile.startDate, range),
-    [profile.startDate, range]
-  )
 
   const todayInjections = getInjectionsForDate(
     peptides,
@@ -43,7 +32,6 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
     profile.startDate
   )
 
-  const handlePrint = () => window.print()
   const handleExportPdf = async () => {
     const { export90DayPlan, getPlanForExport } = await import(
       '../../utils/export90DayPlan'
@@ -205,33 +193,11 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         </Card>
       </div>
 
-      <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-white">Injection Schedule</h3>
-          <p className="mt-0.5 text-sm text-slate-400">
-            Mark doses as done — saved automatically
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant={range === 7 ? 'primary' : 'secondary'}
-            onClick={() => setRange(7)}
-          >
-            7 Days
-          </Button>
-          <Button
-            size="sm"
-            variant={range === 30 ? 'primary' : 'secondary'}
-            onClick={() => setRange(30)}
-          >
-            30 Days
-          </Button>
-          <Button size="sm" variant="secondary" onClick={handlePrint}>
-            <Printer size={14} />
-            Print
-          </Button>
-        </div>
+      <div className="no-print">
+        <h3 className="text-lg font-semibold text-white">Injection Schedule</h3>
+        <p className="mt-0.5 text-sm text-slate-400">
+          Mark doses as done — saved automatically
+        </p>
       </div>
 
       <Card title="Today's Injections" className="no-print">
@@ -276,80 +242,6 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
           </div>
         )}
       </Card>
-
-      <div className="print-checklist space-y-4">
-        <h3 className="hidden text-lg font-bold print:block">
-          {range}-Day Injection Checklist
-        </h3>
-        {scheduleDates.map((dateStr) => {
-          const injections = getInjectionsForDate(
-            peptides,
-            parseISO(dateStr),
-            profile.startDate
-          )
-          if (injections.length === 0) return null
-          const isToday = dateStr === today
-          return (
-            <Card
-              key={dateStr}
-              className={isToday ? 'ring-1 ring-teal-500/40' : ''}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h4 className="font-semibold text-white">
-                  {format(parseISO(dateStr), 'EEE, MMM d')}
-                  {isToday && (
-                    <span className="ml-2 text-xs font-normal text-teal-400">
-                      Today
-                    </span>
-                  )}
-                </h4>
-                <span className="text-xs text-slate-500">
-                  {injections.length} dose{injections.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="space-y-2">
-                {injections.map((inj) => {
-                  const done = isInjectionDone(
-                    injectionLogs,
-                    dateStr,
-                    inj.peptideId
-                  )
-                  return (
-                    <div
-                      key={`${dateStr}-${inj.peptideId}`}
-                      className="flex items-center justify-between gap-3 rounded-md bg-navy-950/30 px-3 py-2 text-sm"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border print:border-black ${
-                            done
-                              ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
-                              : 'border-slate-600'
-                          }`}
-                        >
-                          {done && <Check size={12} />}
-                        </span>
-                        <div>
-                          <span className="text-slate-200">{inj.peptideName}</span>
-                          <span className="ml-2 text-teal-400/80">{inj.dose}</span>
-                          <span className="ml-2 text-slate-500">{inj.timing}</span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="no-print text-xs text-slate-500 hover:text-teal-400"
-                        onClick={() => onToggleInjection(dateStr, inj.peptideId)}
-                      >
-                        {done ? 'Undo' : 'Done'}
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </Card>
-          )
-        })}
-      </div>
     </div>
   )
 }
