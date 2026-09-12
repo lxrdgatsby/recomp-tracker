@@ -23,6 +23,7 @@ const ROUTE_MAP: Record<string, ViewId> = {
   '/app/profile': 'profile',
   '/app/settings': 'settings',
   '/app/company': 'company',
+  '/admin': 'admin',
   '/app/peptides': 'peptides',
   '/app/plan': 'plan',
   '/app/workouts': 'workouts',
@@ -36,6 +37,7 @@ const VIEW_ROUTES: Record<ViewId, string> = {
   profile: '/app/profile',
   settings: '/app/settings',
   company: '/app/company',
+  admin: '/admin',
   peptides: '/app/peptides',
   plan: '/app/plan',
   workouts: '/app/workouts',
@@ -194,7 +196,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen min-w-0 bg-navy-950">
+    <div className="flex min-h-screen min-w-0 bg-[#0a0a0a]">
       <Sidebar
         active={activeView}
         onNavigate={navigateTo}
@@ -205,7 +207,7 @@ export function AppLayout() {
 
       <div className="flex h-svh min-h-0 min-w-0 flex-1 flex-col lg:min-h-screen lg:h-auto">
         <header
-          className={`no-print flex items-center justify-between border-b border-slate-800/80 bg-navy-900/50 px-4 py-3 lg:hidden ${
+          className={`no-print flex items-center justify-between border-b border-white/10 bg-[#0a0a0a]/90 px-4 py-3 lg:hidden ${
             activeView === 'assistant' ? 'hidden' : ''
           }`}
         >
@@ -215,7 +217,7 @@ export function AppLayout() {
             aria-label="Back to home"
           >
             <h1 className="text-lg font-bold text-white">
-              Peptide<span className="text-teal-400">Tracker</span>
+              Peptide<span className="text-emerald-400">Tracker</span>
             </h1>
             {userProfile?.username && (
               <p className="text-[10px] text-slate-500">@{userProfile.username}</p>

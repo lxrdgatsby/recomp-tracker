@@ -254,3 +254,29 @@ begin
       and conversation_id is null;
   end loop;
 end $$;
+
+-- Admin: master account can read all profiles (Admin Dashboard)
+-- Uses JWT email claim (same idea as: auth.jwt() ->> 'email' = admin).
+-- Keep "Users read own profile" above — both SELECT policies apply (OR).
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', ''))
+    = lower('itsgatsby@protonmail.com');
+$$;
+
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+drop policy if exists "Only master admin can view all profiles" on public.profiles;
+drop policy if exists "Admin read all profiles" on public.profiles;
+create policy "Only master admin can view all profiles"
+  on public.profiles for select
+  using (public.is_admin());
+
+drop policy if exists "Only master admin can delete profiles" on public.profiles;
+create policy "Only master admin can delete profiles"
+  on public.profiles for delete
+  using (public.is_admin());

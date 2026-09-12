@@ -343,7 +343,7 @@ export function rebuildPeptideForVialSize(
 export function getCurrentInjectionDose(
   peptide: Peptide,
   startDate: string
-): { doseLabel: string; syringeUnits?: number } {
+): { doseLabel: string; syringeUnits?: number; doseMg?: number } {
   const dayInCycle = Math.max(0, getDaysIntoCycle(startDate) - 1)
   const tier = getTitrationForDay(peptide, dayInCycle)
   const syringeUnits =
@@ -356,6 +356,7 @@ export function getCurrentInjectionDose(
           peptide.protocol?.startingDoseLabel ??
           peptide.dose,
     syringeUnits,
+    doseMg: tier?.doseMg ?? peptide.protocol?.startingDoseMg,
   }
 }
 

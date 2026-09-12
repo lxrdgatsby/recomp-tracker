@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { ToastProvider } from './components/ui/Toast'
+import Admin from './pages/Admin'
 import { AppLayout } from './pages/AppLayout'
 import {
   AssistantRoute,
@@ -24,6 +26,7 @@ import { SignupPage } from './pages/SignupPage'
 export default function App() {
   return (
     <AuthProvider>
+      <ToastProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
@@ -36,6 +39,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireOnboarding>
+                <Admin />
               </ProtectedRoute>
             }
           />
@@ -53,6 +64,7 @@ export default function App() {
             <Route path="profile" element={<ProfileRoute />} />
             <Route path="settings" element={<SettingsRoute />} />
             <Route path="company" element={<CompanyRoute />} />
+            <Route path="admin" element={<Navigate to="/admin" replace />} />
             <Route path="peptides" element={<PeptidesRoute />} />
             <Route path="plan" element={<PlanRoute />} />
             <Route path="workouts" element={<WorkoutsRoute />} />
@@ -62,6 +74,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

@@ -112,7 +112,7 @@ function clonePeptides(peptides: Peptide[]): Peptide[] {
 }
 
 export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
-  const { userProfile } = useAuth()
+  const { userProfile, signOut } = useAuth()
   const initialFamiliarity = (userProfile?.familiarity ??
     'beginner') as FamiliarityLevel
   const [draftProfile, setDraftProfile] = useState(() =>
@@ -193,6 +193,12 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
 
   const removePeptide = (id: string) => {
     setDraftPeptides((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  const handleLogout = async () => {
+    if (!confirm('Are you sure you want to log out?')) return
+    localStorage.clear()
+    await signOut()
   }
 
   const handleSave = async () => {
@@ -566,6 +572,16 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
           </div>
         </div>
       )}
+
+      <div className="mt-10 border-t border-white/10 pt-6 pb-8">
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="w-full rounded-2xl bg-red-500/10 py-4 font-medium text-red-400 transition-colors hover:bg-red-500/20"
+        >
+          Log Out
+        </button>
+      </div>
     </div>
   )
 }

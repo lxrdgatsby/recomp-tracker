@@ -28,3 +28,4 @@ dev-dist
 *.sw?
 .env.local.save
 .env.local*
+.vercel

@@ -17,6 +17,35 @@ Follow these steps to enable authentication, cloud profiles, and the built-in AI
 
 This creates `profiles` and `chat_messages` tables, RLS policies, and an auto-profile trigger on signup.
 
+### Admin dashboard (list all users)
+
+If the schema was applied before admin support existed, also run:
+
+`supabase/migrations/002_admin_read_profiles.sql`
+
+That adds:
+
+```sql
+-- Admin sees every profile
+create policy "Only master admin can view all profiles"
+  on public.profiles for select
+  using (lower(auth.jwt() ->> 'email') = lower('itsgatsby@protonmail.com'));
+```
+
+**Do not use admin-only SELECT as the sole policy.** Regular users still need:
+
+```sql
+create policy "Users read own profile"
+  on public.profiles for select
+  using (auth.uid() = id);
+```
+
+(Postgres ORs multiple permissive policies.)
+
+UI: `/admin` (sidebar **Admin** when signed in as that email).
+
+> Do **not** run a minimal `create table public.profiles (id, email, …)` on an existing project — this app’s `profiles` table already has many columns (`username`, `tracker_data`, etc.). Use the migration above on existing DBs; use full `schema.sql` only for a brand-new project.
+
 ## 3. Enable email auth + redirect URLs
 
 1. Go to **Authentication** → **Providers**

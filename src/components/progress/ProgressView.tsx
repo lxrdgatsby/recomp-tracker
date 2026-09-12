@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { AdherencePanel } from '../adherence/AdherencePanel'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
 import { AdvancedAnalytics } from './AdvancedAnalytics'
 import { InjectionHistory } from './InjectionHistory'
@@ -222,10 +223,17 @@ export function ProgressView({
       </div>
 
       <div className="mb-4">
+        <p className="mb-2 text-xs tracking-widest text-slate-500 uppercase">
+          Check-in
+        </p>
         <SmartCheckIn
           defaultWeight={String(currentWeight)}
           onSubmit={handleCheckIn}
         />
+      </div>
+
+      <div className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        <AdherencePanel state={state} />
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">

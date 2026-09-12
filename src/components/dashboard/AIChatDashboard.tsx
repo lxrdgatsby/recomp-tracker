@@ -1,7 +1,7 @@
-import { ArrowUp, History, Star } from 'lucide-react'
+import { ArrowUp, History, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { MedicalDisclaimer } from '../layout/MedicalDisclaimer'
 import {
   ASSISTANT_INPUT_PLACEHOLDER,
   ASSISTANT_TITLE,
@@ -120,28 +120,25 @@ export function AIChatDashboard() {
       )}
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-1 lg:hidden">
-          <Link
-            to="/app"
-            className="cursor-pointer rounded-lg transition-opacity hover:opacity-90"
-            aria-label="Back to home"
-          >
+        {/* Top Bar */}
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-3 lg:hidden">
+          <div>
             <div className="text-xl font-semibold tracking-tight text-white">
               PeptideTracker
             </div>
             {userProfile?.username && (
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-gray-400">
                 @{userProfile.username}
               </div>
             )}
-          </Link>
+          </div>
           {showInstall && (
             <button
               type="button"
               onClick={install}
               className="flex items-center gap-1 rounded-full bg-white/10 px-4 py-1.5 text-sm transition-colors hover:bg-white/15"
             >
-              <span aria-hidden>↓</span> Install App
+              ↓ Install App
             </button>
           )}
         </div>
@@ -171,10 +168,27 @@ export function AIChatDashboard() {
                 <Star className="text-emerald-400" size={36} />
               </div>
             </div>
-            <div className="shrink-0 px-6 pb-6 text-center">
+            <div className="shrink-0 px-6 pb-4 text-center">
               <h2 className="text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-400">
+                <Sparkles size={12} />
+                Context active
+              </div>
+              <p className="mx-auto mt-2 max-w-sm text-xs text-slate-500">
+                Coach can see your stack, recent doses, check-ins, vials & plan
+                health
+              </p>
             </div>
           </>
+        )}
+
+        {!showHero && (
+          <div className="flex shrink-0 justify-center border-b border-white/5 px-6 py-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+              Context active
+            </div>
+          </div>
         )}
 
         <div
@@ -211,8 +225,13 @@ export function AIChatDashboard() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
-                Thinking...
+              <div className="flex items-center gap-2 rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
+                <span className="inline-flex gap-1">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 [animation-delay:300ms]" />
+                </span>
+                Thinking
               </div>
             </div>
           )}
@@ -260,9 +279,7 @@ export function AIChatDashboard() {
             </button>
           </div>
 
-          <p className="mt-3 text-center text-[10px] text-slate-500">
-            Not medical advice. Always consult your healthcare provider.
-          </p>
+          <MedicalDisclaimer compact className="mt-3" />
         </div>
       </div>
     </div>

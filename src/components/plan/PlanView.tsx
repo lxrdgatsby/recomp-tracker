@@ -12,6 +12,7 @@ import {
 } from '../../utils/calculations'
 import { getInjectionsForDate, isInjectionDone } from '../../utils/peptideSchedule'
 import { getCheckInHistory } from '../../utils/checkInStorage'
+import { PlanHealthCard } from './PlanHealthCard'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { ProgressBar } from '../ui/ProgressBar'
@@ -101,12 +102,34 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         </Card>
       </div>
 
+      <PlanHealthCard
+        state={state}
+        showProgress
+        dayInCycle={daysIn}
+        totalDays={CYCLE_DAYS}
+      />
+
       <Card title="Your Personalized Summary">
+        {!recompPlan?.summary?.length && !peptides.length ? (
+          <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center">
+            <p className="text-sm font-medium text-white">No active 90-day plan yet</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Complete onboarding or set up your stack in Profile to generate a tailored plan.
+            </p>
+            <a
+              href="/app/profile"
+              className="mt-4 inline-flex min-h-11 items-center rounded-2xl bg-emerald-500 px-4 text-sm font-semibold text-black"
+            >
+              Set up stack
+            </a>
+          </div>
+        ) : (
         <ul className="space-y-2 text-sm text-slate-300">
           {summary.map((line) => (
             <li key={line}>· {line}</li>
           ))}
         </ul>
+        )}
       </Card>
 
       <Card title="90-Day Timeline">

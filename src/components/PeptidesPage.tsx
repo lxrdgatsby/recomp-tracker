@@ -1,11 +1,15 @@
-import { format, parseISO, differenceInDays } from 'date-fns'
-import { useMemo } from 'react'
-
+import { differenceInDays, format, parseISO } from 'date-fns'
+import { FlaskConical, Syringe } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTrackerStore } from '../hooks/useTrackerStore'
 import type { Peptide, TitrationWeek } from '../types'
-import { computeAdherence } from '../utils/adherence'
 import { getTitrationForDay } from '../utils/recompProtocol'
+import { loadDoseLogs } from '../utils/inventoryStorage'
+import { EmptyState } from './ui/EmptyState'
+import { VialInventory } from './inventory/VialInventory'
+import { DoseLogger } from './logging/DoseLogger'
 import { DoseCalculator } from './peptides/DoseCalculator'
 import { ReconstitutionGuide } from './peptides/ReconstitutionGuide'
 
@@ -35,9 +39,15 @@ export default function PeptidesPage() {
   const addInjectionLog = useTrackerStore((store) => store.addInjectionLog)
   const saveActiveProtocol = useTrackerStore((store) => store.saveActiveProtocol)
   const { userProfile } = useAuth()
+  const navigate = useNavigate()
+  const [logOpen, setLogOpen] = useState(false)
+  const [logTick, setLogTick] = useState(0)
 
-  const { peptides, injectionLogs, profile } = state
-  const dayInCycle = Math.max(0, differenceInDays(new Date(), parseISO(profile.startDate)))
+  const { peptides, profile } = state
+  const dayInCycle = Math.max(
+    0,
+    differenceInDays(new Date(), parseISO(profile.startDate))
+  )
 
   const handleLogDose = (log: Parameters<typeof addInjectionLog>[0]) => {
     void addInjectionLog({ ...log })
@@ -56,22 +66,16 @@ export default function PeptidesPage() {
     }
   }, [calculatorPeptide, userProfile?.familiarity])
 
-  const adherence = useMemo(() => computeAdherence(state), [state])
-
-  const recentLogs = useMemo(
-    () =>
-      [...injectionLogs]
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, 5)
-        .map((log) => {
-          const peptide = peptides.find((p) => p.id === log.peptideId)
-          return {
-            ...log,
-            name: log.peptideName ?? peptide?.name ?? 'Unknown',
-          }
-        }),
-    [injectionLogs, peptides]
+  const recentDoseLogs = useMemo(
+    () => loadDoseLogs().slice(0, 6),
+    [logTick]
   )
+
+  useEffect(() => {
+    const onData = () => setLogTick((n) => n + 1)
+    window.addEventListener('pt-data-updated', onData)
+    return () => window.removeEventListener('pt-data-updated', onData)
+  }, [])
 
   const upcomingTitrations = useMemo(
     () =>
@@ -90,18 +94,88 @@ export default function PeptidesPage() {
     [peptides, dayInCycle]
   )
 
+  const card = 'rounded-3xl border border-white/10 bg-white/[0.04] p-5'
+
   return (
-    <div className="min-h-screen pb-20">
-      <div className="p-6">
-        <h1 className="text-3xl font-bold">Peptides</h1>
-        <p className="text-zinc-400">Track • Calculate • Progress</p>
+    <div className="pb-8 text-white">
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Peptides
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Stack · vials · dosing
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setLogOpen(true)}
+          className="min-h-11 shrink-0 rounded-2xl bg-emerald-500 px-4 text-sm font-semibold text-black active:bg-emerald-400"
+        >
+          Log dose
+        </button>
       </div>
 
-      <div className="mb-8 px-6">
+      {/* Active stack summary */}
+      <section className={`mb-6 ${card}`}>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-medium text-white">Active stack</h2>
+          <Link
+            to="/app/profile"
+            className="text-xs text-emerald-400 hover:text-emerald-300"
+          >
+            Edit in Profile
+          </Link>
+        </div>
+        {peptides.length === 0 ? (
+          <EmptyState
+            icon={<Syringe size={20} />}
+            title="No active compounds"
+            description="Add peptides to your stack in Profile to schedule doses and protocols."
+            actionLabel="Open profile"
+            onAction={() => navigate('/app/profile')}
+          />
+        ) : (
+          <ul className="space-y-2.5">
+            {peptides.map((peptide) => (
+              <li
+                key={peptide.id}
+                className="flex items-center justify-between gap-2 text-sm"
+              >
+                <span className="font-medium text-white">{peptide.name}</span>
+                <span className="truncate text-xs text-slate-500">
+                  {peptide.dose}
+                  {peptide.protocol?.reconstituted === false && (
+                    <span className="ml-2 text-amber-400">Not mixed</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="mb-8">
+        <VialInventory
+          defaultDoseByName={Object.fromEntries(
+            peptides.map((p) => [p.name, p.protocol?.startingDoseMg ?? 0.5])
+          )}
+          onChange={() => setLogTick((n) => n + 1)}
+        />
+      </div>
+
+      <div className="mb-8">
         <ReconstitutionGuide variant="peptides" />
       </div>
 
-      <div className="px-6 pb-8">
+      <DoseLogger
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        peptides={peptides}
+        onLogged={() => setLogTick((n) => n + 1)}
+      />
+
+      <div className="mb-8">
         <DoseCalculator
           key={calculatorPeptide?.id ?? 'default'}
           peptides={peptides}
@@ -111,73 +185,66 @@ export default function PeptidesPage() {
         />
       </div>
 
-      <div className="space-y-4 px-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-3xl bg-zinc-900 p-6">
-            <h3 className="font-medium">Current Protocol</h3>
-            {peptides.length === 0 ? (
-              <p className="mt-2 text-sm text-zinc-500">No active peptides yet</p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {peptides.map((peptide) => (
-                  <li key={peptide.id} className="text-sm text-zinc-300">
-                    <span className="font-medium text-white">{peptide.name}</span>
-                    {peptide.protocol?.reconstituted === false && (
-                      <span className="ml-2 text-xs text-amber-400">Not mixed</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="rounded-3xl bg-zinc-900 p-6">
-            <h3 className="font-medium">Adherence</h3>
-            <p className="mt-2 text-3xl font-bold text-emerald-400">
-              {adherence.injectionPct}%
-            </p>
-            <p className="mt-1 text-xs text-zinc-500">
-              {adherence.completedInjections} of {adherence.expectedInjections} doses logged
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-3xl bg-zinc-900 p-6">
-          <h3 className="font-medium">Recent Logs</h3>
-          {recentLogs.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">No doses logged yet</p>
+      <div className="space-y-4">
+        <div className={card}>
+          <h3 className="mb-3 text-sm font-medium text-white">Recent dose logs</h3>
+          {recentDoseLogs.length === 0 ? (
+            <EmptyState
+              icon={<FlaskConical size={20} />}
+              title="No doses logged yet"
+              description="Log taken or missed doses so adherence and the AI coach stay accurate."
+              actionLabel="Log a dose"
+              onAction={() => setLogOpen(true)}
+            />
           ) : (
-            <ul className="mt-3 space-y-3">
-              {recentLogs.map((log, index) => (
+            <ul className="space-y-3">
+              {recentDoseLogs.map((log) => (
                 <li
-                  key={`${log.date}-${log.peptideId}-${index}`}
-                  className="flex items-center justify-between text-sm"
+                  key={log.id}
+                  className="flex items-center justify-between gap-2 text-sm"
                 >
-                  <div>
-                    <span className="font-medium text-white">{log.name}</span>
-                    {log.units != null && (
-                      <span className="ml-2 text-zinc-400">{log.units}U</span>
-                    )}
+                  <div className="min-w-0">
+                    <span className="font-medium text-white">
+                      {log.compoundName}
+                    </span>
+                    <span className="text-slate-500">
+                      {' '}
+                      · {log.doseMg}mg
+                      {log.units ? ` · ${log.units}u` : ''}
+                    </span>
                   </div>
-                  <span className="text-zinc-500">
-                    {format(parseISO(log.date.slice(0, 10)), 'MMM d')}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        log.taken
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : 'bg-red-500/15 text-red-400'
+                      }`}
+                    >
+                      {log.taken ? 'Taken' : 'Missed'}
+                    </span>
+                    <span className="text-xs text-slate-600">
+                      {format(parseISO(log.date.slice(0, 10)), 'MMM d')}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        <div className="rounded-3xl bg-zinc-900 p-6">
-          <h3 className="font-medium">Upcoming Titration</h3>
+        <div className={card}>
+          <h3 className="mb-3 text-sm font-medium text-white">
+            Upcoming titration
+          </h3>
           {upcomingTitrations.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500">No titration schedules active</p>
+            <p className="text-sm text-slate-500">No titration schedules active</p>
           ) : (
-            <ul className="mt-3 space-y-4">
+            <ul className="space-y-4">
               {upcomingTitrations.map(({ peptide, current, next }) => (
                 <li key={peptide.id} className="text-sm">
                   <div className="font-medium text-white">{peptide.name}</div>
-                  <div className="mt-1 text-zinc-400">
+                  <div className="mt-1 text-slate-400">
                     Now: Weeks {current.weeks} — {current.doseLabel}
                   </div>
                   {next ? (
@@ -185,7 +252,9 @@ export default function PeptidesPage() {
                       Next: Weeks {next.weeks} — {next.doseLabel}
                     </div>
                   ) : (
-                    <div className="mt-0.5 text-zinc-500">Final titration step</div>
+                    <div className="mt-0.5 text-slate-500">
+                      Final titration step
+                    </div>
                   )}
                 </li>
               ))}

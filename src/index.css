@@ -22,10 +22,16 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--color-navy-950);
+  background: #0a0a0a;
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Shared interactive hit target helper */
+.tap-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
 }
 
 #root {
