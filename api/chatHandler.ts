@@ -60,7 +60,7 @@ export interface ChatApiKeys {
 
 type AIProvider = 'xai' | 'openai'
 
-const XAI_MODELS = ['grok-4.5', 'grok-4.6', 'grok-3-mini'] as const
+const XAI_MODELS = ['grok-4.6', 'grok-4.5', 'grok-3-mini'] as const
 
 const PROVIDER_CONFIG: Record<
   AIProvider,
@@ -78,17 +78,16 @@ const PROVIDER_CONFIG: Record<
   },
 }
 
-function resolveProvider(keys: ChatApiKeys): {
+function resolveProviders(keys: ChatApiKeys): Array<{
   provider: AIProvider
   apiKey: string
-} | null {
+}> {
+  const out: Array<{ provider: AIProvider; apiKey: string }> = []
   const xaiKey = keys.xaiKey?.trim()
-  if (xaiKey) return { provider: 'xai', apiKey: xaiKey }
-
+  if (xaiKey) out.push({ provider: 'xai', apiKey: xaiKey })
   const openaiKey = keys.openaiKey?.trim()
-  if (openaiKey) return { provider: 'openai', apiKey: openaiKey }
-
-  return null
+  if (openaiKey) out.push({ provider: 'openai', apiKey: openaiKey })
+  return out
 }
 
 function formatAIError(provider: AIProvider, message?: string): string {
@@ -153,15 +152,25 @@ async function callChatCompletions(opts: {
     }),
   })
 
-  const data = (await response.json()) as {
-    error?: { message?: string; code?: string }
+  const raw = await response.text()
+  let data: {
+    error?: { message?: string; code?: string } | string
     choices?: Array<{ message?: { content?: string | null } }>
+  } = {}
+  try {
+    data = raw ? (JSON.parse(raw) as typeof data) : {}
+  } catch {
+    data = { error: raw.slice(0, 200) || `HTTP ${response.status}` }
   }
 
-  const errMsg = data.error?.message ?? ''
+  const errMsg =
+    typeof data.error === 'string'
+      ? data.error
+      : data.error?.message || (response.ok ? '' : `HTTP ${response.status}`)
   const modelMissing =
     response.status === 404 ||
-    /model|not found|does not exist|unknown model/i.test(errMsg)
+    response.status === 403 ||
+    /model|not found|does not exist|unknown model|forbidden/i.test(errMsg)
 
   if (!response.ok) {
     return {
@@ -181,8 +190,8 @@ export async function runChat(
   body: ChatRequestBody,
   keys: ChatApiKeys = {}
 ): Promise<{ status: number; body: ChatResponseBody }> {
-  const resolved = resolveProvider(keys)
-  if (!resolved) {
+  const providers = resolveProviders(keys)
+  if (!providers.length) {
     return {
       status: 503,
       body: {
@@ -193,7 +202,6 @@ export async function runChat(
     }
   }
 
-  const { provider, apiKey } = resolved
   const { messages, userContext, protocolWeek, lastUserMessage } = body
 
   if (!messages?.length) {
@@ -207,44 +215,41 @@ export async function runChat(
   console.log('[assistant]', {
     week: protocolWeek ?? null,
     lastUserMessage: lastUser.slice(0, 180),
-    provider,
+    providers: providers.map((p) => p.provider),
   })
 
   const systemContent = buildSystemPrompt(userContext)
-  const config = PROVIDER_CONFIG[provider]
 
   try {
     let lastError = ''
-    for (const model of config.models) {
-      const result = await callChatCompletions({
-        url: config.url,
-        apiKey,
-        model,
-        systemContent,
-        messages,
-      })
+    let lastProvider: AIProvider = providers[0].provider
+    for (const { provider, apiKey } of providers) {
+      lastProvider = provider
+      const config = PROVIDER_CONFIG[provider]
+      for (const model of config.models) {
+        const result = await callChatCompletions({
+          url: config.url,
+          apiKey,
+          model,
+          systemContent,
+          messages,
+        })
 
-      if (result.ok && result.content) {
-        return {
-          status: 200,
-          body: { content: result.content, profileUpdates: null },
+        if (result.ok && result.content) {
+          return {
+            status: 200,
+            body: { content: result.content, profileUpdates: null },
+          }
         }
-      }
 
-      if (result.ok && !result.content) {
-        lastError = 'Empty model response'
-        continue
-      }
+        if (result.ok && !result.content) {
+          lastError = 'Empty model response'
+          continue
+        }
 
-      lastError = result.errorMessage || `HTTP ${result.status}`
-      if (result.modelMissing) continue
-      return {
-        status: result.status || 502,
-        body: {
-          content: '',
-          profileUpdates: null,
-          error: formatAIError(provider, lastError),
-        },
+        lastError = result.errorMessage || `HTTP ${result.status}`
+        if (result.modelMissing) continue
+        if (/unauthorized|invalid key|authentication/i.test(lastError)) break
       }
     }
 
@@ -253,7 +258,7 @@ export async function runChat(
       body: {
         content: '',
         profileUpdates: null,
-        error: formatAIError(provider, lastError || 'No model available'),
+        error: formatAIError(lastProvider, lastError || 'No model available'),
       },
     }
   } catch (err) {
