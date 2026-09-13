@@ -69,6 +69,16 @@ body {
   min-width: 2.75rem;
 }
 
+.assistant-chip-row {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+}
+
+.assistant-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
 /* Prevent iOS Safari from zooming when focusing inputs (requires 16px+ font) */
 input,
 select,

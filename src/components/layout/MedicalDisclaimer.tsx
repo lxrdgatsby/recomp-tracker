@@ -7,7 +7,9 @@ export function MedicalDisclaimer({
 }) {
   if (compact) {
     return (
-      <p className="text-center text-[10px] leading-relaxed text-slate-600">
+      <p
+        className={`text-center text-[10px] leading-tight text-slate-600 ${className}`}
+      >
         Not medical advice. Consult your doctor before using peptides or changing
         your training protocol.
       </p>

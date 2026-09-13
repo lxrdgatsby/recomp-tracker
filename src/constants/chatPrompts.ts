@@ -8,8 +8,10 @@ export const CHAT_SUGGESTIONS = [
   'Why is my weight stalling?',
   'Explain Tesamorelin timing',
   'Reconstitute my BPC-157 vial',
-  "What's the difference between my KLOW and standalone BPC?",
 ] as const
+
+/** Horizontal Assistant chips — keep this order, one row. */
+export const ASSISTANT_QUICK_CHIPS = CHAT_SUGGESTIONS
 
 export const ASSISTANT_TITLE = 'Peptide Protocol Assistant'
 
