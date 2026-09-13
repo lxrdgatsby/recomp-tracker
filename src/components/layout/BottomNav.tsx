@@ -9,7 +9,8 @@ import {
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
-const NAV_ITEMS = [
+// App routes live under `/app/*` (except `/admin`).
+const navItems = [
   { href: '/app', icon: Home, label: 'Home' },
   { href: '/app/assistant', icon: MessageCircle, label: 'Assistant' },
   { href: '/app/peptides', icon: Syringe, label: 'Peptides' },
@@ -25,11 +26,11 @@ export function BottomNav() {
   return (
     <nav className="no-print fixed right-0 bottom-0 left-0 z-50 border-t border-white/10 bg-[#0a0a0a] px-2 pt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto flex max-w-lg items-center justify-around gap-0.5 overflow-x-auto">
-        {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+        {navItems.map(({ href, icon: Icon, label }) => {
           const isActive =
             href === '/app'
               ? pathname === '/app' || pathname === '/app/profile'
-              : pathname === href
+              : pathname === href || pathname.startsWith(`${href}/`)
           return (
             <Link
               key={href}

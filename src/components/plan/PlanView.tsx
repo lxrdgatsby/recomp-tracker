@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { Check } from 'lucide-react'
+import { Check, Download } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   CYCLE_START_DATE,
@@ -22,7 +22,9 @@ import {
   isInjectionDone,
 } from '../../utils/peptideSchedule'
 import { getProtocolHeader } from '../../utils/protocolHeader'
+import { getCheckInHistory } from '../../utils/checkInStorage'
 import { ProtocolCard } from '../protocol/ProtocolCard'
+import { PlanHealthCard } from './PlanHealthCard'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { ProgressBar } from '../ui/ProgressBar'
@@ -63,14 +65,32 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         ? PHASE_NOTES.weeks5to8
         : PHASE_NOTES.weeks9to12
 
+  const handleExportPdf = async () => {
+    const { export90DayPlan, getPlanForExport } = await import(
+      '../../utils/export90DayPlan'
+    )
+    export90DayPlan(getPlanForExport(state), getCheckInHistory())
+  }
+
   return (
     <div className="space-y-6 pb-4">
-      <div>
-        <h2 className="text-2xl font-bold text-white">90-Day Recomp Plan</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          {dateLabel} · Week {week} · {phase}
-          {userProfile?.username ? ` · @${userProfile.username}` : ''}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">90-Day Recomp Plan</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            {dateLabel} · Week {week} · {phase}
+            {userProfile?.username ? ` · @${userProfile.username}` : ''}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="no-print shrink-0"
+          onClick={handleExportPdf}
+        >
+          <Download size={14} />
+          Export PDF
+        </Button>
       </div>
 
       <Card className="!p-4">
@@ -123,6 +143,13 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
           <p className="mt-1 text-2xl font-bold text-emerald-400">−15 lb</p>
         </Card>
       </div>
+
+      <PlanHealthCard
+        state={state}
+        showProgress
+        dayInCycle={daysIn}
+        totalDays={CYCLE_DAYS}
+      />
 
       <Card title="90-Day Timeline">
         <ProgressBar value={cycleProgress} label="Days elapsed" />

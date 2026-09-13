@@ -342,19 +342,22 @@ export function rebuildPeptideForVialSize(
 export function getCurrentInjectionDose(
   peptide: Peptide,
   startDate: string
-): { doseLabel: string; syringeUnits?: number } {
+): { doseLabel: string; syringeUnits?: number; doseMg?: number } {
   const dayInCycle = Math.max(0, getDaysIntoCycle(startDate) - 1)
   const tier = getTitrationForDay(peptide, dayInCycle)
   const syringeUnits =
     tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
+  const isVolume = peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)
   return {
-    doseLabel:
-      syringeUnits != null
+    doseLabel: isVolume
+      ? peptide.dose
+      : syringeUnits != null && syringeUnits > 0
         ? formatSyringeUnits(syringeUnits)
         : tier?.doseLabel ??
           peptide.protocol?.startingDoseLabel ??
           peptide.dose,
-    syringeUnits,
+    syringeUnits: isVolume ? undefined : syringeUnits,
+    doseMg: tier?.doseMg ?? peptide.protocol?.startingDoseMg,
   }
 }
 

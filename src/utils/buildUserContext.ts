@@ -1,124 +1,85 @@
 import { formatPeptideSelectionsForAI } from '../constants/peptideCatalog'
-import { getCheckInHistory, getLastCheckIn } from './checkInStorage'
 import { AUTHORITATIVE_PEPTIDE_KNOWLEDGE } from '../constants/peptideKnowledge'
-import { SEED_USER } from '../lib/protocolSeed'
-import { formatProtocolContextForAI } from './recompProtocol'
-import { computeAdherence } from './adherence'
 import { getDaysIntoCycle } from './calculations'
+import {
+  formatActiveStackForAI,
+  formatRecentCheckInsForAI,
+  formatRecentDoseLogsForAI,
+  formatVialsForAI,
+  getAdherencePercentage,
+} from './coachHelpers'
+import { getCachedPlanHealth } from './planHealth'
+import { loadAdaptivePlan } from './v2Storage'
 import type { TrackerState } from '../types'
 import type { UserProfile } from '../types/auth'
 
-function formatCheckInContextForAI(): string {
-  const last = getLastCheckIn()
-  const history = getCheckInHistory()
-  if (!last && history.length === 0) return ''
-
-  const lines = ['Recent check-ins:']
-  if (last) {
-    lines.push(
-      `Latest (${last.date.split('T')[0]}): energy ${last.energy}/10, mood ${last.mood}/10, hunger ${last.hunger}/10, weight ${last.weight || 'n/a'}, side effects: ${last.sideEffects || 'none'}`
-    )
-  }
-  if (history.length > 1) {
-    const recent = history.slice(-5)
-    const energyTrend = recent.map((c) => c.energy).join(' → ')
-    lines.push(`Energy trend (last ${recent.length}): ${energyTrend}`)
-  }
-  return lines.join('\n')
-}
-
+/**
+ * Full contextual payload for the AI coach on every message.
+ * Includes: stack, 14d dose logs, check-ins, plan, vials, adherence.
+ */
 export function buildUserContextForChat(
   userProfile: UserProfile | null | undefined,
   trackerState: TrackerState
 ): string {
   const p = userProfile
   const t = trackerState
-  if (!p) return ''
+  const adherence7 = getAdherencePercentage(7, t)
+  const adherence14 = getAdherencePercentage(14, t)
+  const planHealth = getCachedPlanHealth(t)
+  const adaptive = loadAdaptivePlan()
+
+  const coachBlock = [
+    '=== COACH CONTEXT (live user data — reference this) ===',
+    `Day ${getDaysIntoCycle(t.profile.startDate)} of 90-day cycle`,
+    `Targets: current ${t.profile.currentWeight} lbs → goal ${t.profile.goalWeight} lbs · weekly ${t.profile.weeklyLossTarget} lbs`,
+    `Adherence: 7-day ${adherence7}% · 14-day ${adherence14}%`,
+    `Plan health: ${planHealth.status} — ${planHealth.summary}`,
+    planHealth.suggestions.length
+      ? `Plan suggestions (not auto-applied): ${planHealth.suggestions.join(' | ')}`
+      : '',
+    '',
+    formatActiveStackForAI(t),
+    '',
+    formatRecentDoseLogsForAI(14),
+    '',
+    formatRecentCheckInsForAI(14),
+    '',
+    formatVialsForAI(),
+    '',
+    t.recompPlan?.summary?.length
+      ? `90-day plan summary: ${t.recompPlan.summary.join(' ')}`
+      : '90-day plan summary: not generated yet.',
+    adaptive?.originalSummary?.length
+      ? `Original plan snapshot: ${adaptive.originalSummary.join(' ')}`
+      : '',
+    `Weight log count: ${t.weightHistory.length} · Workouts done: ${t.workoutCompletions.length}`,
+    '=== END COACH CONTEXT ===',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  if (!p) {
+    return [coachBlock, '', AUTHORITATIVE_PEPTIDE_KNOWLEDGE].join('\n')
+  }
+
   return [
+    '=== USER PROFILE ===',
     `Username: ${p.username ?? 'unknown'}`,
     `Familiarity: ${p.familiarity ?? 'unknown'}`,
     `Goals: ${p.mainGoal ?? 'unknown'}`,
     `Interested peptides: ${p.interestedPeptides ?? 'none'}`,
     p.peptideSelections?.length
-      ? `Peptide selections (dose, status, protocol hints):\n${formatPeptideSelectionsForAI(p.peptideSelections)}`
+      ? `Peptide selections:\n${formatPeptideSelectionsForAI(p.peptideSelections)}`
       : '',
-    `Current weight: ${t.profile.currentWeight} lbs`,
-    `Goal weight: ${t.profile.goalWeight} lbs`,
-    `Weekly loss target: ${t.profile.weeklyLossTarget} lbs`,
-    `Start date: ${t.profile.startDate}`,
-    `Gender: ${p.gender ?? 'unknown'}`,
-    `Age: ${p.age ?? 'unknown'}`,
+    `Gender: ${p.gender ?? 'unknown'} · Age: ${p.age ?? 'unknown'}`,
     `Training: ${p.trainingActivities ?? 'none'}`,
     `Additional info: ${p.additionalInfo ?? 'none'}`,
-    `Day ${getDaysIntoCycle(t.profile.startDate)} of 90-day cycle`,
     '',
-    '=== TAILORED 90-DAY PEPTIDE PROTOCOL (AUTHORITATIVE — use for ALL dosing/stack answers) ===',
-    formatProtocolContextForAI(t.peptides, t.profile.startDate),
-    '=== END PROTOCOL ===',
-    t.recompPlan?.summary?.length
-      ? `Recomp plan summary: ${t.recompPlan.summary.join(' ')}`
-      : '',
-    `Weight entries logged: ${t.weightHistory.length}`,
-    `Workouts completed: ${t.workoutCompletions.length}`,
-    formatCheckInContextForAI(),
+    coachBlock,
     '',
+    '=== AUTHORITATIVE PEPTIDE KNOWLEDGE ===',
     AUTHORITATIVE_PEPTIDE_KNOWLEDGE,
-    '',
-    'CONTEXT JSON:',
-    JSON.stringify(buildAssistantContextJson(p, t)),
   ]
     .filter(Boolean)
     .join('\n')
-}
-
-function buildAssistantContextJson(p: UserProfile, t: TrackerState) {
-  const cutoff = Date.now() - 14 * 86_400_000
-  const recentDoseLogs = (t.injectionLogs ?? []).filter((l) => {
-    const ts = Date.parse(l.date)
-    return Number.isFinite(ts) && ts >= cutoff
-  })
-  const checkIns = getCheckInHistory().filter((c) => {
-    const ts = Date.parse(c.date)
-    return Number.isFinite(ts) && ts >= cutoff
-  })
-  const adherence = computeAdherence(t)
-  const daysIn = getDaysIntoCycle(t.profile.startDate)
-  return {
-    user: p.username ?? SEED_USER,
-    startDate: t.profile.startDate,
-    stack: t.peptides.map((pep) => ({
-      id: pep.id,
-      name: pep.name,
-      dose: pep.dose,
-      frequency: pep.frequency,
-      timing: pep.timing,
-      units: pep.protocol?.startingSyringeUnits,
-      notes: pep.notes,
-    })),
-    vials: t.peptides.map((pep) => ({
-      name: pep.name,
-      vialSize: pep.vialSize,
-      concentration: pep.protocol?.concentrationLabel,
-      mix:
-        pep.protocol && pep.protocol.vialMg > 0
-          ? `${pep.protocol.vialMg}mg / ${pep.protocol.bacWaterMl}mL`
-          : 'unknown',
-    })),
-    recentDoseLogs,
-    checkIns,
-    adherence7d: {
-      scheduled: adherence.expectedInjections,
-      logged: adherence.completedInjections,
-      pct: adherence.injectionPct ?? null,
-    },
-    planHealth: {
-      week: Math.max(0, Math.ceil(daysIn / 7)),
-      started: daysIn > 0,
-      phaseLabel: daysIn <= 0 ? 'Starts Sunday — weeks 1–4 loaded' : `Day ${daysIn}`,
-      warnings: [
-        'Confirm Test Cyp mg/mL on the vial before locking units.',
-        'KLOW is stored as a 10 mg product, not an 80 mg blend.',
-      ],
-    },
-  }
 }

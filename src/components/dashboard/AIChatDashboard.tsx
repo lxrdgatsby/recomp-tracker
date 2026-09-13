@@ -1,14 +1,13 @@
-import { ArrowUp, History, Star } from 'lucide-react'
+import { ArrowUp, History, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { MedicalDisclaimer } from '../layout/MedicalDisclaimer'
 import {
   ASSISTANT_INPUT_PLACEHOLDER,
   ASSISTANT_TITLE,
   ASSISTANT_WELCOME,
   CHAT_SUGGESTIONS,
 } from '../../constants/chatPrompts'
-import { SAFETY_COPY } from '../../lib/protocolSeed'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import { useChat } from '../../hooks/useChat'
 import { ChatHistorySidebar } from './ChatHistorySidebar'
@@ -32,35 +31,17 @@ export function AIChatDashboard() {
 
   const [input, setInput] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [showPrompts, setShowPrompts] = useState(true)
+  const [showQuickActions, setShowQuickActions] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const messagesRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const showInstall = !isInstalled && (canInstall || canShowIOSGuide)
   const hasUserMessage = messages.some((m) => m.role === 'user')
   const showHero = !hasUserMessage
   const showIntro = messages.length === 0 && !loading
 
-  const updateShowPrompts = () => {
-    const el = messagesRef.current
-    if (!el || messages.length <= 1) {
-      setShowPrompts(true)
-      return
-    }
-    setShowPrompts(el.scrollHeight - el.scrollTop - el.clientHeight < 80)
-  }
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    const id = window.setTimeout(() => {
-      const el = messagesRef.current
-      if (!el || messages.length <= 1) {
-        setShowPrompts(true)
-        return
-      }
-      setShowPrompts(el.scrollHeight - el.scrollTop - el.clientHeight < 80)
-    }, 220)
-    return () => window.clearTimeout(id)
   }, [messages, loading])
 
   useEffect(() => {
@@ -70,23 +51,28 @@ export function AIChatDashboard() {
   }, [historyOpen, refreshConversations])
 
   useEffect(() => {
-    messagesRef.current?.scrollTo({ top: 0 })
-    setShowPrompts(true)
+    scrollRef.current?.scrollTo({ top: 0 })
+    setShowQuickActions(true)
   }, [activeConversationId, isDraft])
 
   const handleMessagesScroll = () => {
-    updateShowPrompts()
+    const el = scrollRef.current
+    if (!el) return
+    const nearTop = el.scrollTop < 48
+    setShowQuickActions(!hasUserMessage || nearTop)
   }
 
   const handleSend = () => {
     if (!input.trim() || loading) return
     void sendMessage(input)
     setInput('')
+    setShowQuickActions(false)
   }
 
   const handleQuickPrompt = (action: string) => {
     if (loading) return
     void sendMessage(action)
+    setShowQuickActions(false)
   }
 
   const handleSelectConversation = (id: string) => {
@@ -100,7 +86,7 @@ export function AIChatDashboard() {
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 bg-[#0a0a0a] text-white">
+    <div className="flex h-full min-h-0 bg-[#0a0a0a] text-white">
       <ChatHistorySidebar
         conversations={conversations}
         activeConversationId={activeConversationId}
@@ -128,39 +114,36 @@ export function AIChatDashboard() {
             onPin={(id, pinned) => void pinConversation(id, pinned)}
             onDelete={(id) => void removeConversation(id)}
             onClose={() => setHistoryOpen(false)}
-            className="fixed inset-y-0 left-0 z-50 border-white/10 pt-[max(12px,env(safe-area-inset-top,0px))] pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+            className="fixed inset-y-0 left-0 z-50 border-white/10 lg:hidden"
           />
         </>
       )}
 
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#0a0a0a]">
-        <div className="pt-top-header sticky top-0 z-40 flex shrink-0 items-center justify-between border-b border-white/10 bg-[#0a0a0a] px-4 pb-3 lg:hidden">
-          <Link
-            to="/app"
-            className="cursor-pointer rounded-lg"
-            aria-label="Back to home"
-          >
-            <div className="text-lg font-bold tracking-tight text-white">
-              Peptide<span className="text-emerald-400">Tracker</span>
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        {/* Top Bar */}
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 pb-3 pt-3 lg:hidden">
+          <div>
+            <div className="text-xl font-semibold tracking-tight text-white">
+              PeptideTracker
             </div>
             {userProfile?.username && (
-              <div className="text-[10px] text-emerald-400">
+              <div className="text-xs text-gray-400">
                 @{userProfile.username}
               </div>
             )}
-          </Link>
+          </div>
           {showInstall && (
             <button
               type="button"
               onClick={install}
               className="flex items-center gap-1 rounded-full bg-white/10 px-4 py-1.5 text-sm transition-colors hover:bg-white/15"
             >
-              <span aria-hidden>↓</span> Install App
+              ↓ Install App
             </button>
           )}
         </div>
 
-        <div className="flex shrink-0 gap-3 border-b border-white/10 px-4 py-3 lg:hidden">
+        <div className="flex shrink-0 gap-3 border-b border-white/10 px-6 py-3 lg:hidden">
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
@@ -179,19 +162,40 @@ export function AIChatDashboard() {
         </div>
 
         {showHero && (
-          <div className="flex shrink-0 flex-col items-center px-4 pt-4 pb-3">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-500/10">
-              <Star className="text-emerald-400" size={32} />
+          <>
+            <div className="flex shrink-0 justify-center pt-5 pb-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10">
+                <Star className="text-emerald-400" size={36} />
+              </div>
             </div>
-            <h2 className="text-center text-xl font-semibold">{ASSISTANT_TITLE}</h2>
+            <div className="shrink-0 px-6 pb-4 text-center">
+              <h2 className="text-2xl font-semibold">{ASSISTANT_TITLE}</h2>
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-400">
+                <Sparkles size={12} />
+                Context active
+              </div>
+              <p className="mx-auto mt-2 max-w-sm text-xs text-slate-500">
+                Coach can see your stack, recent doses, check-ins, vials & plan
+                health
+              </p>
+            </div>
+          </>
+        )}
+
+        {!showHero && (
+          <div className="flex shrink-0 justify-center border-b border-white/5 px-6 py-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+              Context active
+            </div>
           </div>
         )}
 
         <div
-          ref={messagesRef}
+          ref={scrollRef}
           onScroll={handleMessagesScroll}
-          className={`min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 ${
-            showHero ? 'pt-1' : 'pt-3'
+          className={`min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 pb-32 lg:pb-4 ${
+            showHero ? '' : 'pt-3'
           }`}
         >
           {showIntro && (
@@ -221,39 +225,38 @@ export function AIChatDashboard() {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
-                Thinking...
+              <div className="flex items-center gap-2 rounded-3xl bg-white/10 px-4 py-3 text-sm text-slate-400">
+                <span className="inline-flex gap-1">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 [animation-delay:150ms]" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 [animation-delay:300ms]" />
+                </span>
+                Thinking
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="relative z-30 shrink-0 border-t border-white/10 bg-[#0a0a0a] px-4 pt-3 pb-3">
+        <div className="fixed inset-x-0 bottom-[var(--mobile-nav-height)] z-30 border-t border-white/10 bg-[#0a0a0a] px-6 pt-4 pb-6 lg:relative lg:inset-x-auto lg:bottom-auto lg:z-auto lg:shrink-0">
           <div
-            className={`overflow-hidden transition-[max-height] duration-200 ${
-              showPrompts ? 'max-h-40' : 'max-h-0'
+            className={`mb-4 flex flex-wrap gap-2 overflow-hidden transition-all duration-300 ease-out ${
+              showQuickActions
+                ? 'max-h-40 translate-y-0 opacity-100'
+                : 'pointer-events-none max-h-0 translate-y-3 opacity-0'
             }`}
           >
-            <div
-              className={`mb-3 flex flex-wrap gap-2 transition-[transform,opacity] duration-200 ${
-                showPrompts
-                  ? 'translate-y-0 opacity-100'
-                  : 'pointer-events-none translate-y-full opacity-0'
-              }`}
-            >
-              {CHAT_SUGGESTIONS.map((action) => (
-                <button
-                  key={action}
-                  type="button"
-                  onClick={() => handleQuickPrompt(action)}
-                  disabled={loading}
-                  className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
-                >
-                  {action}
-                </button>
-              ))}
-            </div>
+            {CHAT_SUGGESTIONS.map((action) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => handleQuickPrompt(action)}
+                disabled={loading}
+                className="rounded-3xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 disabled:opacity-40"
+              >
+                {action}
+              </button>
+            ))}
           </div>
 
           <div className="flex items-center gap-3 rounded-3xl border border-white/20 bg-white/5 px-4 py-3">
@@ -276,16 +279,7 @@ export function AIChatDashboard() {
             </button>
           </div>
 
-          {messages.some((m) =>
-            /AI key not configured/i.test(m.content)
-          ) && (
-            <p className="mt-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-center text-xs text-rose-200">
-              AI key not configured. Add VITE_XAI_API_KEY to .env.local and redeploy.
-            </p>
-          )}
-          <p className="mt-3 text-center text-[10px] leading-relaxed text-slate-500">
-            {SAFETY_COPY}
-          </p>
+          <MedicalDisclaimer compact className="mt-3" />
         </div>
       </div>
     </div>

@@ -94,6 +94,7 @@ export type ViewId =
   | 'profile'
   | 'settings'
   | 'company'
+  | 'admin'
   | 'peptides'
   | 'plan'
   | 'workouts'
@@ -114,3 +115,15 @@ export interface WorkoutWeek {
   days: WorkoutDay[]
   progressionNote: string
 }
+
+// v2 inventory / dose / plan models
+export type {
+  PeptideCompound,
+  Vial,
+  DoseLog as InventoryDoseLog,
+  Blend,
+  CheckIn as V2CheckIn,
+  PlanHealth,
+  PlanHealthStatus,
+  AdaptivePlanState,
+} from './v2'

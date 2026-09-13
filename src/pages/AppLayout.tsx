@@ -23,6 +23,7 @@ const ROUTE_MAP: Record<string, ViewId> = {
   '/app/profile': 'profile',
   '/app/settings': 'settings',
   '/app/company': 'company',
+  '/admin': 'admin',
   '/app/peptides': 'peptides',
   '/app/plan': 'plan',
   '/app/workouts': 'workouts',
@@ -36,6 +37,7 @@ const VIEW_ROUTES: Record<ViewId, string> = {
   profile: '/app/profile',
   settings: '/app/settings',
   company: '/app/company',
+  admin: '/admin',
   peptides: '/app/peptides',
   plan: '/app/plan',
   workouts: '/app/workouts',
@@ -189,7 +191,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-dvh min-w-0 bg-[#0a0a0a] lg:bg-navy-950">
+    <div className="flex min-h-dvh min-w-0 bg-[#0a0a0a]">
       <Sidebar
         active={activeView}
         onNavigate={navigateTo}

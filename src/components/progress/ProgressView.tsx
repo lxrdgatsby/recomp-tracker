@@ -1,5 +1,5 @@
-import { differenceInCalendarDays, format, parseISO } from 'date-fns'
-import { Download, Flag, Target, TrendingUp, X } from 'lucide-react'
+import { differenceInCalendarDays, format, parse, parseISO } from 'date-fns'
+import { Calendar, Download, Target, TrendingUp, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -10,8 +10,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { AdherencePanel } from '../adherence/AdherencePanel'
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
-import { Card } from '../ui/Card'
 import { AdvancedAnalytics } from './AdvancedAnalytics'
 import { InjectionHistory } from './InjectionHistory'
 import { ProgressCorrelation } from './ProgressCorrelation'
@@ -28,8 +28,8 @@ import {
 interface ProgressViewProps {
   state: TrackerState
   onLogWeight: (date: string, weight: number) => void
+  onToggleInjection: (date: string, peptideId: string) => void
   onCheckInScheduleChange?: (schedule: CheckInSchedule) => void
-  onToggleInjection?: (date: string, peptideId: string) => void
 }
 
 const ADHERENCE_STATS = [
@@ -42,10 +42,20 @@ const ADHERENCE_STATS = [
   { key: 'workout' as const, label: 'Workouts', colorClass: 'text-blue-400' },
 ]
 
+const UPCOMING_WEEKS = [2, 4, 8]
+
 interface ChartPoint {
   date: string
   weight: number
   goal: number
+}
+
+interface UpcomingMilestone {
+  week: string
+  date: string
+  target: string
+  status: string
+  statusClass: string
 }
 
 function buildChartData(state: TrackerState): ChartPoint[] {
@@ -100,11 +110,47 @@ function getYDomain(chartData: ChartPoint[], goalWeight: number): [number, numbe
   return [min, Math.max(max, min + 8)]
 }
 
+function buildUpcomingMilestones(state: TrackerState): UpcomingMilestone[] {
+  const { profile, weightHistory } = state
+  const startWeight = getStartWeight(profile, weightHistory)
+  const currentWeight = getLatestWeight(profile, weightHistory)
+  const today = new Date()
+  const milestones = getMilestones(profile, startWeight)
+
+  return UPCOMING_WEEKS.map((weekNum) => {
+    const milestone = milestones.find((m) => m.week === weekNum)
+    if (!milestone) return null
+
+    const milestoneDate = parse(milestone.date, 'MMM d, yyyy', new Date())
+    const shortDate = format(milestoneDate, 'MMM d')
+    const achieved = currentWeight <= milestone.projectedWeight
+    const isPast = milestoneDate < today
+
+    let status = 'Upcoming'
+    let statusClass = 'text-emerald-400'
+    if (isPast && achieved) {
+      status = 'Achieved'
+      statusClass = 'text-emerald-400'
+    } else if (isPast) {
+      status = 'In progress'
+      statusClass = 'text-amber-400'
+    }
+
+    return {
+      week: `Week ${weekNum}`,
+      date: shortDate,
+      target: `~${milestone.projectedWeight} lbs`,
+      status,
+      statusClass,
+    }
+  }).filter((m): m is UpcomingMilestone => m != null)
+}
+
 export function ProgressView({
   state,
   onLogWeight,
-  onCheckInScheduleChange,
   onToggleInjection,
+  onCheckInScheduleChange,
 }: ProgressViewProps) {
   const { profile, weightHistory } = state
   const [showLogModal, setShowLogModal] = useState(false)
@@ -127,7 +173,10 @@ export function ProgressView({
     () => getYDomain(chartData, profile.goalWeight),
     [chartData, profile.goalWeight]
   )
-  const milestones = getMilestones(profile, startWeight)
+  const upcomingMilestones = useMemo(
+    () => buildUpcomingMilestones(state),
+    [state]
+  )
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const hasLoggedWeights = weightHistory.length > 0
@@ -160,36 +209,7 @@ export function ProgressView({
 
   return (
     <div className="pb-8 text-white">
-      <div className="flex items-start justify-between gap-3 pb-6 pt-2">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
-          <p className="text-slate-400">Track your recomp journey</p>
-        </div>
-        <button
-          type="button"
-          onClick={handleExportPdf}
-          className="flex shrink-0 items-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-400"
-        >
-          <Download size={14} />
-          Export Full Report (PDF)
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <SmartCheckIn
-          defaultWeight={String(currentWeight)}
-          profile={profile}
-          onSubmit={handleCheckIn}
-          onScheduleChange={onCheckInScheduleChange}
-        />
-      </div>
-
-      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ProgressCorrelation refreshKey={checkInVersion} />
-        <AdvancedAnalytics refreshKey={checkInVersion} />
-      </div>
-
-      <div className="mb-8 grid grid-cols-3 gap-3">
+      <div className="mb-4 grid grid-cols-3 gap-3 pt-[max(0.5rem,env(safe-area-inset-top))]">
         {ADHERENCE_STATS.map((stat) => (
           <div
             key={stat.key}
@@ -204,6 +224,29 @@ export function ProgressView({
           </div>
         ))}
       </div>
+
+      <div className="mb-4">
+        <p className="mb-2 text-xs tracking-widest text-slate-500 uppercase">
+          Check-in
+        </p>
+        <SmartCheckIn
+          defaultWeight={String(currentWeight)}
+          profile={profile}
+          onSubmit={handleCheckIn}
+          onScheduleChange={onCheckInScheduleChange}
+        />
+      </div>
+
+      <div className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        <AdherencePanel state={state} />
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ProgressCorrelation refreshKey={checkInVersion} />
+        <AdvancedAnalytics refreshKey={checkInVersion} />
+      </div>
+
+      <InjectionHistory state={state} onToggleInjection={onToggleInjection} />
 
       <div className="mb-8">
         <div className="mb-4 flex items-center justify-between">
@@ -268,39 +311,45 @@ export function ProgressView({
         </div>
       </div>
 
-      {onToggleInjection && (
-        <div className="mb-8">
-          <InjectionHistory
-            state={state}
-            onToggleInjection={onToggleInjection}
-          />
+      <div className="mb-8 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Progress Log</h1>
+          <p className="text-slate-400">Track your recomp journey</p>
         </div>
-      )}
+        <button
+          type="button"
+          onClick={handleExportPdf}
+          className="flex shrink-0 items-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs text-slate-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-400"
+        >
+          <Download size={14} />
+          Export Full Report (PDF)
+        </button>
+      </div>
 
-      <Card title="Key Milestones">
+      <div>
+        <h2 className="mb-4 flex items-center gap-2 font-medium">
+          <Calendar size={18} /> Upcoming Milestones
+        </h2>
+
         <div className="space-y-3">
-          {milestones.map((m) => (
+          {upcomingMilestones.map((milestone) => (
             <div
-              key={m.week}
-              className="flex items-center gap-4 rounded-lg border border-slate-800/60 bg-navy-950/30 px-4 py-3"
+              key={milestone.week}
+              className="flex items-center justify-between rounded-2xl bg-white/5 p-5"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-500/10 text-teal-400">
-                <Flag size={16} />
+              <div>
+                <div className="font-medium">{milestone.week} Check-in</div>
+                <div className="text-xs text-slate-400">
+                  {milestone.date} • {milestone.target}
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-white">{m.label}</p>
-                <p className="text-xs text-slate-500">{m.date}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-emerald-400">
-                  ~{m.projectedWeight} lbs
-                </p>
-                <p className="text-xs text-slate-600">projected</p>
+              <div className={`text-right text-sm ${milestone.statusClass}`}>
+                {milestone.status}
               </div>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
       <button
         type="button"

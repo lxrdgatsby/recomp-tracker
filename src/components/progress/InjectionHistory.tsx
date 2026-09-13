@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import type { TrackerState } from '../../types'
 import {
   getInjectionsForDate,
-  getScheduleDates,
+  getRecentScheduleDates,
   isInjectionDone,
 } from '../../utils/peptideSchedule'
 import { Button } from '../ui/Button'
@@ -24,15 +24,15 @@ export function InjectionHistory({
   const today = format(new Date(), 'yyyy-MM-dd')
 
   const scheduleDates = useMemo(
-    () => getScheduleDates(profile.startDate, range),
+    () => getRecentScheduleDates(profile.startDate, range),
     [profile.startDate, range]
   )
 
   return (
-    <div className="space-y-4">
-      <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mb-8">
+      <div className="no-print mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white">Injection History</h3>
+          <h2 className="text-lg font-semibold text-white">Injection History</h2>
           <p className="mt-0.5 text-sm text-slate-400">
             Dated cards from {format(parseISO(profile.startDate), 'MMM d, yyyy')} —
             logged doses stay as logged. Undo / Done still works.
@@ -141,3 +141,5 @@ export function InjectionHistory({
     </div>
   )
 }
+
+export default InjectionHistory

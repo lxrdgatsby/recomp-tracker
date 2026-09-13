@@ -22,7 +22,7 @@ const NAV: { id: ViewId; label: string; icon: typeof MessageSquare }[] = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'company', label: 'Company', icon: Building2 },
-  { id: 'peptides', label: 'Peptides', icon: Syringe },
+  { id: 'peptides', label: 'Peptides / Stack', icon: Syringe },
   { id: 'plan', label: '90-Day Plan', icon: Calendar },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },
   { id: 'progress', label: 'Progress', icon: Activity },
@@ -46,18 +46,18 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <>
-      <aside className="no-print hidden w-56 shrink-0 flex-col border-r border-slate-800/80 bg-navy-900/50 lg:flex">
-        <div className="border-b border-slate-800/80 px-5 py-6">
+      <aside className="no-print hidden w-56 shrink-0 flex-col border-r border-white/10 bg-[#0a0a0a] lg:flex">
+        <div className="border-b border-white/10 px-5 py-6">
           <Link
             to="/app"
             className="block cursor-pointer rounded-lg transition-opacity hover:opacity-90"
             aria-label="Back to home"
           >
             <h1 className="text-lg font-bold tracking-tight text-white">
-              Peptide<span className="text-teal-400">Tracker</span>
+              Peptide<span className="text-emerald-400">Tracker</span>
             </h1>
             {username ? (
-              <p className="mt-1 text-xs text-teal-400/80">@{username}</p>
+              <p className="mt-1 text-xs text-emerald-400/80">@{username}</p>
             ) : (
               <p className="mt-1 text-xs text-slate-500">90-day peptide protocol</p>
             )}
@@ -69,10 +69,10 @@ export function Sidebar({
               key={id}
               type="button"
               onClick={() => onNavigate(id)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors ${
                 active === id
-                  ? 'bg-teal-500/10 font-medium text-teal-400'
-                  : 'text-slate-400 hover:bg-navy-800 hover:text-slate-200'
+                  ? 'bg-emerald-500/10 font-medium text-emerald-400'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
               }`}
             >
               <Icon size={18} />
@@ -80,7 +80,7 @@ export function Sidebar({
             </button>
           ))}
         </nav>
-        <div className="space-y-2 border-t border-slate-800/80 p-3">
+        <div className="space-y-2 border-t border-white/10 p-3">
           <InstallAppButton fullWidth />
           <button
             type="button"

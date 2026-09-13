@@ -1,11 +1,17 @@
 import { AUTHORITATIVE_PEPTIDE_KNOWLEDGE } from './peptideKnowledge.js'
 
-const SYSTEM_PROMPT = `You are PeptideTracker's research protocol assistant.
-You are NOT a doctor. Never prescribe. Always include a short disclaimer.
-Use the user's logged stack, vials, doses, check-ins, and 90-day plan when answering.
-Be concise and practical.
+const SYSTEM_PROMPT = `You are PeptideTracker's contextual AI coach — an experienced peptide + body recomposition coach.
 
-You are a world-class peptide and body recomposition expert built into Peptide Tracker. You have deep, authoritative knowledge of peptide chemistry, reconstitution, storage, U-100 syringe dosing, injection technique, clinical handling practices, stacking, titration, side effects, and training/nutrition for recomp. Never guess — follow the authoritative knowledge below and the user's tailored protocol.
+ROLE & BEHAVIOR:
+- Act as a practical recomp + peptide coach, not a clinician.
+- ALWAYS reference the user's live data from COACH CONTEXT when relevant: active stack + doses, last 14 days dose logs (taken/missed), check-ins (weight/energy/sleep), 90-day plan summary/targets, active vials remaining, adherence %, and plan health.
+- Be concise, practical, and encouraging. Prefer short paragraphs and bullets.
+- When the user asks about progress, analyze recent weight, energy, and adherence from the context.
+- If adherence is low, prioritize consistency strategies over optimization or dose changes.
+- If energy is low, consider recovery, sleep, and dose timing before suggesting harder work.
+- Suggest small adjustments ONLY when the data supports it. Never auto-claim you changed their plan.
+- NEVER give medical advice, diagnose, prescribe, or replace a licensed clinician. Remind users to consult their healthcare provider for medical decisions.
+- Never invent doses that contradict the user's tailored protocol / stack section.
 
 CRITICAL — TAILORED PROTOCOL DOSING (read the user profile section):
 - Each user has a personalized 90-day recomp protocol with exact injection doses and syringe units.
@@ -16,6 +22,7 @@ CRITICAL — TAILORED PROTOCOL DOSING (read the user profile section):
 - Example: "1. **Retatrutide (10 units, once weekly)**: appetite control and fat loss — currently week 1–4 of your titration; rotate injection sites."
 - Reference their full titration table when discussing dose increases.
 - BAC water reconstitution (100/200/300 units) determines concentration — syringe units are pre-calculated in their profile.
+- If active vials are listed, use remaining mg / concentration when discussing how many doses are left.
 
 POST-RECONSTITUTION STORAGE (CRITICAL — NEVER GET THIS WRONG):
 - IMMEDIATELY after reconstituting with bacteriostatic water, place the vial in the refrigerator (not the freezer).
@@ -29,8 +36,10 @@ ${AUTHORITATIVE_PEPTIDE_KNOWLEDGE}
 
 RULES:
 - Be concise, practical, and supportive.
-- Personalize ALL dosing answers from the TAILORED 90-DAY PEPTIDE PROTOCOL section — it is authoritative.
-- NEVER claim to be a doctor. Remind users to consult their healthcare provider.
+- Personalize ALL dosing answers from the tailored protocol + recent dose logs — they are authoritative.
+- If adherence is low, prioritize consistency tips before dose changes.
+- If plan health suggests weight dropping too fast or energy is low, surface that gently with non-medical lifestyle framing.
+- NEVER claim to be a doctor.
 - If the user shares profile updates (weight, peptides, goals), call the update_profile function.
 - Do not encourage unsafe dosing or illegal sourcing.
 
@@ -56,12 +65,11 @@ type AIProvider = 'xai' | 'openai'
 
 const PROVIDER_CONFIG: Record<
   AIProvider,
-  { url: string; model: string; models?: string[]; label: string }
+  { url: string; model: string; label: string }
 > = {
   xai: {
     url: 'https://api.x.ai/v1/chat/completions',
-    model: 'grok-4',
-    models: ['grok-4', 'grok-3', 'grok-3-mini'],
+    model: 'grok-3-mini',
     label: 'xAI Grok',
   },
   openai: {
@@ -161,7 +169,7 @@ export async function runChat(
         content: '',
         profileUpdates: null,
         error:
-          'AI key not configured. Add VITE_XAI_API_KEY to .env.local and redeploy. Server-side XAI_API_KEY on Vercel also works.',
+          'AI assistant not configured. Add XAI_API_KEY (console.x.ai) or OPENAI_API_KEY to .env.local / Vercel env vars (server-side only — do NOT use NEXT_PUBLIC_), then restart npm run dev.',
       },
     }
   }
@@ -181,11 +189,25 @@ export async function runChat(
     : SYSTEM_PROMPT
 
   const config = PROVIDER_CONFIG[provider]
-  const models = config.models?.length ? config.models : [config.model]
 
   try {
-    let response: Response | null = null
-    let data: {
+    const response = await fetch(config.url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: 'system', content: systemContent }, ...messages],
+        tools: PROFILE_TOOLS,
+        tool_choice: 'auto',
+        max_tokens: 1200,
+        temperature: 0.7,
+      }),
+    })
+
+    const data = (await response.json()) as {
       error?: { message?: string }
       choices?: Array<{
         message?: {
@@ -195,68 +217,15 @@ export async function runChat(
           }>
         }
       }>
-    } = {}
-
-    let lastError = ''
-    const attempts: Array<{ model: string; withTools: boolean }> = models.flatMap(
-      (model) => [
-        { model, withTools: true },
-        { model, withTools: false },
-      ]
-    )
-
-    for (const attempt of attempts) {
-      const payload: Record<string, unknown> = {
-        model: attempt.model,
-        messages: [{ role: 'system', content: systemContent }, ...messages],
-        max_tokens: 1200,
-        temperature: 0.7,
-      }
-      if (attempt.withTools) {
-        payload.tools = PROFILE_TOOLS
-        payload.tool_choice = 'auto'
-      }
-
-      response = await fetch(config.url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-
-      const raw = await response.text()
-      try {
-        data = JSON.parse(raw) as typeof data
-      } catch {
-        data = { error: { message: raw.slice(0, 240) || `HTTP ${response.status}` } }
-      }
-
-      if (response.ok) break
-      const msg = data.error?.message ?? raw.slice(0, 240)
-      lastError = msg || `HTTP ${response.status}`
-      const retryable =
-        !msg ||
-        /model|not found|does not exist|invalid|unrecognized|tool/i.test(msg) ||
-        response.status === 400 ||
-        response.status === 404
-      if (!retryable) {
-        break
-      }
     }
 
-    if ((!response || !response.ok) && provider === 'xai' && keys.openaiKey?.trim()) {
-      return runChat(body, { openaiKey: keys.openaiKey })
-    }
-
-    if (!response || !response.ok) {
+    if (!response.ok) {
       return {
-        status: response?.status ?? 502,
+        status: response.status,
         body: {
           content: '',
           profileUpdates: null,
-          error: formatAIError(provider, lastError || data.error?.message),
+          error: formatAIError(provider, data.error?.message),
         },
       }
     }

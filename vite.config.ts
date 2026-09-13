@@ -61,6 +61,8 @@ export default defineConfig({
     port: 5174,
     host: true,
     open: true,
+    // Allow Cloudflare quick tunnels (and other reverse proxies) for mobile preview
+    allowedHosts: true,
   },
   test: {
     environment: 'jsdom',
