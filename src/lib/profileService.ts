@@ -16,6 +16,7 @@ import type { Questionnaire } from '../types/auth'
 import { formatSupabaseError } from './supabaseErrors'
 import { supabase } from './supabase'
 import type { Peptide, Profile, TrackerState } from '../types'
+import { buildAssistantUserContext } from '../utils/assistantUserContext'
 import type { UserProfile } from '../types/auth'
 
 interface DbProfile {
@@ -200,6 +201,30 @@ export async function completeOnboarding(
     injectionLogs: [],
     workoutCompletions: [],
   }
+  trackerState.protocolProfile = buildAssistantUserContext(
+    {
+      id: userId,
+      email: null,
+      username,
+      familiarity: questionnaire.familiarity,
+      mainGoal: questionnaire.mainGoal,
+      interestedPeptides,
+      peptideSelections: questionnaire.peptideSelections,
+      additionalInfo: questionnaire.additionalInfo,
+      gender: questionnaire.gender,
+      age: questionnaire.age,
+      trainingActivities: questionnaire.trainingActivities,
+      currentWeight: questionnaire.currentWeight,
+      goalWeight: questionnaire.goalWeight,
+      height: null,
+      startDate: trackerState.profile.startDate,
+      weeklyLossTarget: weeklyTarget,
+      peptideStack,
+      trackerData: trackerState,
+      onboardingCompleted: true,
+    },
+    trackerState
+  ) as unknown as Record<string, unknown>
 
   const { error } = await supabase.from('profiles').upsert(
     {
@@ -248,6 +273,14 @@ async function persistPeptideData(
   const interestedPeptides =
     extras?.interestedPeptides ?? formatPeptideSelections(normalizedSelections)
 
+  const withProfile: TrackerState = {
+    ...trackerState,
+    protocolProfile: buildAssistantUserContext(null, trackerState) as unknown as Record<
+      string,
+      unknown
+    >,
+  }
+
   const update: Record<string, unknown> = {
     current_weight: profile.currentWeight,
     goal_weight: profile.goalWeight,
@@ -256,7 +289,7 @@ async function persistPeptideData(
     weekly_loss_target: profile.weeklyLossTarget,
     peptide_selections: normalizedSelections,
     peptide_stack: trackerState.peptides,
-    tracker_data: trackerState,
+    tracker_data: withProfile,
     interested_peptides: interestedPeptides,
   }
   if (extras?.familiarity !== undefined) update.familiarity = extras.familiarity
@@ -268,7 +301,14 @@ async function persistPeptideData(
   if (extras?.trainingActivities !== undefined)
     update.training_activities = extras.trainingActivities
 
+  update.protocol_profile = withProfile.protocolProfile
+
   const { error } = await supabase.from('profiles').update(update).eq('id', userId)
+  if (error && /protocol_profile/i.test(error.message)) {
+    delete update.protocol_profile
+    const retry = await supabase.from('profiles').update(update).eq('id', userId)
+    return { error: retry.error ? formatSupabaseError(retry.error.message) : null }
+  }
 
   return { error: error ? formatSupabaseError(error.message) : null }
 }

@@ -34,7 +34,8 @@ export function devApiPlugin(): Plugin {
           const { runChat } = await import('./api/chatHandler.ts')
           const result = await runChat(body, {
             openaiKey: env.OPENAI_API_KEY?.trim(),
-            xaiKey: env.XAI_API_KEY?.trim(),
+            xaiKey:
+              env.XAI_API_KEY?.trim() || env.VITE_XAI_API_KEY?.trim(),
           })
 
           if (result.body.error) {

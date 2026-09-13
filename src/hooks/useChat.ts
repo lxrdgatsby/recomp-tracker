@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHAT_CONNECTION_ERROR } from '../constants/chatPrompts'
-import {
-  getAssistantContext,
-  getFallbackAssistantResponse,
-} from '../utils/assistantFallback'
+import { ASSISTANT_UNAVAILABLE } from '../constants/chatPrompts'
 import { buildUserContextForChat } from '../utils/buildUserContext'
+import { buildAssistantUserContext } from '../utils/assistantUserContext'
 import { useAuth } from '../contexts/AuthContext'
 import {
   deleteConversation,
@@ -91,7 +88,8 @@ export function useChat() {
   }, [user?.id])
 
   const getUserContext = useCallback(
-    () => buildUserContextForChat(userProfile, trackerState),
+    (lastUserMessage?: string) =>
+      buildUserContextForChat(userProfile, trackerState, lastUserMessage),
     [userProfile, trackerState]
   )
 
@@ -234,7 +232,18 @@ export function useChat() {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!user || !text.trim() || sendingRef.current) return
+      if (!text.trim() || sendingRef.current) return
+      if (!user) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `e-${Date.now()}`,
+            role: 'assistant',
+            content: 'Sign in to use the Peptide Protocol Assistant.',
+          },
+        ])
+        return
+      }
 
       const trimmed = text.trim()
       sendingRef.current = true
@@ -299,9 +308,13 @@ export function useChat() {
           )
         }
 
+        const liveCtx = buildAssistantUserContext(userProfile, trackerState, {
+          lastUserMessage: trimmed,
+        })
         const { content, profileUpdates } = await fetchChatResponse({
           messages: apiMessages,
-          userContext: getUserContext(),
+          userContext: getUserContext(trimmed),
+          protocolWeek: liveCtx.protocolWeek,
         })
 
         if (profileUpdates) {
@@ -324,18 +337,11 @@ export function useChat() {
       } catch (err) {
         console.error('chat send:', err)
         const apiMessage = err instanceof Error ? err.message : ''
-        const isConfigError = /AI key not configured|not configured|XAI_API_KEY|VITE_XAI_API_KEY/i.test(
-          apiMessage
-        )
-        const isApiError =
-          isConfigError ||
-          (/AI|fetch|network|connect/i.test(apiMessage) ||
-            apiMessage.includes('503'))
-        const fallbackContent = isConfigError
+        const fallbackContent = apiMessage.includes('Assistant unavailable')
           ? apiMessage
-          : isApiError
-            ? CHAT_CONNECTION_ERROR
-            : getFallbackAssistantResponse(trimmed, getAssistantContext())
+          : apiMessage
+            ? `${ASSISTANT_UNAVAILABLE}. ${apiMessage}`
+            : ASSISTANT_UNAVAILABLE
         const errMsg: ChatMsg = {
           id: `e-${Date.now()}`,
           role: 'assistant',
@@ -368,6 +374,8 @@ export function useChat() {
       applyUpdates,
       applyResolvedConversation,
       refreshConversations,
+      userProfile,
+      trackerState,
     ]
   )
 

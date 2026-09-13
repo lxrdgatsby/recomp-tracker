@@ -8,12 +8,13 @@ import {
   ASSISTANT_WELCOME,
   CHAT_SUGGESTIONS,
 } from '../../constants/chatPrompts'
+import { getAssistantQuickPrompts } from '../../utils/assistantUserContext'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import { useChat } from '../../hooks/useChat'
 import { ChatHistorySidebar } from './ChatHistorySidebar'
 
 export function AIChatDashboard() {
-  const { userProfile } = useAuth()
+  const { userProfile, trackerState } = useAuth()
   const { canInstall, canShowIOSGuide, isInstalled, install } = usePwaInstall()
   const {
     messages,
@@ -246,7 +247,10 @@ export function AIChatDashboard() {
                 : 'pointer-events-none max-h-0 translate-y-3 opacity-0'
             }`}
           >
-            {CHAT_SUGGESTIONS.map((action) => (
+            {(trackerState.peptides.length
+              ? getAssistantQuickPrompts(trackerState.peptides)
+              : [...CHAT_SUGGESTIONS]
+            ).map((action) => (
               <button
                 key={action}
                 type="button"

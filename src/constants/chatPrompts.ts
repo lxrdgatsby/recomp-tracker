@@ -2,10 +2,13 @@ import { getCatalogEntry, getCatalogEntryByName } from './peptideCatalog'
 import { RECONSTITUTION_FAQ_QUESTION } from './reconstitutionGuide'
 
 export const CHAT_SUGGESTIONS = [
-  "What's on my stack today?",
-  'Walk me through Sunday draws in units',
-  'Any vial warnings I should confirm?',
-  'What changes in weeks 5–8?',
+  'What do I inject today?',
+  'What is my current Reta / Tesamorelin dose in units?',
+  'Can I titrate this week?',
+  'Why is my weight stalling?',
+  'Explain Tesamorelin timing',
+  'Reconstitute my BPC-157 vial',
+  "What's the difference between my KLOW and standalone BPC?",
 ] as const
 
 export const ASSISTANT_TITLE = 'Peptide Protocol Assistant'
@@ -20,7 +23,10 @@ export const ASSISTANT_INPUT_PLACEHOLDER =
   'Ask about peptides, dosing, your stack...'
 
 export const CHAT_CONNECTION_ERROR =
-  "Sorry, I'm having trouble connecting right now. Please try again."
+  'Assistant unavailable — check API key / network'
+
+export const ASSISTANT_UNAVAILABLE =
+  'Assistant unavailable — check API key / network'
 
 export const FAQ_QUESTIONS = [
   RECONSTITUTION_FAQ_QUESTION,

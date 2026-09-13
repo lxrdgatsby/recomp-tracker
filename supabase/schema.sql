@@ -21,10 +21,14 @@ create table if not exists public.profiles (
   weekly_loss_target numeric default 0.875,
   peptide_stack jsonb default '[]'::jsonb,
   tracker_data jsonb default '{}'::jsonb,
+  protocol_profile jsonb default '{}'::jsonb,
   onboarding_completed boolean default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+alter table public.profiles
+  add column if not exists protocol_profile jsonb default '{}'::jsonb;
 
 -- Chat conversations (threads)
 create table if not exists public.chat_conversations (

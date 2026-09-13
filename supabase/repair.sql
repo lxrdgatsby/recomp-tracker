@@ -1,6 +1,9 @@
 -- Run this FIRST if schema.sql failed with: column "conversation_id" does not exist
 -- Supabase Dashboard → SQL Editor → New query → paste all → Run
 
+alter table public.profiles
+  add column if not exists protocol_profile jsonb default '{}'::jsonb;
+
 -- 1. Conversations table (needed before conversation_id FK)
 create table if not exists public.chat_conversations (
   id uuid default gen_random_uuid() primary key,

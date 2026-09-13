@@ -1,53 +1,50 @@
 import { AUTHORITATIVE_PEPTIDE_KNOWLEDGE } from './peptideKnowledge.js'
 
-const SYSTEM_PROMPT = `You are PeptideTracker's contextual AI coach — an experienced peptide + body recomposition coach.
+export const ASSISTANT_UNAVAILABLE =
+  'Assistant unavailable — check API key / network'
 
-ROLE & BEHAVIOR:
-- Act as a practical recomp + peptide coach, not a clinician.
-- ALWAYS reference the user's live data from COACH CONTEXT when relevant: active stack + doses, last 14 days dose logs (taken/missed), check-ins (weight/energy/sleep), 90-day plan summary/targets, active vials remaining, adherence %, and plan health.
-- Be concise, practical, and encouraging. Prefer short paragraphs and bullets.
-- When the user asks about progress, analyze recent weight, energy, and adherence from the context.
-- If adherence is low, prioritize consistency strategies over optimization or dose changes.
-- If energy is low, consider recovery, sleep, and dose timing before suggesting harder work.
-- Suggest small adjustments ONLY when the data supports it. Never auto-claim you changed their plan.
-- NEVER give medical advice, diagnose, prescribe, or replace a licensed clinician. Remind users to consult their healthcare provider for medical decisions.
-- Never invent doses that contradict the user's tailored protocol / stack section.
+const PROTOCOL_ASSISTANT_PROMPT = `You are the PeptideTracker Protocol Assistant.
 
-CRITICAL — TAILORED PROTOCOL DOSING (read the user profile section):
-- Each user has a personalized 90-day recomp protocol with exact injection doses and syringe units.
-- The "vial size" (e.g. 10mg Retatrutide) is the TOTAL powder in the vial — NOT what they inject per dose.
-- NEVER describe a user's injection as their vial size (e.g. NEVER say "Retatrutide 10mg weekly").
-- ALWAYS use their CURRENT WEEK injection from the protocol: dose in mg/mcg AND syringe units.
-- When listing peptides in overviews, use this format: "PeptideName (X units, once weekly)" or "PeptideName (X units, daily)".
-- Example: "1. **Retatrutide (10 units, once weekly)**: appetite control and fat loss — currently week 1–4 of your titration; rotate injection sites."
-- Reference their full titration table when discussing dose increases.
-- BAC water reconstitution (100/200/300 units) determines concentration — syringe units are pre-calculated in their profile.
-- If active vials are listed, use remaining mg / concentration when discussing how many doses are left.
+You help THIS user with THEIR saved 90-day recomp protocol and with peptide questions in general.
 
-POST-RECONSTITUTION STORAGE (CRITICAL — NEVER GET THIS WRONG):
-- IMMEDIATELY after reconstituting with bacteriostatic water, place the vial in the refrigerator (not the freezer).
-- The 30-minute activation period happens IN THE REFRIGERATOR — NEVER at room temperature.
-- NEVER say "allow 30 minutes at room temperature" or any room-temperature activation step. This is WRONG and dangerous to peptide stability.
-- Keep refrigerated for exactly 30 minutes before the first injection, then always store in the refrigerator for stability, purity, and potency.
-- Reconstitution step 8 wording: "Immediately place the reconstituted peptide in the refrigerator (not the freezer) after reconstitution. Keep it refrigerated for exactly 30 minutes before the first use to allow the bacteriostatic water to activate the peptides. Always keep your peptides stored in the refrigerator to maintain its stability, purity and potency. (IMPORTANT)"
-- Storage FAQ step 2 wording: "Immediately store the reconstituted peptide in the refrigerator (not the freezer) after reconstitution. Keep it refrigerated for exactly 30 minutes before the first use to allow the bacteriostatic water to activate the peptides. Never leave reconstituted peptides at room temperature for activation. Always keep your peptides stored in the refrigerator to maintain stability, purity, and potency."
+Rules:
+- Always use the user context JSON as ground truth for what they are running.
+- When they ask “what do I take tonight?” or “what do I inject today?” answer from TODAY’S INJECTIONS + current week phase, with units.
+- When they ask about titration, use their start date and current week. Reta steps every 4 weeks, not weekly.
+- Be direct, specific, and practical. Use mg AND U-100 units.
+- Short answers first, then detail if asked.
+- This is research-use / compounding tracking, not a prescription. Tracking + education only, not medical advice.
+- Tesamorelin and testosterone are prescription drugs with labeled uses. Retatrutide is investigational. AOD, BPC, SS-31 research vials, GHK-Cu injectable, MOTS-c, KLOW, NAD+ subQ have limited or no approved recomp dosing.
+- Do not tell them to copy Forzinity 40 mg SS-31 onto a research vial.
+- Do not promise +8 lb muscle and 7% BF in 90 days. Honest frame: fat loss from Reta + deficit + steps; muscle from Test + Tesamorelin + lifting + protein; support peptides are adjuncts.
+- If they ask something outside peptides / training / nutrition / their protocol, answer briefly then steer back.
+- If you lack their lab values, say so and recommend they use labs + a clinician for dose changes.
+- Never ignore their actual saved doses in favor of a generic internet protocol.
+- If hasPlan is false, say: “I don’t have a 90-day protocol on file yet. Add compounds on the 90-Day tab and I’ll coach from your actual plan.” Then still answer general peptide questions from the knowledge base.
+- If a field is "not provided", do not invent labs or doses.
+- Classic KLOW is often an 80 mg blend; this app treats the vial as 10 mg unless the user context says otherwise. Standalone BPC-157 may already be in the stack — if KLOW also contains BPC, they may be stacking BPC twice.
 
-${AUTHORITATIVE_PEPTIDE_KNOWLEDGE}
+Knowledge you must be able to cover:
+- What each peptide is studied or commonly used for
+- Typical published vs community ranges
+- Reconstitution and U-100 math: units = (desired_mg / (vial_mg / bac_ml)) * 100
+- Timing (fasted vs nightly vs weekly)
+- Injection site rotation (abdomen vs thigh; NAD+ often thigh, inject slow, can burn)
+- Side-effect flags (Reta GI, Tesamorelin glucose/IGF-1, NAD+ burn, site irritation)
+- Stack interactions relevant to THIS plan (BPC already standalone + KLOW may also contain BPC)
+- When to hold a titration
+- How check-ins, weight trend, and adherence connect to the plan
 
-RULES:
-- Be concise, practical, and supportive.
-- Personalize ALL dosing answers from the tailored protocol + recent dose logs — they are authoritative.
-- If adherence is low, prioritize consistency tips before dose changes.
-- If plan health suggests weight dropping too fast or energy is low, surface that gently with non-medical lifestyle framing.
-- NEVER claim to be a doctor.
-- If the user shares profile updates (weight, peptides, goals), call the update_profile function.
-- Do not encourage unsafe dosing or illegal sourcing.
+USER CONTEXT JSON:
+{{userContext}}
 
-When users mention specific peptides or doses they are taking, update their profile stack accordingly.`
+${AUTHORITATIVE_PEPTIDE_KNOWLEDGE}`
 
 export interface ChatRequestBody {
   messages: { role: string; content: string }[]
   userContext?: string
+  protocolWeek?: number
+  lastUserMessage?: string
 }
 
 export interface ChatResponseBody {
@@ -63,18 +60,20 @@ export interface ChatApiKeys {
 
 type AIProvider = 'xai' | 'openai'
 
+const XAI_MODELS = ['grok-4.5', 'grok-4.6', 'grok-3-mini'] as const
+
 const PROVIDER_CONFIG: Record<
   AIProvider,
-  { url: string; model: string; label: string }
+  { url: string; models: readonly string[]; label: string }
 > = {
   xai: {
     url: 'https://api.x.ai/v1/chat/completions',
-    model: 'grok-3-mini',
+    models: XAI_MODELS,
     label: 'xAI Grok',
   },
   openai: {
     url: 'https://api.openai.com/v1/chat/completions',
-    model: 'gpt-4o-mini',
+    models: ['gpt-4o-mini'],
     label: 'OpenAI',
   },
 }
@@ -93,69 +92,90 @@ function resolveProvider(keys: ChatApiKeys): {
 }
 
 function formatAIError(provider: AIProvider, message?: string): string {
-  if (!message) return `${PROVIDER_CONFIG[provider].label} API error`
-  if (/quota|billing|insufficient|credits/i.test(message)) {
+  if (/quota|billing|insufficient|credits/i.test(message ?? '')) {
     if (provider === 'xai') {
-      return (
-        'Your xAI account has no available credits. Go to console.x.ai → Billing, ' +
-        'add credits, then try again.'
-      )
+      return `${ASSISTANT_UNAVAILABLE}. Your xAI account has no available credits (console.x.ai → Billing).`
     }
-    return (
-      'Your OpenAI account has no available credits. Go to platform.openai.com → Settings → Billing, ' +
-      'add a payment method or top up credits, then try again.'
-    )
+    return `${ASSISTANT_UNAVAILABLE}. Your OpenAI account has no available credits.`
+  }
+  if (/api key|unauthorized|invalid key|authentication/i.test(message ?? '')) {
+    return `${ASSISTANT_UNAVAILABLE}. ${PROVIDER_CONFIG[provider].label} API key was rejected.`
   }
   return message
+    ? `${ASSISTANT_UNAVAILABLE}. ${message}`
+    : ASSISTANT_UNAVAILABLE
 }
 
-const PROFILE_TOOLS = [
-  {
-    type: 'function' as const,
-    function: {
-      name: 'update_profile',
-      description:
-        'Update user profile fields when they share new weight, goals, or peptide stack info',
-      parameters: {
-        type: 'object',
-        properties: {
-          current_weight: { type: 'number', description: 'Current weight in lbs' },
-          goal_weight: { type: 'number', description: 'Goal weight in lbs' },
-          main_goal: {
-            type: 'string',
-            description: 'User goals, comma-separated if multiple',
-          },
-          interested_peptides: { type: 'string' },
-          additional_info: { type: 'string' },
-          gender: {
-            type: 'string',
-            enum: ['male', 'female', 'non_binary', 'prefer_not_to_say'],
-          },
-          age: { type: 'number', description: 'User age (18–50)' },
-          training_activities: {
-            type: 'string',
-            description: 'Comma-separated training activities',
-          },
-          weekly_loss_target: { type: 'number' },
-          peptide_stack: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                dose: { type: 'string' },
-                frequency: { type: 'string', enum: ['daily', 'weekly'] },
-                timing: { type: 'string' },
-                notes: { type: 'string' },
-              },
-              required: ['name', 'dose', 'frequency'],
-            },
-          },
-        },
-      },
+function lastUserText(messages: { role: string; content: string }[]): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user' && messages[i].content.trim()) {
+      return messages[i].content.trim()
+    }
+  }
+  return ''
+}
+
+function buildSystemPrompt(userContext?: string): string {
+  const ctx = userContext?.trim()
+    ? userContext.trim()
+    : JSON.stringify({
+        hasPlan: false,
+        noPlanMessage:
+          "I don't have a 90-day protocol on file yet. Add compounds on the 90-Day tab and I'll coach from your actual plan.",
+      })
+  return PROTOCOL_ASSISTANT_PROMPT.replace('{{userContext}}', ctx)
+}
+
+async function callChatCompletions(opts: {
+  url: string
+  apiKey: string
+  model: string
+  systemContent: string
+  messages: { role: string; content: string }[]
+}): Promise<{
+  ok: boolean
+  status: number
+  content: string
+  errorMessage?: string
+  modelMissing?: boolean
+}> {
+  const response = await fetch(opts.url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${opts.apiKey}`,
+      'Content-Type': 'application/json',
     },
-  },
-]
+    body: JSON.stringify({
+      model: opts.model,
+      messages: [{ role: 'system', content: opts.systemContent }, ...opts.messages],
+      max_tokens: 1400,
+      temperature: 0.4,
+    }),
+  })
+
+  const data = (await response.json()) as {
+    error?: { message?: string; code?: string }
+    choices?: Array<{ message?: { content?: string | null } }>
+  }
+
+  const errMsg = data.error?.message ?? ''
+  const modelMissing =
+    response.status === 404 ||
+    /model|not found|does not exist|unknown model/i.test(errMsg)
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      content: '',
+      errorMessage: errMsg,
+      modelMissing,
+    }
+  }
+
+  const content = (data.choices?.[0]?.message?.content ?? '').trim()
+  return { ok: true, status: 200, content }
+}
 
 export async function runChat(
   body: ChatRequestBody,
@@ -168,14 +188,13 @@ export async function runChat(
       body: {
         content: '',
         profileUpdates: null,
-        error:
-          'AI assistant not configured. Add XAI_API_KEY (console.x.ai) or OPENAI_API_KEY to .env.local / Vercel env vars (server-side only — do NOT use NEXT_PUBLIC_), then restart npm run dev.',
+        error: `${ASSISTANT_UNAVAILABLE}. Add XAI_API_KEY or VITE_XAI_API_KEY in Vercel env (server-side) and redeploy.`,
       },
     }
   }
 
   const { provider, apiKey } = resolved
-  const { messages, userContext } = body
+  const { messages, userContext, protocolWeek, lastUserMessage } = body
 
   if (!messages?.length) {
     return {
@@ -184,84 +203,70 @@ export async function runChat(
     }
   }
 
-  const systemContent = userContext
-    ? `${SYSTEM_PROMPT}\n\n--- USER PROFILE ---\n${userContext}`
-    : SYSTEM_PROMPT
+  const lastUser = lastUserMessage || lastUserText(messages)
+  console.log('[assistant]', {
+    week: protocolWeek ?? null,
+    lastUserMessage: lastUser.slice(0, 180),
+    provider,
+  })
 
+  const systemContent = buildSystemPrompt(userContext)
   const config = PROVIDER_CONFIG[provider]
 
   try {
-    const response = await fetch(config.url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [{ role: 'system', content: systemContent }, ...messages],
-        tools: PROFILE_TOOLS,
-        tool_choice: 'auto',
-        max_tokens: 1200,
-        temperature: 0.7,
-      }),
-    })
+    let lastError = ''
+    for (const model of config.models) {
+      const result = await callChatCompletions({
+        url: config.url,
+        apiKey,
+        model,
+        systemContent,
+        messages,
+      })
 
-    const data = (await response.json()) as {
-      error?: { message?: string }
-      choices?: Array<{
-        message?: {
-          content?: string
-          tool_calls?: Array<{
-            function?: { name?: string; arguments?: string }
-          }>
+      if (result.ok && result.content) {
+        return {
+          status: 200,
+          body: { content: result.content, profileUpdates: null },
         }
-      }>
-    }
+      }
 
-    if (!response.ok) {
+      if (result.ok && !result.content) {
+        lastError = 'Empty model response'
+        continue
+      }
+
+      lastError = result.errorMessage || `HTTP ${result.status}`
+      if (result.modelMissing) continue
       return {
-        status: response.status,
+        status: result.status || 502,
         body: {
           content: '',
           profileUpdates: null,
-          error: formatAIError(provider, data.error?.message),
+          error: formatAIError(provider, lastError),
         },
       }
     }
 
-    const message = data.choices?.[0]?.message
-    let profileUpdates: Record<string, unknown> | null = null
-
-    if (message?.tool_calls?.length) {
-      const toolCall = message.tool_calls[0]
-      if (toolCall.function?.name === 'update_profile' && toolCall.function.arguments) {
-        try {
-          profileUpdates = JSON.parse(toolCall.function.arguments) as Record<
-            string,
-            unknown
-          >
-        } catch {
-          profileUpdates = null
-        }
-      }
+    return {
+      status: 502,
+      body: {
+        content: '',
+        profileUpdates: null,
+        error: formatAIError(provider, lastError || 'No model available'),
+      },
     }
-
-    const content =
-      message?.content ||
-      'I updated your profile based on what you shared. Let me know if you need anything else!'
-
-    return { status: 200, body: { content, profileUpdates } }
   } catch (err) {
-    console.error(err)
+    console.error('[assistant] network', err)
     return {
       status: 500,
       body: {
         content: '',
         profileUpdates: null,
-        error: 'Failed to reach AI service',
+        error: ASSISTANT_UNAVAILABLE,
       },
     }
   }
 }
 
+export { PROTOCOL_ASSISTANT_PROMPT }

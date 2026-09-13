@@ -5,9 +5,7 @@ export async function parseChatApiResponse(
 
   if (!text.trim()) {
     throw new Error(
-      res.status === 404
-        ? 'AI API route not found. On Vercel, add XAI_API_KEY or VITE_XAI_API_KEY under Settings → Environment Variables, then redeploy.'
-        : 'AI key not configured. Add VITE_XAI_API_KEY to .env.local and redeploy.'
+      'Assistant unavailable — check API key / network'
     )
   }
 
@@ -29,16 +27,22 @@ export async function parseChatApiResponse(
   } catch {
     if (looksLikeHtml) {
       throw new Error(
-        'AI API returned the app page instead of a response. On Vercel, set XAI_API_KEY or VITE_XAI_API_KEY and redeploy. Locally, use npm run dev (not npm run preview).'
+        'Assistant unavailable — check API key / network. The /api/chat route returned the app page instead of a Grok reply.'
       )
     }
     throw new Error(
-      `AI assistant returned an invalid response (HTTP ${res.status}). Check XAI_API_KEY / VITE_XAI_API_KEY on Vercel and redeploy.`
+      `Assistant unavailable — check API key / network (HTTP ${res.status}).`
     )
   }
 
   if (!res.ok) {
-    throw new Error(data.error ?? `AI request failed (${res.status})`)
+    throw new Error(
+      data.error ?? 'Assistant unavailable — check API key / network'
+    )
+  }
+
+  if (!(data.content ?? data.reply)?.trim()) {
+    throw new Error('Assistant unavailable — check API key / network')
   }
 
   return {

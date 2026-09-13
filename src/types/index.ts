@@ -85,6 +85,8 @@ export interface TrackerState {
   weightHistory: WeightEntry[]
   injectionLogs: InjectionLog[]
   workoutCompletions: WorkoutCompletion[]
+  /** Snapshot of the live protocol the Assistant reads. Logs/start date stay independent. */
+  protocolProfile?: Record<string, unknown>
 }
 
 export type ViewId =

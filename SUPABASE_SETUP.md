@@ -17,6 +17,10 @@ Follow these steps to enable authentication, cloud profiles, and the built-in AI
 
 This creates `profiles` and `chat_messages` tables, RLS policies, and an auto-profile trigger on signup.
 
+### Protocol profile (Assistant)
+
+If the project already exists, also run `supabase/migrations/003_protocol_profile.sql`. That adds `profiles.protocol_profile` (jsonb) so the Assistant can read each user's 90-day plan. It does **not** reset `start_date`, `tracker_data` logs, or Mark Done history.
+
 ### Admin dashboard (list all users)
 
 If the schema was applied before admin support existed, also run:

@@ -20,14 +20,20 @@ export interface ChatResponseResult {
 export async function fetchChatResponse(params: {
   messages: { role: string; content: string }[]
   userContext: string
+  protocolWeek?: number
 }): Promise<ChatResponseResult> {
   try {
+    const lastUser = [...params.messages]
+      .reverse()
+      .find((m) => m.role === 'user')?.content
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: params.messages,
-        userContext: `${params.userContext}\n\n${DISCLAIMER}`,
+        userContext: params.userContext,
+        lastUserMessage: lastUser,
+        protocolWeek: params.protocolWeek,
       }),
     })
 
