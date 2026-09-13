@@ -60,12 +60,13 @@ export function WorkoutsRoute() {
 }
 
 export function ProgressRoute() {
-  const { state, logWeight } = useAppContext()
+  const { state, logWeight, toggleInjection } = useAppContext()
   const { persistState } = usePersistTrackerState()
   return (
     <ProgressView
       state={state}
       onLogWeight={logWeight}
+      onToggleInjection={toggleInjection}
       onCheckInScheduleChange={(schedule) => {
         void persistState({
           ...state,

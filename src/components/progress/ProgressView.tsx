@@ -13,6 +13,7 @@ import {
 import { SmartCheckIn } from '../checkin/SmartCheckIn'
 import { Card } from '../ui/Card'
 import { AdvancedAnalytics } from './AdvancedAnalytics'
+import { InjectionHistory } from './InjectionHistory'
 import { ProgressCorrelation } from './ProgressCorrelation'
 import type { TrackerState } from '../../types'
 import type { CheckInData } from '../../utils/checkInStorage'
@@ -28,6 +29,7 @@ interface ProgressViewProps {
   state: TrackerState
   onLogWeight: (date: string, weight: number) => void
   onCheckInScheduleChange?: (schedule: CheckInSchedule) => void
+  onToggleInjection?: (date: string, peptideId: string) => void
 }
 
 const ADHERENCE_STATS = [
@@ -102,6 +104,7 @@ export function ProgressView({
   state,
   onLogWeight,
   onCheckInScheduleChange,
+  onToggleInjection,
 }: ProgressViewProps) {
   const { profile, weightHistory } = state
   const [showLogModal, setShowLogModal] = useState(false)
@@ -264,6 +267,15 @@ export function ProgressView({
           </ResponsiveContainer>
         </div>
       </div>
+
+      {onToggleInjection && (
+        <div className="mb-8">
+          <InjectionHistory
+            state={state}
+            onToggleInjection={onToggleInjection}
+          />
+        </div>
+      )}
 
       <Card title="Key Milestones">
         <div className="space-y-3">

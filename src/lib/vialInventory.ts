@@ -48,7 +48,7 @@ export const PROTOCOL_PEPTIDE_OPTIONS: {
     targetDoseMg: 0,
     frequency: 'weekly',
     timing: 'Sunday PM',
-    notes: 'Dose stored as volume. Confirm mg/mL on vial.',
+    notes: '0.75 mL weekly — not a U-100 peptide draw. Confirm 200 vs 250 mg/mL.',
   },
   {
     id: 'retatrutide',
@@ -128,7 +128,7 @@ export const PROTOCOL_PEPTIDE_OPTIONS: {
     targetDoseMg: 0.5,
     frequency: 'daily',
     timing: 'Evening',
-    notes: '0.5 mg = 15 units.',
+    notes: '0.5 mg = 15 units. Treated as 10 mg vial, not an 80 mg blend.',
   },
   {
     id: 'nad',

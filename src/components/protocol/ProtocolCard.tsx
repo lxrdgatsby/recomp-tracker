@@ -1,5 +1,6 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns'
-import { PHASE_NOTES, SAFETY_COPY } from '../../lib/protocolSeed'
+import { KLOW_NOTE, RESEARCH_DISCLAIMER } from '../../constants/reconstitutionTable'
+import { PHASE_NOTES } from '../../lib/protocolSeed'
 import type { TrackerState } from '../../types'
 import { getInjectionsForDate } from '../../utils/peptideSchedule'
 import { getProtocolHeader } from '../../utils/protocolHeader'
@@ -46,11 +47,7 @@ export function ProtocolCard({
             className="flex items-start justify-between gap-3 border-b border-white/5 py-2 last:border-0"
           >
             <div>
-              <div className="text-sm font-medium text-white">{inj.peptideName}</div>
-              <div className="text-xs text-slate-400">{inj.timing}</div>
-            </div>
-            <div className="text-right text-sm font-semibold text-emerald-400">
-              {inj.dose}
+              <div className="text-sm font-medium text-white">{inj.cardLine}</div>
             </div>
           </div>
         ))}
@@ -89,11 +86,11 @@ export function ProtocolCard({
           </div>
 
           <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3 text-xs leading-relaxed text-rose-200">
-            KLOW is stored as a 10 mg product, not an 80 mg blend. Confirm label before
-            locking units.
+            {KLOW_NOTE}
           </div>
           <div className="mt-2 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
-            Test Cyp concentration is UNKNOWN. Dose is 0.75 mL — confirm mg/mL on vial.
+            Test Cyp dose is 0.75 mL (not insulin units). 150 mg if 200 mg/mL, or 187.5 mg
+            if 250 mg/mL — confirm the vial label.
           </div>
 
           <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
@@ -106,7 +103,7 @@ export function ProtocolCard({
           </ul>
 
           <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
-            Weeks 5–8 (planned, not auto-applied)
+            Weeks 5–8 (auto from Aug 23)
           </h3>
           <ul className="list-disc space-y-1 pl-4 text-sm text-slate-400">
             {PHASE_NOTES.weeks5to8.map((n) => (
@@ -114,14 +111,16 @@ export function ProtocolCard({
             ))}
           </ul>
           <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
-            Weeks 9–12 (planned, not auto-applied)
+            Weeks 9–12 (auto from Aug 23)
           </h3>
           <ul className="list-disc space-y-1 pl-4 text-sm text-slate-400">
             {PHASE_NOTES.weeks9to12.map((n) => (
               <li key={n}>{n}</li>
             ))}
           </ul>
-          <p className="mt-4 text-[11px] leading-relaxed text-amber-200/90">{SAFETY_COPY}</p>
+          <p className="mt-4 text-[11px] leading-relaxed text-amber-200/90">
+            {RESEARCH_DISCLAIMER}
+          </p>
         </>
       )}
     </section>

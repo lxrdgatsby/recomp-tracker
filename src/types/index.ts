@@ -42,6 +42,8 @@ export interface RecompPlan {
   trainingNotes: string[]
   checkInCadence: string
   reconstitutionReminder?: string
+  /** Protocol definition version. Logs / start date are independent. */
+  definitionVersion?: string
 }
 
 export type CheckInCadence = 'daily' | 'weekly'

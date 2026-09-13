@@ -1,6 +1,14 @@
 import { addDays, differenceInDays, format, parseISO } from 'date-fns'
 import type { InjectionLog, Peptide } from '../types'
 import { formatSyringeUnits, getTitrationForDay } from './recompProtocol'
+import { formatUnits } from './doseMath'
+
+export type InjectionSlot =
+  | 'morning'
+  | 'peri'
+  | 'evening'
+  | 'night'
+  | 'weekly'
 
 export interface ScheduledInjection {
   peptideId: string
@@ -9,6 +17,70 @@ export interface ScheduledInjection {
   syringeUnits?: number
   timing: string
   notes?: string
+  slot: InjectionSlot
+  /** e.g. "Tesamorelin · 15 units on U-100 · Night, 2–3 h fasted" */
+  cardLine: string
+}
+
+export const SLOT_LABELS: Record<InjectionSlot, string> = {
+  morning: 'Morning, fasted',
+  peri: 'Peri-training / after first meal',
+  evening: 'Evening / post-training',
+  night: 'Night, 2–3 h after last food',
+  weekly: 'Weekly',
+}
+
+const SLOT_ORDER: InjectionSlot[] = [
+  'morning',
+  'peri',
+  'evening',
+  'night',
+  'weekly',
+]
+
+const SLOT_BY_ID: Record<string, InjectionSlot> = {
+  aod9604: 'morning',
+  ss31: 'morning',
+  motsc: 'morning',
+  ghkcu: 'morning',
+  bpc157: 'peri',
+  klow: 'evening',
+  nad: 'evening',
+  tesamorelin: 'night',
+  'test-cyp': 'weekly',
+  retatrutide: 'weekly',
+}
+
+export function injectionSlot(peptideId: string): InjectionSlot {
+  return SLOT_BY_ID[peptideId] ?? 'morning'
+}
+
+export function formatInjectionCardLine(opts: {
+  name: string
+  peptideId: string
+  dose: string
+  syringeUnits?: number
+  timing: string
+}): string {
+  const isVolume =
+    opts.peptideId === 'test-cyp' || /ml/i.test(opts.dose)
+  if (isVolume) {
+    return `${opts.name} · ${opts.dose} · ${opts.timing}`
+  }
+  if (opts.syringeUnits != null && opts.syringeUnits > 0) {
+    return `${opts.name} · ${formatUnits(opts.syringeUnits)} units on U-100 · ${opts.timing}`
+  }
+  return `${opts.name} · ${opts.dose} · ${opts.timing}`
+}
+
+export function groupInjectionsBySlot(
+  injections: ScheduledInjection[]
+): { slot: InjectionSlot; label: string; items: ScheduledInjection[] }[] {
+  return SLOT_ORDER.map((slot) => ({
+    slot,
+    label: SLOT_LABELS[slot],
+    items: injections.filter((inj) => inj.slot === slot),
+  })).filter((group) => group.items.length > 0)
 }
 
 export function getInjectionsForDate(
@@ -37,16 +109,25 @@ export function getInjectionsForDate(
           ? formatSyringeUnits(syringeUnits)
           : tier?.doseLabel ?? p.dose
       const titrationNote = tier?.notes
+      const timing =
+        p.timing ??
+        (p.frequency === 'weekly' ? 'Weekly — same day each week' : 'Daily')
 
       return {
         peptideId: p.id,
         peptideName: p.name,
         dose,
         syringeUnits,
-        timing:
-          p.timing ??
-          (p.frequency === 'weekly' ? 'Weekly — same day each week' : 'Daily'),
+        timing,
         notes: titrationNote ? `${titrationNote}. ${p.notes ?? ''}`.trim() : p.notes,
+        slot: injectionSlot(p.id),
+        cardLine: formatInjectionCardLine({
+          name: p.name,
+          peptideId: p.id,
+          dose,
+          syringeUnits,
+          timing,
+        }),
       }
     })
 }

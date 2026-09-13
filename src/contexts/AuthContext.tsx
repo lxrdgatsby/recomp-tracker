@@ -14,7 +14,10 @@ import {
   persistSeededProtocol,
   profileToTrackerState,
 } from '../lib/profileService'
-import { applyLxrdgatsbyProtocolSeed } from '../lib/protocolSeed'
+import {
+  applyLxrdgatsbyProtocolSeed,
+  refreshProtocolDefinition,
+} from '../lib/protocolSeed'
 import { runVialSizeMigrationV2 } from '../lib/vialInventory'
 import { getAuthCallbackUrl } from '../lib/authRedirect'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
@@ -55,15 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (profile) {
       let next = profileToTrackerState(profile)
       const seeded = applyLxrdgatsbyProtocolSeed(next, profile.username)
-      if (seeded) {
-        next = seeded
+      if (seeded) next = seeded
+      const refreshed = refreshProtocolDefinition(next, profile.username)
+      if (refreshed) next = refreshed
+      if (seeded || refreshed) {
         try {
-          await persistSeededProtocol(userId, seeded, {
-            mainGoal: profile.mainGoal ?? seeded.recompPlan?.summary?.[1],
+          await persistSeededProtocol(userId, next, {
+            mainGoal: profile.mainGoal ?? next.recompPlan?.summary?.[1],
             additionalInfo: profile.additionalInfo,
           })
         } catch (err) {
-          console.error('persist seeded protocol:', err)
+          console.error('persist protocol definition:', err)
         }
       }
       next = runVialSizeMigrationV2(next) ?? next

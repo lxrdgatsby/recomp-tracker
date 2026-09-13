@@ -60,12 +60,13 @@ export function bacWaterUnitsToMl(units: BacWaterUnits): number {
 
 export function mgToSyringeUnits(mg: number, concentrationMgPerMl: number): number {
   if (concentrationMgPerMl <= 0) return 0
-  const ml = mg / concentrationMgPerMl
-  return Math.round(ml * 100)
+  const units = (mg / concentrationMgPerMl) * 100
+  return Math.round(units * 2) / 2
 }
 
 export function formatSyringeUnits(units: number): string {
-  return `${units} units on U-100 syringe`
+  const label = Number.isInteger(units) ? String(units) : String(units)
+  return `${label} units on U-100`
 }
 
 export function formatMg(mg: number): string {
@@ -222,17 +223,15 @@ export function generateRecompPlan(input: ProtocolInput): {
       : 'Track daily steps and hydration alongside peptide schedule.',
   ]
 
-  const trainingNotes = (input.trainingActivities ?? '')
-    .split(',')
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => `Continue ${t} — align intensity with recovery and appetite changes from stack.`)
-
-  if (trainingNotes.length === 0) {
-    trainingNotes.push(
-      '5 days training / 2 rest per week with 10k steps + 100 pushups daily baseline.'
-    )
-  }
+  const trainingNotes = [
+    'Driver of fat loss: Retatrutide + deficit + steps',
+    'Driver of muscle: Test + Tesamorelin + progressive overload + 200–240 g protein',
+    'Calories: start ~2000–2200, adjust by weekly average weight',
+    'Aim 0.8–1.2 lb/week average. Faster usually means lean loss',
+    'Weigh-in every 7 days',
+    'Only advance Reta every 4 weeks, not weekly',
+    'Only advance Tesamorelin if sides are manageable and glucose is stable',
+  ]
 
   return {
     peptides,
@@ -242,7 +241,7 @@ export function generateRecompPlan(input: ProtocolInput): {
       nutritionNotes,
       trainingNotes,
       checkInCadence:
-        'Weigh in every 7 days. Only advance titration if sides are manageable and weight trend is on track.',
+        'Weigh-in every 7 days. Only advance Reta every 4 weeks. Only advance Tesamorelin if sides are manageable and glucose is stable.',
       reconstitutionReminder:
         'Mark each vial reconstituted in the Peptides tab after mixing with BAC water so your syringe-unit schedule stays accurate.',
     },

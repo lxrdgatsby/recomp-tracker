@@ -48,7 +48,8 @@ export function DashboardView({
   const weightToLose = getWeightToLose(currentWeight, profile.goalWeight)
   const { dayInCycle, totalDays, injections, workout } =
     getTodayDashboardData(state)
-  const seeded = hasSeededProtocol()
+  const seeded =
+    hasSeededProtocol() || state.peptides.some((p) => p.id === 'test-cyp')
   const progress = Math.round((dayInCycle / totalDays) * 100)
 
   const displayName = username
@@ -216,7 +217,7 @@ export function DashboardView({
                     </div>
                     <div>
                       <div className="font-medium">{inj.peptideName}</div>
-                      <div className="text-sm text-emerald-400">{inj.dose}</div>
+                      <div className="text-sm text-emerald-400">{inj.cardLine}</div>
                       <div className="text-xs text-slate-400">{inj.timing}</div>
                     </div>
                   </div>

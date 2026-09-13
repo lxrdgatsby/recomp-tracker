@@ -19,11 +19,22 @@ import {
   getCatalogEntry,
   PEPTIDE_CATALOG,
   recommendedBacWaterForVialMg,
-  VIAL_SIZE_OPTIONS_MG,
-  formatVialSizeLabel,
   normalizeVialSizeMg,
   type VialSizeOptionMg,
 } from '../constants/peptideCatalog'
+import {
+  getReconstitutionCompound,
+  KLOW_NOTE,
+  RECONSTITUTION_TABLE,
+  U100_FORMULA,
+} from '../constants/reconstitutionTable'
+import {
+  formatUnits,
+  mlFromU100Units,
+  testCypInsulinUnits,
+  testCypMgFromMl,
+  u100UnitsFromMg,
+} from '../utils/doseMath'
 import type { FamiliarityLevel } from '../types/auth'
 import type { BacWaterUnits, Peptide, TitrationWeek } from '../types'
 import { InjectionSiteMap } from './InjectionSiteMap'
@@ -192,7 +203,17 @@ export function DoseCalculator({
   const [selectedPeptideId, setSelectedPeptideId] = useState(defaultPeptideId)
   const [vialMg, setVialMg] = useState(() => normalizeVialMg(initialVialMg))
   const [bacWaterMl, setBacWaterMl] = useState(initialBacWaterUnits / 100)
+  const [vialMgInput, setVialMgInput] = useState(
+    initialVialMg > 0 ? String(initialVialMg) : ''
+  )
+  const [bacMlInput, setBacMlInput] = useState(
+    initialBacWaterUnits > 0 ? String(initialBacWaterUnits / 100) : ''
+  )
   const [targetDoseMg, setTargetDoseMg] = useState(initialTargetDoseMg)
+  const [doseUnit, setDoseUnit] = useState<'mg' | 'mcg'>('mg')
+  const [testCypMl, setTestCypMl] = useState(0.75)
+  const [testCypMgPerMl, setTestCypMgPerMl] = useState<200 | 250>(200)
+  const [showInsulinView, setShowInsulinView] = useState(false)
   const [syringeType, setSyringeType] = useState<'30' | '50' | '100'>('100')
   const [isCopied, setIsCopied] = useState(false)
   const [vials, setVials] = useState<Vial[]>([])
@@ -201,12 +222,26 @@ export function DoseCalculator({
   const [showMapModal, setShowMapModal] = useState(false)
   const [ready, setReady] = useState(false)
 
+  const tableCompound = getReconstitutionCompound(selectedPeptideId)
+  const isTestCyp = tableCompound?.isTestCyp === true || selectedPeptideId === 'test-cyp'
+
   const selectedPeptide = useMemo(
     () =>
       availablePeptides.find((p) => p.id === selectedPeptideId) ??
       availablePeptides[0],
     [availablePeptides, selectedPeptideId]
   )
+
+  const compoundOptions = useMemo(() => {
+    const fromTable = RECONSTITUTION_TABLE.map((c) => ({
+      id: c.id,
+      name: c.name,
+    }))
+    const extra = availablePeptides
+      .filter((p) => !fromTable.some((c) => c.id === p.id))
+      .map((p) => ({ id: p.id, name: displayPeptideName(p) }))
+    return [...fromTable, ...extra]
+  }, [availablePeptides])
 
   useEffect(() => {
     if (!ready || !selectedPeptide) return
@@ -217,15 +252,50 @@ export function DoseCalculator({
     const preset = PROTOCOL_PEPTIDE_OPTIONS.find((p) => p.id === selectedPeptide.id)
     const proto = selectedPeptide.protocol
 
+    const table = getReconstitutionCompound(selectedPeptide.id)
+    if (table?.isTestCyp) {
+      setVialMgInput('')
+      setBacMlInput('')
+      setBacWaterMl(0)
+      setTestCypMl(table.defaultDoseMl ?? 0.75)
+      setShowInsulinView(false)
+      return
+    }
+    if (table?.vialMg != null && table.bacMl != null) {
+      setVialMg(normalizeVialMg(table.vialMg))
+      setVialMgInput(String(table.vialMg))
+      setBacWaterMl(table.bacMl)
+      setBacMlInput(String(table.bacMl))
+      setDoseUnit(table.doseUnit === 'mcg' ? 'mcg' : 'mg')
+      if (table.doseUnit === 'mcg' && table.defaultDoseMg != null) {
+        setTargetDoseMg(table.defaultDoseMg * 1000)
+      } else if (table.defaultDoseMg != null) {
+        setTargetDoseMg(table.defaultDoseMg)
+      }
+      return
+    }
+
     if (inventoryVial) {
       setVialMg(normalizeVialMg(inventoryVial.vialMg))
-      if (inventoryVial.bacWaterMl > 0) setBacWaterMl(inventoryVial.bacWaterMl)
+      setVialMgInput(String(inventoryVial.vialMg))
+      if (inventoryVial.bacWaterMl > 0) {
+        setBacWaterMl(inventoryVial.bacWaterMl)
+        setBacMlInput(String(inventoryVial.bacWaterMl))
+      }
     } else if (proto && proto.vialMg > 0) {
       setVialMg(normalizeVialMg(proto.vialMg))
-      if (proto.bacWaterMl > 0) setBacWaterMl(proto.bacWaterMl)
+      setVialMgInput(String(proto.vialMg))
+      if (proto.bacWaterMl > 0) {
+        setBacWaterMl(proto.bacWaterMl)
+        setBacMlInput(String(proto.bacWaterMl))
+      }
     } else if (preset && preset.defaultVialMg > 0) {
       setVialMg(normalizeVialMg(preset.defaultVialMg))
-      if (preset.defaultBacMl > 0) setBacWaterMl(preset.defaultBacMl)
+      setVialMgInput(String(preset.defaultVialMg))
+      if (preset.defaultBacMl > 0) {
+        setBacWaterMl(preset.defaultBacMl)
+        setBacMlInput(String(preset.defaultBacMl))
+      }
     }
 
     if (proto && proto.startingDoseMg > 0) {
@@ -278,46 +348,82 @@ export function DoseCalculator({
     }
   }, [selectedPeptide, ready, vialMg, peptideVials, activeVialId])
 
+  const parsedVialMg = vialMgInput.trim() === '' ? NaN : Number(vialMgInput)
+  const parsedBacMl = bacMlInput.trim() === '' ? NaN : Number(bacMlInput)
+
   const calculations = useMemo(() => {
-    if (bacWaterMl <= 0 || vialMg <= 0) {
+    const desiredMg =
+      doseUnit === 'mcg' ? targetDoseMg / 1000 : targetDoseMg
+    const u100 = u100UnitsFromMg(desiredMg, parsedVialMg, parsedBacMl)
+    if (u100 == null) {
       return {
         concentrationMgPerMl: 0,
         volumePerDoseMl: 0,
         syringeUnits: 0,
         dosesRemaining: 0,
-        concentrationLabel: '0 mg/mL',
+        concentrationLabel: '—',
+        ready: false as const,
       }
     }
 
-    const concentrationMgPerMl = vialMg / bacWaterMl
-    const volumePerDoseMl = targetDoseMg / concentrationMgPerMl
+    const concentrationMgPerMl = parsedVialMg / parsedBacMl
+    const volumePerDoseMl = mlFromU100Units(u100)
     const unitsPerMl = parseInt(syringeType, 10)
-    const syringeUnits = Math.max(0, Math.round(volumePerDoseMl * unitsPerMl))
-    const remainingMg = activeVial?.remainingMg ?? vialMg
+    const syringeUnits =
+      unitsPerMl === 100 ? u100 : Math.round(volumePerDoseMl * unitsPerMl * 2) / 2
+    const remainingMg = activeVial?.remainingMg ?? parsedVialMg
     const dosesRemaining =
-      targetDoseMg > 0 ? Math.max(0, Math.floor(remainingMg / targetDoseMg)) : 0
+      desiredMg > 0 ? Math.max(0, Math.floor(remainingMg / desiredMg)) : 0
 
     return {
       concentrationMgPerMl: Math.round(concentrationMgPerMl * 100) / 100,
-      volumePerDoseMl: Math.round(volumePerDoseMl * 1000) / 1000,
+      volumePerDoseMl,
       syringeUnits,
       dosesRemaining,
       concentrationLabel: `${Math.round(concentrationMgPerMl * 100) / 100} mg/mL`,
+      ready: true as const,
     }
-  }, [vialMg, bacWaterMl, targetDoseMg, syringeType, activeVial?.remainingMg])
+  }, [
+    parsedVialMg,
+    parsedBacMl,
+    targetDoseMg,
+    doseUnit,
+    syringeType,
+    activeVial?.remainingMg,
+  ])
 
-  const applyVialSelection = (nextVialMg: VialSizeOptionMg) => {
-    setVialMg(nextVialMg)
-    const preset = PROTOCOL_PEPTIDE_OPTIONS.find((p) => p.id === selectedPeptide?.id)
-    if (preset && preset.defaultVialMg === nextVialMg && preset.defaultBacMl > 0) {
-      setBacWaterMl(preset.defaultBacMl)
+  const applyTableCompound = (id: string) => {
+    setSelectedPeptideId(id)
+    const compound = getReconstitutionCompound(id)
+    if (!compound) return
+    setDoseUnit(compound.doseUnit === 'mcg' ? 'mcg' : 'mg')
+    if (compound.isTestCyp) {
+      setVialMgInput('')
+      setBacMlInput('')
+      setVialMg(normalizeVialMg(5))
+      setBacWaterMl(0)
+      setTestCypMl(compound.defaultDoseMl ?? 0.75)
+      setShowInsulinView(false)
       return
     }
-    if (selectedPeptide?.protocol?.vialMg === nextVialMg && selectedPeptide.protocol.bacWaterMl > 0) {
-      setBacWaterMl(selectedPeptide.protocol.bacWaterMl)
-      return
+    if (compound.vialMg != null) {
+      setVialMgInput(String(compound.vialMg))
+      setVialMg(normalizeVialMg(compound.vialMg))
+    } else {
+      setVialMgInput('')
     }
-    setBacWaterMl(recommendedBacWaterForVialMg(nextVialMg) / 100)
+    if (compound.bacMl != null) {
+      setBacMlInput(String(compound.bacMl))
+      setBacWaterMl(compound.bacMl)
+    } else {
+      setBacMlInput('')
+      setBacWaterMl(0)
+    }
+    if (compound.doseUnit === 'mcg' && compound.defaultDoseMg != null) {
+      setTargetDoseMg(compound.defaultDoseMg * 1000)
+    } else if (compound.defaultDoseMg != null) {
+      setTargetDoseMg(compound.defaultDoseMg)
+    }
   }
 
   useEffect(() => {
@@ -430,7 +536,12 @@ export function DoseCalculator({
 
   const handleCopyUnits = async () => {
     try {
-      await navigator.clipboard.writeText(calculations.syringeUnits.toString())
+      const text = isTestCyp
+        ? showInsulinView
+          ? String(testCypInsulinUnits(testCypMl))
+          : `${testCypMl} mL`
+        : formatUnits(calculations.syringeUnits)
+      await navigator.clipboard.writeText(text)
       setIsCopied(true)
       setTimeout(() => setIsCopied(false), 1500)
     } catch {
@@ -444,8 +555,16 @@ export function DoseCalculator({
     const logData: DoseLog = {
       peptideId: selectedPeptide.id,
       peptideName: selectedPeptide.name,
-      doseMg: targetDoseMg,
-      units: calculations.syringeUnits,
+      doseMg: isTestCyp
+        ? testCypMgFromMl(testCypMl, testCypMgPerMl)
+        : doseUnit === 'mcg'
+          ? targetDoseMg / 1000
+          : targetDoseMg,
+      units: isTestCyp
+        ? showInsulinView
+          ? testCypInsulinUnits(testCypMl)
+          : testCypMl
+        : calculations.syringeUnits,
       date: new Date().toISOString(),
     }
 
@@ -608,87 +727,210 @@ export function DoseCalculator({
       </div>
 
       <div className="mb-6">
-        <label className="mb-2 block text-sm text-zinc-400">Peptide</label>
+        <label className="mb-2 block text-sm text-zinc-400">Compound</label>
         <select
-          value={selectedPeptide?.id ?? selectedPeptideId}
-          onChange={(e) => setSelectedPeptideId(e.target.value)}
+          value={selectedPeptideId}
+          onChange={(e) => applyTableCompound(e.target.value)}
           className={SELECT_CLASS}
         >
-          {availablePeptides.map((p) => (
+          {compoundOptions.map((p) => (
             <option key={p.id} value={p.id}>
-              {displayPeptideName(p)}
+              {p.name}
             </option>
           ))}
         </select>
-        {selectedPeptide && peptideHelperText(selectedPeptide) && (
+        {tableCompound && (
+          <p className="mt-1 text-xs text-zinc-500">
+            {tableCompound.concentrationLabel}
+            {tableCompound.keyDraws.length
+              ? ` · ${tableCompound.keyDraws.map((d) => d.label).join(' · ')}`
+              : ''}
+          </p>
+        )}
+        {selectedPeptide && peptideHelperText(selectedPeptide) && !tableCompound && (
           <p className="mt-1 text-xs text-zinc-500">
             {peptideHelperText(selectedPeptide)}
           </p>
         )}
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="mb-2 block text-sm text-zinc-400">Vial Size</label>
-          <select
-            value={vialMg}
-            onChange={(e) =>
-              applyVialSelection(normalizeVialMg(Number(e.target.value)))
-            }
-            className={SELECT_CLASS}
-          >
-            {VIAL_SIZE_OPTIONS_MG.map((size) => (
-              <option key={size} value={size}>
-                {formatVialSizeLabel(size)}
-              </option>
-            ))}
-          </select>
+      {isTestCyp ? (
+        <div className="mb-8 space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm text-zinc-400">
+                Dose (mL)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.05"
+                value={testCypMl}
+                onChange={(e) =>
+                  setTestCypMl(e.target.value === '' ? 0 : Number(e.target.value))
+                }
+                className={INPUT_CLASS}
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                Protocol draw is 0.75 mL. Not insulin units.
+              </p>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm text-zinc-400">
+                Vial label (optional mg)
+              </label>
+              <select
+                value={testCypMgPerMl}
+                onChange={(e) =>
+                  setTestCypMgPerMl(Number(e.target.value) as 200 | 250)
+                }
+                className={SELECT_CLASS}
+              >
+                <option value={200}>200 mg/mL → 0.75 mL = 150 mg</option>
+                <option value={250}>250 mg/mL → 0.75 mL = 187.5 mg</option>
+              </select>
+            </div>
+          </div>
+          <label className="flex items-start gap-3 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={showInsulinView}
+              onChange={(e) => setShowInsulinView(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              Show 1 mL insulin syringe view. Off by default — Test Cyp is an oil
+              volume draw, not a U-100 peptide reconstitution.
+            </span>
+          </label>
         </div>
+      ) : (
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm text-zinc-400">Vial mg</label>
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={vialMgInput}
+              onChange={(e) => {
+                setVialMgInput(e.target.value)
+                const n = Number(e.target.value)
+                if (n > 0) setVialMg(normalizeVialMg(n))
+              }}
+              placeholder="Don't invent — enter vial mg"
+              className={INPUT_CLASS}
+            />
+          </div>
 
-        <div>
-          <label className="mb-2 block text-sm text-zinc-400">BAC Water Added</label>
-          <select
-            value={normalizeBacUnits(Math.round(bacWaterMl * 100))}
-            onChange={(e) => setBacWaterMl(Number(e.target.value) / 100)}
-            className={SELECT_CLASS}
-          >
-            {BAC_WATER_OPTIONS.map((units) => (
-              <option key={units} value={units}>
-                {units} units ({units / 100}mL)
-              </option>
-            ))}
-          </select>
-        </div>
+          <div>
+            <label className="mb-2 block text-sm text-zinc-400">BAC mL</label>
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={bacMlInput}
+              onChange={(e) => {
+                setBacMlInput(e.target.value)
+                const n = Number(e.target.value)
+                if (n > 0) setBacWaterMl(n)
+              }}
+              placeholder="Don't invent — enter BAC mL"
+              className={INPUT_CLASS}
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Presets:{' '}
+              {BAC_WATER_OPTIONS.map((units) => (
+                <button
+                  key={units}
+                  type="button"
+                  className="mr-2 text-emerald-400 hover:underline"
+                  onClick={() => {
+                    setBacWaterMl(units / 100)
+                    setBacMlInput(String(units / 100))
+                  }}
+                >
+                  {units / 100} mL
+                </button>
+              ))}
+            </p>
+          </div>
 
-        <div>
-          <label className="mb-2 block text-sm text-zinc-400">Target Dose (mg)</label>
-          <input
-            type="number"
-            min={0}
-            step="any"
-            value={targetDoseMg}
-            onChange={(e) => {
-              const next = e.target.value
-              setTargetDoseMg(next === '' ? 0 : Number(next))
-            }}
-            className={INPUT_CLASS}
-          />
-          <p className="mt-1 text-xs text-zinc-500">Example: 0.25 = 250 mcg</p>
-        </div>
+          <div>
+            <label className="mb-2 block text-sm text-zinc-400">
+              Desired dose ({doseUnit})
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={targetDoseMg}
+                onChange={(e) => {
+                  const next = e.target.value
+                  setTargetDoseMg(next === '' ? 0 : Number(next))
+                }}
+                className={INPUT_CLASS}
+              />
+              <select
+                value={doseUnit}
+                onChange={(e) => {
+                  const next = e.target.value as 'mg' | 'mcg'
+                  if (next === doseUnit) return
+                  if (next === 'mcg') setTargetDoseMg((mg) => mg * 1000)
+                  else setTargetDoseMg((mg) => mg / 1000)
+                  setDoseUnit(next)
+                }}
+                className={`${SELECT_CLASS} w-28 shrink-0`}
+              >
+                <option value="mg">mg</option>
+                <option value="mcg">mcg</option>
+              </select>
+            </div>
+          </div>
 
-        <div>
-          <label className="mb-2 block text-sm text-zinc-400">Syringe Type</label>
-          <select
-            value={syringeType}
-            onChange={(e) => setSyringeType(e.target.value as '30' | '50' | '100')}
-            className={SELECT_CLASS}
-          >
-            <option value="100">U-100 (100 units = 1 mL) — Most common</option>
-            <option value="50">U-50 (50 units = 0.5 mL)</option>
-            <option value="30">U-30 (30 units = 0.3 mL)</option>
-          </select>
+          <div>
+            <label className="mb-2 block text-sm text-zinc-400">Syringe Type</label>
+            <select
+              value={syringeType}
+              onChange={(e) => setSyringeType(e.target.value as '30' | '50' | '100')}
+              className={SELECT_CLASS}
+            >
+              <option value="100">U-100 (100 units = 1 mL)</option>
+              <option value="50">U-50 (50 units = 0.5 mL)</option>
+              <option value="30">U-30 (30 units = 0.3 mL)</option>
+            </select>
+          </div>
         </div>
-      </div>
+      )}
+
+      {tableCompound?.id === 'klow' && (
+        <div className="mb-6 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm leading-relaxed text-rose-100">
+          {KLOW_NOTE}
+        </div>
+      )}
+
+      {tableCompound && tableCompound.keyDraws.length > 0 && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {tableCompound.keyDraws.map((draw) => (
+            <button
+              key={draw.label}
+              type="button"
+              onClick={() => {
+                setDoseUnit('mg')
+                setTargetDoseMg(draw.desiredMg)
+              }}
+              className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300 hover:bg-emerald-500/20"
+            >
+              {draw.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <p className="mb-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-mono text-xs text-slate-400">
+        {U100_FORMULA}
+      </p>
 
       <div className="mb-8">
         <div className="mb-3 flex items-center justify-between">
@@ -844,72 +1086,112 @@ export function DoseCalculator({
             <Syringe className="h-5 w-5 text-emerald-400" />
             <h3 className="text-lg font-semibold">Live Results</h3>
           </div>
-          <div className="text-xs text-emerald-400">Real-time</div>
+          <div className="text-xs text-emerald-400">U-100 · 100 units = 1 mL</div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl bg-zinc-900 p-4">
-            <div className="text-xs text-zinc-400">Concentration</div>
-            <div className="mt-1 text-3xl font-bold tabular-nums text-white">
-              {calculations.concentrationLabel}
+        {isTestCyp ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl bg-zinc-900 p-4">
+              <div className="text-xs text-zinc-400">Draw</div>
+              <div className="mt-1 text-3xl font-bold tabular-nums text-emerald-400">
+                {testCypMl} mL
+              </div>
+            </div>
+            <div className="rounded-2xl bg-zinc-900 p-4">
+              <div className="text-xs text-zinc-400">
+                Optional mg ({testCypMgPerMl} mg/mL)
+              </div>
+              <div className="mt-1 text-3xl font-bold tabular-nums text-white">
+                {testCypMgFromMl(testCypMl, testCypMgPerMl)} mg
+              </div>
+            </div>
+            <div className="rounded-2xl bg-zinc-900 p-4">
+              <div className="text-xs text-zinc-400">Insulin syringe view</div>
+              {showInsulinView ? (
+                <div className="mt-1 text-3xl font-bold tabular-nums text-white">
+                  {formatUnits(testCypInsulinUnits(testCypMl))} u
+                </div>
+              ) : (
+                <div className="mt-2 text-sm leading-relaxed text-zinc-400">
+                  Hidden. Test Cyp is {testCypMl} mL, not a peptide unit draw.
+                </div>
+              )}
             </div>
           </div>
-
-          <div className="rounded-2xl bg-zinc-900 p-4">
-            <div className="text-xs text-zinc-400">Volume to Draw</div>
-            <div className="mt-1 text-3xl font-bold tabular-nums text-white">
-              {calculations.volumePerDoseMl} mL
-            </div>
-          </div>
-
-          <div className="relative rounded-2xl bg-zinc-900 p-4">
-            <div className="text-xs text-zinc-400">Syringe Units</div>
-            <div className="flex items-baseline">
-              <span className="text-5xl font-bold tabular-nums text-emerald-400">
-                {calculations.syringeUnits}
-              </span>
-              <span className="ml-1 text-2xl text-zinc-400">U</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleCopyUnits}
-              className="absolute right-4 top-4 text-emerald-400 transition-colors hover:text-emerald-300"
-              aria-label="Copy syringe units"
-            >
-              {isCopied ? <Check size={18} /> : <Copy size={18} />}
-            </button>
-          </div>
-        </div>
-
-        {calculations.dosesRemaining > 0 && (
-          <p className="mt-4 text-center text-sm text-emerald-400">
-            ≈ {calculations.dosesRemaining} doses left
-            {activeVial ? ' in active vial' : ' in this vial'}
-            {peptideVials.length > 1 && (
-              <span className="block text-zinc-400">
-                {peptideVials.length} vials tracked for {selectedPeptide?.name}
-              </span>
-            )}
+        ) : !calculations.ready ? (
+          <p className="text-sm text-amber-300">
+            Enter vial mg and BAC mL to calculate. Blank fields are not filled in
+            with guessed numbers.
           </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl bg-zinc-900 p-4">
+                <div className="text-xs text-zinc-400">Concentration</div>
+                <div className="mt-1 text-3xl font-bold tabular-nums text-white">
+                  {calculations.concentrationLabel}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-zinc-900 p-4">
+                <div className="text-xs text-zinc-400">Volume (mL)</div>
+                <div className="mt-1 text-3xl font-bold tabular-nums text-white">
+                  {calculations.volumePerDoseMl} mL
+                </div>
+              </div>
+
+              <div className="relative rounded-2xl bg-zinc-900 p-4">
+                <div className="text-xs text-zinc-400">U-100 units</div>
+                <div className="flex items-baseline">
+                  <span className="text-5xl font-bold tabular-nums text-emerald-400">
+                    {formatUnits(calculations.syringeUnits)}
+                  </span>
+                  <span className="ml-1 text-2xl text-zinc-400">u</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyUnits}
+                  className="absolute right-4 top-4 text-emerald-400 transition-colors hover:text-emerald-300"
+                  aria-label="Copy syringe units"
+                >
+                  {isCopied ? <Check size={18} /> : <Copy size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {calculations.dosesRemaining > 0 && (
+              <p className="mt-4 text-center text-sm text-emerald-400">
+                ≈ {calculations.dosesRemaining} doses left
+                {activeVial ? ' in active vial' : ' in this vial'}
+                {peptideVials.length > 1 && (
+                  <span className="block text-zinc-400">
+                    {peptideVials.length} vials tracked for {selectedPeptide?.name}
+                  </span>
+                )}
+              </p>
+            )}
+          </>
         )}
       </div>
 
-      <div className="mb-8">
-        <div className="mb-3 flex items-center gap-2">
-          <Droplet className="h-5 w-5 text-zinc-400" />
-          <h3 className="font-semibold">Reconstitution Steps</h3>
+      {!isTestCyp && calculations.ready && (
+        <div className="mb-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Droplet className="h-5 w-5 text-zinc-400" />
+            <h3 className="font-semibold">Reconstitution Steps</h3>
+          </div>
+          <ol className="space-y-2 text-sm text-zinc-300">
+            {reconstitutionSteps.map((step, index) => (
+              <li key={`${selectedPeptide?.id ?? 'peptide'}-step-${index}`} className="flex gap-3">
+                <span className="w-5 font-mono font-semibold text-emerald-400">
+                  {index + 1}.
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
         </div>
-        <ol className="space-y-2 text-sm text-zinc-300">
-          {reconstitutionSteps.map((step, index) => (
-            <li key={`${selectedPeptide?.id ?? 'peptide'}-step-${index}`} className="flex gap-3">
-              <span className="w-5 font-mono font-semibold text-emerald-400">
-                {index + 1}.
-              </span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
+      )}
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row">

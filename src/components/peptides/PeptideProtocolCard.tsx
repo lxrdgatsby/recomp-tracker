@@ -48,7 +48,7 @@ export function PeptideProtocolCard({ peptide }: { peptide: Peptide }) {
         <div className="rounded-lg border border-slate-800 bg-navy-900/60 px-3 py-2">
           <p className="text-xs text-slate-500">Week 1 injection dose</p>
           <p className="font-medium text-teal-400">
-            {protocol.startingSyringeUnits} units on U-100 syringe
+            {protocol.startingDoseLabel}
           </p>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function PeptideProtocolCard({ peptide }: { peptide: Peptide }) {
                 <tr key={tier.weeks} className="border-b border-slate-800/60">
                   <td className="py-2 pr-3 text-slate-300">{tier.weeks}</td>
                   <td className="py-2 pr-3 font-semibold text-teal-400">
-                    {tier.syringeUnits} units
+                    {tier.doseLabel}
                   </td>
                   <td className="py-2 text-slate-500">{tier.notes ?? '—'}</td>
                 </tr>
