@@ -39,6 +39,7 @@ interface VialInventoryProps {
   defaultDoseByName?: Record<string, number>
   peptides?: Peptide[]
   startDate?: string
+  initialVials?: Vial[]
   onChange?: () => void
 }
 
@@ -57,10 +58,13 @@ export function VialInventory({
   defaultDoseByName = {},
   peptides = [],
   startDate,
+  initialVials,
   onChange,
 }: VialInventoryProps) {
   const { toast } = useToast()
-  const [vials, setVials] = useState<Vial[]>(() => loadVials())
+  const [vials, setVials] = useState<Vial[]>(
+    () => (initialVials && initialVials.length > 0 ? initialVials : loadVials())
+  )
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -82,10 +86,24 @@ export function VialInventory({
   }
 
   useEffect(() => {
-    const onData = () => setVials(loadVials())
+    if (initialVials && initialVials.length > 0) {
+      setVials(initialVials)
+      return
+    }
+    setVials(loadVials())
+  }, [initialVials])
+
+  useEffect(() => {
+    const onData = () => {
+      if (initialVials && initialVials.length > 0) {
+        setVials(initialVials)
+        return
+      }
+      setVials(loadVials())
+    }
     window.addEventListener('pt-data-updated', onData)
     return () => window.removeEventListener('pt-data-updated', onData)
-  }, [])
+  }, [initialVials])
 
   const peptideById = useMemo(() => {
     const map = new Map<string, Peptide>()

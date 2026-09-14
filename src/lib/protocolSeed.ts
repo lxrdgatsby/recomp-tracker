@@ -476,8 +476,14 @@ export function buildLxrdgatsbyStack(startDate: string): {
   return { peptides, recompPlan, vials }
 }
 
-export function isLxrdgatsbyUser(username?: string | null): boolean {
-  return (username ?? '').trim().toLowerCase() === SEED_USER
+export function isLxrdgatsbyUser(
+  username?: string | null,
+  email?: string | null,
+): boolean {
+  const values = [username, email].map((v) => (v ?? '').trim().toLowerCase())
+  return values.some(
+    (v) => v === SEED_USER || v.includes('lxrdgatsby') || v.split('@')[0] === SEED_USER
+  )
 }
 
 export function hasSeededProtocol(): boolean {

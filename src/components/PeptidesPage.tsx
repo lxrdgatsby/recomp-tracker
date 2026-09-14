@@ -160,6 +160,7 @@ export default function PeptidesPage() {
         <VialInventory
           peptides={peptides}
           startDate={profile.startDate}
+          initialVials={state.vialInventory}
           defaultDoseByName={Object.fromEntries(
             peptides.map((p) => [p.name, p.protocol?.startingDoseMg ?? 0.5])
           )}

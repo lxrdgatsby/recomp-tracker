@@ -62,7 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (seeded) next = seeded
       const refreshed = refreshProtocolDefinition(next, profile.username)
       if (refreshed) next = refreshed
-      const vialsSeeded = applyLxrdgatsbyVialInventorySeed(next, profile.username)
+      const vialsSeeded = applyLxrdgatsbyVialInventorySeed(
+        next,
+        profile.username,
+        profile.email,
+      )
       if (vialsSeeded) next = vialsSeeded
       if (seeded || refreshed || vialsSeeded) {
         try {

@@ -5,9 +5,10 @@ import {
   loadVials,
   saveVials,
 } from '../utils/inventoryStorage'
+import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { isLxrdgatsbyUser } from './protocolSeed'
 
-export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v1'
+export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v2'
 export const VIAL_LEDGER_KEY = 'pt-v2-vial-ledger'
 /** Remaining already includes scheduled use through this date. */
 export const VIAL_SEED_THROUGH = '2026-09-14'
@@ -322,46 +323,74 @@ export function buildLxrdgatsbyVialLedger(): Ledger {
   return ledger
 }
 
-export function applyLxrdgatsbyVialInventorySeed(
-  current: TrackerState,
-  username?: string | null,
-): TrackerState | null {
-  if (typeof localStorage === 'undefined') return null
-  if (username && !isLxrdgatsbyUser(username)) return null
+function looksLikeLxrdgatsbyStack(state: TrackerState): boolean {
+  const ids = new Set(state.peptides.map((p) => p.id))
+  return ids.has('test-cyp') && ids.has('klow') && ids.has('tesamorelin')
+}
 
-  if (current.vialInventory && current.vialInventory.length > 0) {
-    saveVials(current.vialInventory)
-    if (!localStorage.getItem(VIAL_LEDGER_KEY)) {
-      saveVialLedger(buildLxrdgatsbyVialLedger())
-    }
-    try {
-      localStorage.setItem(VIAL_SEED_FLAG, 'true')
-    } catch {
-      /* ignore */
-    }
-    return null
+function hasSeededVialIds(vials: Vial[]): boolean {
+  return vials.some((v) => v.id === 'vial-ss31-b' || v.id === 'vial-amino1mq-a')
+}
+
+function toCalculatorVial(v: Vial): InventoryVial {
+  return {
+    id: v.id,
+    peptideId: v.compoundId || v.id,
+    compoundName: v.compoundName,
+    vialMg: v.vialMg,
+    bacWaterMl: v.bacWaterMl,
+    concentrationMgPerMl: v.concentrationMgPerMl,
+    mixedDate: (v.mixedDate || '').slice(0, 10),
+    isPowder: false,
+    remainingMg: v.remainingMg,
+    notes: v.notes,
+    createdAt: v.createdAt,
   }
+}
 
-  const existing = loadVials()
-  if (existing.length > 0) {
-    try {
-      localStorage.setItem(VIAL_SEED_FLAG, 'true')
-    } catch {
-      /* ignore */
-    }
-    if (!localStorage.getItem(VIAL_LEDGER_KEY)) {
-      saveVialLedger(buildLxrdgatsbyVialLedger())
-    }
-    return { ...current, vialInventory: existing }
-  }
-
-  const vials = buildLxrdgatsbyVials()
+function persistLocalVials(vials: Vial[], resetLedger = false) {
   saveVials(vials)
-  saveVialLedger(buildLxrdgatsbyVialLedger())
+  saveInventoryVials(vials.map(toCalculatorVial))
+  if (resetLedger || !localStorage.getItem(VIAL_LEDGER_KEY)) {
+    saveVialLedger(buildLxrdgatsbyVialLedger())
+  }
   try {
     localStorage.setItem(VIAL_SEED_FLAG, 'true')
   } catch {
     /* ignore */
   }
+  try {
+    window.dispatchEvent(new CustomEvent('pt-data-updated', { detail: 'vials' }))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function applyLxrdgatsbyVialInventorySeed(
+  current: TrackerState,
+  username?: string | null,
+  email?: string | null,
+): TrackerState | null {
+  if (typeof localStorage === 'undefined') return null
+  const allowed =
+    isLxrdgatsbyUser(username, email) || looksLikeLxrdgatsbyStack(current)
+  if (!allowed) return null
+
+  const fromState = current.vialInventory ?? []
+  const fromStorage = loadVials()
+  const existing = hasSeededVialIds(fromState)
+    ? fromState
+    : hasSeededVialIds(fromStorage)
+      ? fromStorage
+      : []
+
+  if (existing.length > 0) {
+    persistLocalVials(existing, false)
+    if (current.vialInventory === existing) return null
+    return { ...current, vialInventory: existing }
+  }
+
+  const vials = buildLxrdgatsbyVials()
+  persistLocalVials(vials, true)
   return { ...current, vialInventory: vials }
 }

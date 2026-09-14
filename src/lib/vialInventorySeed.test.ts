@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { buildLxrdgatsbyStack } from './protocolSeed'
 import {
+  applyLxrdgatsbyVialInventorySeed,
   buildLxrdgatsbyVials,
   VIAL_SEED_THROUGH,
 } from './vialInventorySeed'
@@ -92,5 +93,29 @@ describe('lxrdgatsby vial inventory seed', () => {
 
   it('accounts scheduled use through Sept 14', () => {
     expect(VIAL_SEED_THROUGH).toBe('2026-09-14')
+  })
+
+  it('seeds into empty inventory when the 90-day stack is present', () => {
+    localStorage.clear()
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const next = applyLxrdgatsbyVialInventorySeed(
+      {
+        profile: {
+          currentWeight: 175,
+          goalWeight: 160,
+          startDate: '2026-08-23',
+          weeklyLossTarget: 1.2,
+        },
+        peptides,
+        weightHistory: [],
+        injectionLogs: [],
+        workoutCompletions: [],
+      },
+      null,
+      null,
+    )
+    expect(next?.vialInventory?.some((v) => v.id === 'vial-ss31-b')).toBe(true)
+    expect(next?.vialInventory?.find((v) => v.id === 'vial-ss31-b')?.remainingMg).toBe(45)
+    expect(next?.vialInventory?.find((v) => v.id === 'vial-amino1mq-a')?.remainingMg).toBe(50)
   })
 })
