@@ -18,6 +18,7 @@ import {
   applyLxrdgatsbyProtocolSeed,
   refreshProtocolDefinition,
 } from '../lib/protocolSeed'
+import { applyLxrdgatsbyVialInventorySeed } from '../lib/vialInventorySeed'
 import { runVialSizeMigrationV2 } from '../lib/vialInventory'
 import { getAuthCallbackUrl } from '../lib/authRedirect'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
@@ -61,7 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (seeded) next = seeded
       const refreshed = refreshProtocolDefinition(next, profile.username)
       if (refreshed) next = refreshed
-      if (seeded || refreshed) {
+      const vialsSeeded = applyLxrdgatsbyVialInventorySeed(next, profile.username)
+      if (vialsSeeded) next = vialsSeeded
+      if (seeded || refreshed || vialsSeeded) {
         try {
           await persistSeededProtocol(userId, next, {
             mainGoal: profile.mainGoal ?? next.recompPlan?.summary?.[1],

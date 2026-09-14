@@ -96,6 +96,7 @@ function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
       weightHistory: saved.weightHistory ?? [],
       injectionLogs: saved.injectionLogs ?? [],
       workoutCompletions: saved.workoutCompletions ?? [],
+      vialInventory: saved.vialInventory,
     }
   }
 

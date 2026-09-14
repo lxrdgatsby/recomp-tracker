@@ -158,6 +158,8 @@ export default function PeptidesPage() {
 
       <div className="mb-8">
         <VialInventory
+          peptides={peptides}
+          startDate={profile.startDate}
           defaultDoseByName={Object.fromEntries(
             peptides.map((p) => [p.name, p.protocol?.startingDoseMg ?? 0.5])
           )}

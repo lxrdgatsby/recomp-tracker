@@ -24,7 +24,7 @@ import { saveState } from '../utils/storage'
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-09-14-amino1mq-v4'
+export const PROTOCOL_DEFINITION_VERSION = '2026-09-14-aod20-vials-v5'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -32,7 +32,7 @@ export const PHASE_NOTES = {
     'Test Cyp: 0.75 mL weekly (Sunday PM)',
     'Retatrutide: 2.5 mg weekly = 50 units',
     'Tesamorelin: Week 1 = 0.5 mg (7.5 u); Weeks 2–4 = 1.0 mg (15 u). Nightly, fasted',
-    'AOD-9604: Week 1 = 0.5 mg (15 u); Weeks 2–4 = 1.0 mg (30 u). Morning fasted',
+    'AOD-9604: Week 1 = 0.5 mg (15 u); Weeks 2–4 through Sept 12 = 1.0 mg (30 u on 3 mL). From Sept 13: 1.0 mg = 20 u on 10 mg / 2 mL',
     'BPC-157: 500 mcg daily = 10 units',
     'SS-31: 2.5 mg = 15 units, morning',
     'GHK-Cu: 1 mg = 3 units, daily or 5×/week AM',
@@ -230,16 +230,44 @@ export function buildLxrdgatsbyStack(startDate: string): {
       dose: '0.5mg',
       frequency: 'daily',
       timing: 'Morning, fasted',
-      notes: 'Support compound. Fat-loss engine is Retatrutide + food + steps.',
+      notes:
+        'Support compound. Fat-loss engine is Retatrutide + food + steps. New vial from Sept 13 is 10 mg / 2 mL = 5 mg/mL · 1.0 mg = 20 units.',
       vialSize: '10mg',
       protocol: protocol({
         vialMg: 10,
-        bacWaterUnits: 300,
+        bacWaterUnits: 200,
         startingDoseMg: 0.5,
         startingSyringeUnits: 15,
+        extraSteps: [
+          'Vial B from Sept 13: 10 mg / 2 mL = 5 mg/mL. 1.0 mg = 20 units. Do not use the old 3 mL / 30 u math on this vial.',
+        ],
         titration: [
-          tier('1-1', 0.5, 15, 'Week 1 · Morning fasted'),
-          tier('2-12', 1, 30, 'Weeks 2+ · Morning fasted. Hold after week 4.'),
+          {
+            weeks: '1-1',
+            startDate: CYCLE_START_DATE,
+            endDate: '2026-08-29',
+            doseMg: 0.5,
+            doseLabel: uLabel(15),
+            syringeUnits: 15,
+            notes: 'Week 1 · 0.5 mg = 15 units on 10 mg / 3 mL',
+          },
+          {
+            weeks: '2-4',
+            startDate: '2026-08-30',
+            endDate: '2026-09-12',
+            doseMg: 1,
+            doseLabel: uLabel(30),
+            syringeUnits: 30,
+            notes: '1.0 mg = 30 units on 10 mg / 3 mL (old vial)',
+          },
+          {
+            weeks: '4-12',
+            startDate: '2026-09-13',
+            doseMg: 1,
+            doseLabel: uLabel(20),
+            syringeUnits: 20,
+            notes: '1.0 mg = 20 units on 10 mg / 2 mL (new vial). Hold after week 4.',
+          },
         ],
       }),
     },

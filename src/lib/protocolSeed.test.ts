@@ -84,6 +84,21 @@ describe('90-day protocol definition', () => {
     expect(getTitrationForDay(reta, 35)?.syringeUnits).toBe(80)
   })
 
+  it('AOD is 30 u through Sept 12 and 20 u from Sept 13 on the 10 mg / 2 mL vial', () => {
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const start = '2026-08-23'
+    const aod = peptides.find((p) => p.id === 'aod9604')!
+    expect(aod.protocol?.bacWaterMl).toBe(2)
+    expect(getTitrationForDay(aod, 20, new Date(2026, 8, 12))?.syringeUnits).toBe(30)
+    const sept12 = getInjectionsForDate(peptides, new Date(2026, 8, 12), start)
+    expect(sept12.find((s) => s.peptideId === 'aod9604')?.syringeUnits).toBe(30)
+    const sept13 = getInjectionsForDate(peptides, new Date(2026, 8, 13), start)
+    expect(sept13.find((s) => s.peptideId === 'aod9604')?.syringeUnits).toBe(20)
+    expect(sept13.find((s) => s.peptideId === 'aod9604')?.cardLine).toContain(
+      '20 units on U-100'
+    )
+  })
+
   it('calculator identities used by the protocol', () => {
     expect(u100UnitsFromMg(1, 20, 3)).toBe(15)
     expect(u100UnitsFromMg(2.5, 10, 2)).toBe(50)

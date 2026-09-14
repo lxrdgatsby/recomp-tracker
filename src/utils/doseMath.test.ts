@@ -25,9 +25,14 @@ describe('dose calculator reconstitution math', () => {
     expect(u100UnitsFromMg(0.5, 10, 2)).toBe(10)
   })
 
-  it('AOD 0.5 / 1.0 mg → 15 / 30 units', () => {
+  it('AOD 0.5 / 1.0 mg on old 3 mL vial → 15 / 30 units', () => {
     expect(u100UnitsFromMg(0.5, 10, 3)).toBe(15)
     expect(u100UnitsFromMg(1.0, 10, 3)).toBe(30)
+  })
+
+  it('AOD 1.0 mg on 10 mg / 2 mL vial → 20 units', () => {
+    expect(u100UnitsFromMg(1.0, 10, 2)).toBe(20)
+    expect(u100UnitsFromMg(0.5, 10, 2)).toBe(10)
   })
 
   it('SS-31 2.5 / 5 mg → 15 / 30 units', () => {

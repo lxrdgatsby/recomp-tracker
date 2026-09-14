@@ -26,6 +26,10 @@ export type Vial = {
   /** Soft-delete / fully used */
   depleted?: boolean
   finishedAt?: string
+  /** Test Cyp volume tracking. Null/undefined = user has not set starting mL. */
+  remainingMl?: number | null
+  startingMl?: number | null
+  drawsUsed?: number
 }
 
 export type DoseLog = {

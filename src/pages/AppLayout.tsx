@@ -15,6 +15,8 @@ import type { DoseLog } from '../components/DoseCalculator'
 import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
+import { loadVials } from '../utils/inventoryStorage'
+import { applyVialToggle } from '../utils/vialUsage'
 
 const ROUTE_MAP: Record<string, ViewId> = {
   '/app': 'dashboard',
@@ -150,12 +152,33 @@ export function AppLayout() {
       const exists = trackerState.injectionLogs.some(
         (l) => l.date === date && l.peptideId === peptideId
       )
+      const turningOn = !exists
+      const { vials, vialId, doseMg } = applyVialToggle({
+        vials: loadVials(),
+        peptides: trackerState.peptides,
+        startDate: trackerState.profile.startDate,
+        date,
+        peptideId,
+        turningOn,
+      })
       const injectionLogs = exists
         ? trackerState.injectionLogs.filter(
             (l) => !(l.date === date && l.peptideId === peptideId)
           )
-        : [...trackerState.injectionLogs, { date, peptideId }]
-      await persistState({ ...trackerState, injectionLogs })
+        : [
+            ...trackerState.injectionLogs,
+            { date, peptideId, doseMg, vialId },
+          ]
+      await persistState({
+        ...trackerState,
+        injectionLogs,
+        vialInventory: vials,
+      })
+      try {
+        window.dispatchEvent(new CustomEvent('pt-data-updated', { detail: 'injection' }))
+      } catch {
+        /* ignore */
+      }
     },
     addInjectionLog: async (log) => {
       await persistState(addInjectionLogToState(trackerState, log))

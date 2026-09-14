@@ -90,14 +90,14 @@ export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
     id: 'aod9604',
     name: 'AOD-9604',
     vialMg: 10,
-    bacMl: 3,
-    concentrationLabel: '3.33 mg/mL',
+    bacMl: 2,
+    concentrationLabel: '5 mg/mL',
     defaultDoseMg: 1,
     defaultDoseMl: null,
     doseUnit: 'mg',
     keyDraws: [
-      { label: '15 u = 0.5 mg', desiredMg: 0.5, units: 15 },
-      { label: '30 u = 1.0 mg', desiredMg: 1, units: 30 },
+      { label: '10 u = 0.5 mg', desiredMg: 0.5, units: 10 },
+      { label: '20 u = 1.0 mg', desiredMg: 1, units: 20 },
     ],
   },
   {

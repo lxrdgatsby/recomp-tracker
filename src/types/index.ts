@@ -76,6 +76,7 @@ export interface InjectionLog {
   peptideName?: string
   doseMg?: number
   units?: number
+  vialId?: string
 }
 
 export interface WorkoutCompletion {
@@ -93,6 +94,8 @@ export interface TrackerState {
   workoutCompletions: WorkoutCompletion[]
   /** Snapshot of the live protocol the Assistant reads. Logs/start date stay independent. */
   protocolProfile?: Record<string, unknown>
+  /** Peptides-tab vial inventory. Independent of injection history. */
+  vialInventory?: import('./v2').Vial[]
 }
 
 export type ViewId =

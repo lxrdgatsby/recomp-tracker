@@ -36,6 +36,7 @@ function normalizeVial(raw: Partial<Vial> & { id?: string }): Vial | null {
   if (!raw || typeof raw !== 'object') return null
   const compoundName = String(raw.compoundName || '').trim()
   if (!compoundName) return null
+  const compoundId = raw.compoundId
   const vialMg = Number(raw.vialMg) || 0
   const bacWaterMl = Number(raw.bacWaterMl) || 0
   const isPowder = Boolean(raw.isPowder)
@@ -57,8 +58,11 @@ function normalizeVial(raw: Partial<Vial> & { id?: string }): Vial | null {
     remainingMg,
     notes: raw.notes,
     createdAt,
-    depleted: raw.depleted || remainingMg <= 0.001,
+    depleted: raw.depleted || (compoundId !== 'test-cyp' && remainingMg <= 0.001),
     finishedAt: raw.finishedAt,
+    remainingMl: raw.remainingMl,
+    startingMl: raw.startingMl,
+    drawsUsed: raw.drawsUsed,
   }
 }
 
@@ -114,6 +118,7 @@ export type NewVialInput = {
   isPowder: boolean
   notes?: string
   remainingMg?: number
+  compoundId?: string
 }
 
 export function addVial(input: NewVialInput): Vial {
@@ -123,6 +128,7 @@ export function addVial(input: NewVialInput): Vial {
   const vial: Vial = {
     id: generateId(),
     compoundName: input.compoundName.trim(),
+    compoundId: input.compoundId,
     vialMg: input.vialMg,
     bacWaterMl: input.isPowder ? 0 : input.bacWaterMl,
     concentrationMgPerMl,
@@ -191,11 +197,15 @@ export function deductFromVial(vialId: string, doseMg: number): Vial | null {
 }
 
 export function getActiveVials(): Vial[] {
-  return loadVials().filter((v) => !v.depleted && v.remainingMg > 0.001)
+  return loadVials().filter(
+    (v) => !v.depleted && (v.compoundId === 'test-cyp' || v.remainingMg > 0.001)
+  )
 }
 
 export function getFinishedVials(): Vial[] {
-  return loadVials().filter((v) => v.depleted || v.remainingMg <= 0.001)
+  return loadVials().filter(
+    (v) => v.depleted || (v.compoundId !== 'test-cyp' && v.remainingMg <= 0.001)
+  )
 }
 
 // ── Dose logs ──────────────────────────────────────────────────────
