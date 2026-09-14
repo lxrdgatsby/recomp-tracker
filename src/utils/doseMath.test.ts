@@ -35,6 +35,11 @@ describe('dose calculator reconstitution math', () => {
     expect(u100UnitsFromMg(5, 50, 3)).toBe(30)
   })
 
+  it('5-Amino-1MQ 2.5 / 5 mg on 50 mg / 3 mL → 15 / 30 units', () => {
+    expect(u100UnitsFromMg(2.5, 50, 3)).toBe(15)
+    expect(u100UnitsFromMg(5, 50, 3)).toBe(30)
+  })
+
   it('GHK-Cu 1 / 2 mg → 3 / 6 units', () => {
     expect(u100UnitsFromMg(1, 100, 3)).toBe(3)
     expect(u100UnitsFromMg(2, 100, 3)).toBe(6)

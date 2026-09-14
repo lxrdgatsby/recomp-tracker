@@ -59,16 +59,20 @@ function buildStackCards(state: TrackerState, today: string): StackCard[] {
       0,
       differenceInDays(todayDate, parseISO(profile.startDate))
     )
-    const tier = getTitrationForDay(peptide, dayInCycle)
+    const startsOn = peptide.startsOn
+    const notStarted = Boolean(startsOn && today < startsOn.slice(0, 10))
+    const tier = getTitrationForDay(peptide, dayInCycle, todayDate)
     const units =
       tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
-    const nextDose = scheduled
-      ? scheduled.cardLine
-      : peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)
-        ? peptide.dose
-        : units != null && units > 0
-          ? formatSyringeUnits(units)
-          : peptide.protocol?.startingDoseLabel ?? 'Check protocol'
+    const nextDose = notStarted && startsOn
+      ? `Starts ${startsOn}`
+      : scheduled
+        ? scheduled.cardLine
+        : peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)
+          ? peptide.dose
+          : units != null && units > 0
+            ? formatSyringeUnits(units)
+            : peptide.protocol?.startingDoseLabel ?? 'Check protocol'
 
     const frequency =
       peptide.frequency === 'weekly'

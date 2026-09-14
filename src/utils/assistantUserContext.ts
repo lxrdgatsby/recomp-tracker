@@ -93,10 +93,20 @@ function frequencyLabel(freq: Peptide['frequency']): string {
   return 'daily'
 }
 
-function nextTitrationNote(peptide: Peptide, dayInCycle: number): string {
+function nextTitrationNote(
+  peptide: Peptide,
+  dayInCycle: number,
+  scheduleDate?: Date,
+): string {
   const titration = peptide.protocol?.titration
   if (!titration?.length) return NOT_PROVIDED
-  const current = getTitrationForDay(peptide, dayInCycle)
+  if (peptide.startsOn && scheduleDate) {
+    const todayIso = format(scheduleDate, 'yyyy-MM-dd')
+    if (todayIso < peptide.startsOn) {
+      return `Starts ${peptide.startsOn}: 15 units for 2 days, then 30 units daily`
+    }
+  }
+  const current = getTitrationForDay(peptide, dayInCycle, scheduleDate)
   if (!current) return NOT_PROVIDED
   const idx = titration.findIndex(
     (t) => t.weeks === current.weeks && t.doseMg === current.doseMg
@@ -164,27 +174,38 @@ function last7Adherence(state: TrackerState): {
 
 function compoundFromPeptide(
   peptide: Peptide,
-  dayInCycle: number
+  dayInCycle: number,
+  scheduleDate?: Date,
 ): AssistantCompound {
   const proto = peptide.protocol
-  const tier = getTitrationForDay(peptide, dayInCycle)
+  const notStarted =
+    Boolean(peptide.startsOn) &&
+    Boolean(scheduleDate) &&
+    format(scheduleDate as Date, 'yyyy-MM-dd') < (peptide.startsOn as string)
+  const tier = getTitrationForDay(peptide, dayInCycle, scheduleDate)
   const isVolume = peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)
   const units = isVolume
     ? NOT_PROVIDED
-    : orMissing(tier?.syringeUnits ?? proto?.startingSyringeUnits)
+    : notStarted
+      ? NOT_PROVIDED
+      : orMissing(tier?.syringeUnits ?? proto?.startingSyringeUnits)
   const doseMg = isVolume
     ? NOT_PROVIDED
-    : orMissing(tier?.doseMg ?? proto?.startingDoseMg)
+    : notStarted
+      ? NOT_PROVIDED
+      : orMissing(tier?.doseMg ?? proto?.startingDoseMg)
 
   return {
     id: peptide.id,
     name: peptide.name,
     currentDoseMg: doseMg,
-    currentDoseLabel: isVolume
-      ? peptide.dose
-      : typeof units === 'number'
-        ? `${formatUnits(units)} units on U-100`
-        : peptide.dose,
+    currentDoseLabel: notStarted
+      ? `Starts ${peptide.startsOn}`
+      : isVolume
+        ? peptide.dose
+        : typeof units === 'number'
+          ? `${formatUnits(units)} units on U-100`
+          : peptide.dose,
     units,
     timing: peptide.timing || NOT_PROVIDED,
     frequency: frequencyLabel(peptide.frequency),
@@ -195,7 +216,7 @@ function compoundFromPeptide(
         proto && proto.bacWaterMl > 0 ? proto.bacWaterMl : NOT_PROVIDED,
       mgPerMl: proto?.concentrationLabel || NOT_PROVIDED,
     },
-    nextTitration: nextTitrationNote(peptide, dayInCycle),
+    nextTitration: nextTitrationNote(peptide, dayInCycle, scheduleDate),
   }
 }
 
@@ -254,7 +275,7 @@ export function buildAssistantUserContext(
         NOT_PROVIDED,
     },
     protocol: {
-      compounds: peptides.map((p) => compoundFromPeptide(p, dayInCycle)),
+      compounds: peptides.map((p) => compoundFromPeptide(p, dayInCycle, today)),
     },
     adherence: {
       today: todayShots.map((s) => ({
@@ -295,6 +316,9 @@ export function getAssistantQuickPrompts(peptides: Peptide[]): string[] {
     chips.push('What is my current Reta / Tesamorelin dose in units?')
   }
   chips.push('Can I titrate this week?')
+  if (ids.has('amino1mq')) {
+    chips.push('How do I dose 5-Amino-1MQ?')
+  }
   chips.push('Why is my weight stalling?')
   if (ids.has('tesamorelin')) {
     chips.push('Explain Tesamorelin timing')

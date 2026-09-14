@@ -3,6 +3,7 @@ import {
   recommendedBacWaterForVial,
   type PeptideSelection,
 } from '../constants/peptideCatalog'
+import { CYCLE_START_DATE } from '../constants/reconstitutionTable'
 import { getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
 import { getTitrationPhases } from '../constants/peptideTitration'
 import type { FamiliarityLevel } from '../types/auth'
@@ -33,6 +34,14 @@ export function normalizeSelection(
   if (raw.catalogId === 'selank') {
     if (dose === '5mg') dose = '10mg'
     if (dose === '10mg') bacWaterUnits = 200
+  }
+
+  // 5-Amino-1MQ source of truth: 50 mg vial + 3 mL BAC.
+  if (raw.catalogId === 'amino1mq') {
+    if (!dose || dose === '50mg') {
+      dose = '50mg'
+      bacWaterUnits = 300
+    }
   }
 
   return {
@@ -248,11 +257,40 @@ export function generateRecompPlan(input: ProtocolInput): {
   }
 }
 
-export function getTitrationForDay(peptide: Peptide, dayInCycle: number): TitrationWeek | null {
+function localYmd(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function ymdFromCycleDay(dayInCycle: number): string {
+  const [y, m, d] = CYCLE_START_DATE.split('-').map(Number)
+  return localYmd(new Date(y, (m ?? 1) - 1, (d ?? 1) + dayInCycle))
+}
+
+export function getTitrationForDay(
+  peptide: Peptide,
+  dayInCycle: number,
+  scheduleDate?: Date,
+): TitrationWeek | null {
   if (!peptide.protocol?.titration.length) return null
   const week = Math.floor(dayInCycle / 7) + 1
+  const dateIso = scheduleDate ? localYmd(scheduleDate) : ymdFromCycleDay(dayInCycle)
+
+  const datedTiers = peptide.protocol.titration.filter((t) => t.startDate)
+  if (datedTiers.length > 0) {
+    for (const tier of datedTiers) {
+      if (!tier.startDate) continue
+      if (dateIso < tier.startDate) continue
+      if (tier.endDate && dateIso > tier.endDate) continue
+      return tier
+    }
+    return null
+  }
 
   for (const tier of peptide.protocol.titration) {
+    if (tier.startDate) continue
     const [start, end] = tier.weeks.split('-').map((n) => parseInt(n, 10))
     if (week >= start && week <= (end ?? start)) return tier
   }
@@ -281,7 +319,8 @@ export function formatProtocolContextForAI(
         )
       }
 
-      const current = getTitrationForDay(pep, dayInCycle - 1) ?? proto.titration[0]
+      const current =
+        getTitrationForDay(pep, dayInCycle - 1, new Date()) ?? proto.titration[0]
       const schedule =
         pep.frequency === 'weekly' ? 'once weekly' : 'daily'
       const titrationLines = proto.titration
@@ -336,6 +375,7 @@ export function rebuildPeptideForVialSize(
     timing: peptide.timing ?? built.timing,
     notes: peptide.notes ?? built.notes,
     vialSize,
+    startsOn: peptide.startsOn,
   }
 }
 
@@ -344,7 +384,7 @@ export function getCurrentInjectionDose(
   startDate: string
 ): { doseLabel: string; syringeUnits?: number; doseMg?: number } {
   const dayInCycle = Math.max(0, getDaysIntoCycle(startDate) - 1)
-  const tier = getTitrationForDay(peptide, dayInCycle)
+  const tier = getTitrationForDay(peptide, dayInCycle, new Date())
   const syringeUnits =
     tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
   const isVolume = peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)

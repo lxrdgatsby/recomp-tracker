@@ -10,6 +10,7 @@ import {
 import {
   generateRecompPlan,
   normalizeSelection,
+  selectionsFromPeptides,
   syncSelectionsFromPeptides,
 } from '../utils/recompProtocol'
 import type { Questionnaire } from '../types/auth'
@@ -367,7 +368,7 @@ export async function persistSeededProtocol(
     userId,
     trackerState.profile,
     trackerState,
-    [],
+    selectionsFromPeptides(trackerState.peptides),
     extras
   )
 }

@@ -1,6 +1,8 @@
 /** Source of truth for Dose Calculator + 90-day protocol draws. U-100: 100 units = 1 mL. */
 
 export const CYCLE_START_DATE = '2026-08-23'
+export const AMINO_1MQ_START_DATE = '2026-09-15'
+export const AMINO_1MQ_FULL_DOSE_DATE = '2026-09-17'
 export const START_WEIGHT_LB = 175
 export const GOAL_WEIGHT_LB = 160
 
@@ -114,6 +116,20 @@ export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
     ],
   },
   {
+    id: 'amino1mq',
+    name: '5-Amino-1MQ',
+    vialMg: 50,
+    bacMl: 3,
+    concentrationLabel: '16.67 mg/mL',
+    defaultDoseMg: 2.5,
+    defaultDoseMl: null,
+    doseUnit: 'mg',
+    keyDraws: [
+      { label: '15 u = 2.5 mg', desiredMg: 2.5, units: 15 },
+      { label: '30 u = 5 mg', desiredMg: 5, units: 30 },
+    ],
+  },
+  {
     id: 'ghkcu',
     name: 'GHK-Cu',
     vialMg: 100,
@@ -193,6 +209,7 @@ export const GUIDANCE_CARDS = [
   'Only advance Tesamorelin if sides are manageable and glucose is stable',
   'Labs: CBC, CMP, fasting glucose + insulin or HbA1c, lipids, IGF-1, total/free T, estradiol, prolactin if symptomatic, hs-CRP — baseline, week 4–6, week 10–12',
   'Tesamorelin contraindication note: active malignancy / disrupted pituitary axis; it raises IGF-1',
+  '5-Amino-1MQ is NAD+/NNMT support on top of NAD+ already in the stack — overlap, not a second fat-loss drug. Drivers stay Reta + food + steps for fat, Test + Tesamorelin + lifting for muscle.',
 ]
 
 export function getReconstitutionCompound(

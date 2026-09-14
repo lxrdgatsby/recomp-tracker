@@ -91,6 +91,17 @@ export const PROTOCOL_PEPTIDE_OPTIONS: {
     notes: '2.5 mg = 15 units daily.',
   },
   {
+    id: 'amino1mq',
+    name: '5-Amino-1MQ',
+    defaultVialMg: 50,
+    defaultBacMl: 3,
+    targetDoseMg: 2.5,
+    frequency: 'daily',
+    timing: 'Morning, fasted',
+    notes:
+      '50 mg / 3 mL = 16.67 mg/mL. Start 2.5 mg = 15 u AM fasted for 2 days, then 5 mg = 30 u if tolerated. Not 50 mg SC.',
+  },
+  {
     id: 'ghkcu',
     name: 'GHK-Cu',
     defaultVialMg: 100,
@@ -153,6 +164,7 @@ const NAME_ALIASES: Record<string, string> = {
   'klow': 'KLOW',
   'retatrutide': 'Retatrutide',
   'tesamorelin': 'Tesamorelin',
+  'amino1mq': '5-Amino-1MQ',
 }
 
 export function displayPeptideName(peptide: { id?: string; name: string }): string {

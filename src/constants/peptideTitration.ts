@@ -184,6 +184,45 @@ export const PEPTIDE_TITRATION: Record<string, TitrationMap> = {
       { weeks: '3-13', doseMg: 0.5, notes: 'Daily or EOD — max common dose (500mcg)' },
     ],
   },
+  amino1mq: {
+    beginner: [
+      {
+        weeks: '1-1',
+        doseMg: 2.5,
+        notes: 'Start 2.5 mg (15 u) AM fasted for 2 days, then 5 mg (30 u) if tolerated',
+      },
+      {
+        weeks: '2-13',
+        doseMg: 5,
+        notes: '5 mg (30 u) daily AM fasted. Not 50 mg SC.',
+      },
+    ],
+    intermediate: [
+      {
+        weeks: '1-1',
+        doseMg: 2.5,
+        notes: 'Start 2.5 mg (15 u) AM fasted for 2 days',
+      },
+      {
+        weeks: '2-13',
+        doseMg: 5,
+        notes: '5 mg (30 u) daily AM fasted if tolerated. Not 50 mg SC.',
+      },
+    ],
+    advanced: [
+      {
+        weeks: '1-1',
+        doseMg: 2.5,
+        notes: 'Start 2.5 mg (15 u) AM fasted for 2 days',
+      },
+      {
+        weeks: '2-13',
+        doseMg: 5,
+        notes:
+          '5 mg (30 u) daily AM fasted if tolerated. Optional split 15 u AM + 15 u PM. Not 50 mg SC.',
+      },
+    ],
+  },
   pinealon: {
     beginner: [
       { weeks: '1-13', doseMg: 0.5, notes: 'Daily AM — run in 10–20 day cycles (500mcg)' },

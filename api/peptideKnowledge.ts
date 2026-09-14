@@ -20,4 +20,12 @@ LYOPHILIZED (UNRECONSTITUTED) STORAGE:
 INJECTION & HANDLING:
 - Rotate injection sites. Use sterile technique. Draw with U-100 insulin syringe units matching the user's protocol.
 
+5-AMINO-1MQ:
+- Reconstitution: 50 mg vial + 3 mL BAC = 16.67 mg/mL. units = (desired_mg / (50 / 3)) * 100.
+- 2.5 mg = 15 units. 5 mg = 30 units. NEVER use 50 mg as the injectable daily dose (that is oral-style dosing).
+- Timing: Morning, fasted, in the AM cluster (after AOD and SS-31).
+- lxrdgatsby insert: starts Tuesday Sept 15 2026 at 15 u for 2 days (Sept 15–16), then 30 u from Thursday Sept 17. Hold 30 u through weeks 5–12.
+- 5-Amino-1MQ is NAD+/NNMT support on top of NAD+ already in the stack — overlap, not a second fat-loss drug. Fat-loss drivers stay Reta + food + steps. Muscle drivers stay Test + Tesamorelin + lifting.
+- Do not tell the user to titrate Reta during Week 4. First Reta step is Sunday Sept 20 (Week 5) and only if GI at 2.5 mg stayed mild. Do not jump Reta to 80 u before Sept 20.
+
 === END AUTHORITATIVE PEPTIDE EXPERT KNOWLEDGE ===`

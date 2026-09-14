@@ -41,6 +41,7 @@ const SLOT_ORDER: InjectionSlot[] = [
 const SLOT_BY_ID: Record<string, InjectionSlot> = {
   aod9604: 'morning',
   ss31: 'morning',
+  amino1mq: 'morning',
   motsc: 'morning',
   ghkcu: 'morning',
   bpc157: 'peri',
@@ -49,6 +50,26 @@ const SLOT_BY_ID: Record<string, InjectionSlot> = {
   tesamorelin: 'night',
   'test-cyp': 'weekly',
   retatrutide: 'weekly',
+}
+
+const MORNING_ORDER: Record<string, number> = {
+  aod9604: 0,
+  ss31: 1,
+  amino1mq: 2,
+  motsc: 3,
+  ghkcu: 4,
+}
+
+function localYmd(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export function isPeptideActiveOnDate(peptide: Peptide, date: Date): boolean {
+  if (!peptide.startsOn) return true
+  return localYmd(date) >= peptide.startsOn.slice(0, 10)
 }
 
 export function injectionSlot(peptideId: string): InjectionSlot {
@@ -79,7 +100,12 @@ export function groupInjectionsBySlot(
   return SLOT_ORDER.map((slot) => ({
     slot,
     label: SLOT_LABELS[slot],
-    items: injections.filter((inj) => inj.slot === slot),
+    items: injections
+      .filter((inj) => inj.slot === slot)
+      .sort((a, b) => {
+        if (slot !== 'morning') return 0
+        return (MORNING_ORDER[a.peptideId] ?? 50) - (MORNING_ORDER[b.peptideId] ?? 50)
+      }),
   })).filter((group) => group.items.length > 0)
 }
 
@@ -95,13 +121,14 @@ export function getInjectionsForDate(
 
   return peptides
     .filter((p) => {
+      if (!isPeptideActiveOnDate(p, scheduleDate)) return false
       const dow = scheduleDate.getDay()
       if (p.frequency === 'daily') return true
       if (p.frequency === 'mwf') return dow === 1 || dow === 3 || dow === 5
       return isWeeklyInjectionDay(scheduleDate, start)
     })
     .map((p) => {
-      const tier = getTitrationForDay(p, dayInCycle)
+      const tier = getTitrationForDay(p, dayInCycle, scheduleDate)
       const syringeUnits = tier?.syringeUnits ?? p.protocol?.startingSyringeUnits
       const dose = /ml/i.test(p.dose)
         ? p.dose
@@ -129,6 +156,14 @@ export function getInjectionsForDate(
           timing,
         }),
       }
+    })
+    .sort((a, b) => {
+      const slotDiff = SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot)
+      if (slotDiff !== 0) return slotDiff
+      if (a.slot === 'morning') {
+        return (MORNING_ORDER[a.peptideId] ?? 50) - (MORNING_ORDER[b.peptideId] ?? 50)
+      }
+      return 0
     })
 }
 

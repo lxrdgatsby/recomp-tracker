@@ -7,6 +7,10 @@ export interface TitrationWeek {
   doseLabel: string
   syringeUnits: number
   notes?: string
+  /** Inclusive YYYY-MM-DD. Used for mid-week inserts (e.g. 5-Amino-1MQ). */
+  startDate?: string
+  /** Inclusive YYYY-MM-DD. Omit to keep the tier open-ended. */
+  endDate?: string
 }
 
 export interface PeptideProtocol {
@@ -33,6 +37,8 @@ export interface Peptide {
   notes?: string
   vialSize?: string
   protocol?: PeptideProtocol
+  /** First calendar day this compound appears on Today’s Injections. */
+  startsOn?: string
 }
 
 export interface RecompPlan {

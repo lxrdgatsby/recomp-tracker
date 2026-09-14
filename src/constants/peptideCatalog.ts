@@ -195,6 +195,17 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     notes: 'Emerging longevity stack component.',
   },
   {
+    id: 'amino1mq',
+    name: '5-Amino-1MQ',
+    tagline: 'NAD+/NNMT support — 50 mg / 3 mL, start 15 u then 30 u AM fasted',
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
+    defaultDose: '50mg',
+    frequency: 'daily',
+    timing: 'Morning, fasted',
+    notes:
+      '50 mg vial + 3 mL BAC (16.67 mg/mL). Start 2.5 mg (15 u) AM fasted for 2 days, then 5 mg (30 u) daily if tolerated. NAD+/NNMT support on top of NAD+ — not a second fat-loss drug. Do not use 50 mg as the injectable daily dose.',
+  },
+  {
     id: 'kpv',
     name: 'KPV',
     tagline: 'Gut & inflammation — trending in wellness stacks',
@@ -280,9 +291,33 @@ export function getCatalogEntry(catalogId: string): PeptideCatalogEntry | undefi
   return PEPTIDE_CATALOG.find((p) => p.id === catalogId)
 }
 
+const CATALOG_NAME_ALIASES: Record<string, string> = {
+  '5-amino-1mq': 'amino1mq',
+  '5-amino': 'amino1mq',
+  '5 amino 1mq': 'amino1mq',
+  '5 amino-1mq': 'amino1mq',
+  '5-amino1mq': 'amino1mq',
+  '5amino1mq': 'amino1mq',
+  'amino-1mq': 'amino1mq',
+  'amino 1mq': 'amino1mq',
+}
+
 export function getCatalogEntryByName(name: string): PeptideCatalogEntry | undefined {
   const normalized = name.trim().toLowerCase()
-  return PEPTIDE_CATALOG.find((p) => p.name.toLowerCase() === normalized)
+  const collapsed = normalized.replace(/[_]+/g, ' ').replace(/\s+/g, ' ')
+  const hyphenated = collapsed.replace(/\s/g, '-')
+  const compact = collapsed.replace(/[\s-]/g, '')
+  const aliasId =
+    CATALOG_NAME_ALIASES[collapsed] ??
+    CATALOG_NAME_ALIASES[hyphenated] ??
+    CATALOG_NAME_ALIASES[compact]
+  if (aliasId) return PEPTIDE_CATALOG.find((p) => p.id === aliasId)
+  return PEPTIDE_CATALOG.find(
+    (p) =>
+      p.name.toLowerCase() === normalized ||
+      p.id === normalized ||
+      p.id === hyphenated
+  )
 }
 
 export function selectionToPeptide(selection: PeptideSelection): Peptide | null {

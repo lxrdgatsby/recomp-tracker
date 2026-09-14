@@ -238,6 +238,13 @@ function isMwf(date: Date): boolean {
   return dow === 1 || dow === 3 || dow === 5
 }
 
+function amino1mqUnits(date: Date): number | null {
+  const iso = toIsoDate(date)
+  if (iso < '2026-09-15') return null
+  if (iso <= '2026-09-16') return 15
+  return 30
+}
+
 function phaseUnits(week: number) {
   if (week <= 1) {
     return { tesa: 7.5, aod: 15, ss31: 15, ghk: 3, klow: 15, mots: 15, nad: 25, reta: 50 }
@@ -257,29 +264,40 @@ export function getShotsForSlot(slot: ReminderSlot, date: Date): SlotShots {
   const mwf = isMwf(date)
 
   if (slot === 'morning') {
+    const amino = amino1mqUnits(date)
     const shots: ShotForSlot[] = [
       { id: 'aod9604', short: 'AOD', detail: `AOD ${u.aod}u` },
       { id: 'ss31', short: 'SS-31', detail: `SS-31 ${u.ss31}u` },
-      { id: 'ghkcu', short: 'GHK-Cu', detail: `GHK-Cu ${u.ghk}u` },
     ]
+    if (amino != null) {
+      shots.push({
+        id: 'amino1mq',
+        short: '5-Amino-1MQ',
+        detail: `5-Amino-1MQ ${amino}u`,
+      })
+    }
     if (mwf) {
       shots.push({ id: 'motsc', short: 'MOTS-c', detail: `MOTS-c ${u.mots}u` })
     }
-    const names = [`AOD ${u.aod}u`, 'SS-31', 'GHK-Cu']
+    shots.push({ id: 'ghkcu', short: 'GHK-Cu', detail: `GHK-Cu ${u.ghk}u` })
+    const names = [`AOD ${u.aod}u`, 'SS-31']
+    if (amino != null) names.push('5-Amino-1MQ')
     if (mwf) names.push('MOTS-c')
+    names.push('GHK-Cu')
     return { slot, title: 'Morning shots', body: names.join(' + '), shots }
   }
 
   if (slot === 'evening') {
     const shots: ShotForSlot[] = [
       { id: 'klow', short: 'KLOW', detail: `KLOW ${u.klow}u` },
-      { id: 'bpc157', short: 'BPC', detail: 'BPC 10u' },
     ]
     if (mwf) {
       shots.push({ id: 'nad', short: 'NAD+', detail: `NAD+ ${u.nad}u` })
     }
-    const names = ['KLOW', 'BPC']
+    shots.push({ id: 'bpc157', short: 'BPC', detail: 'BPC 10u' })
+    const names = ['KLOW']
     if (mwf) names.push('NAD+')
+    names.push('BPC')
     return { slot, title: 'Evening shots', body: names.join(' + '), shots }
   }
 

@@ -1,5 +1,7 @@
 import { STORAGE_KEY } from '../constants/defaults'
 import {
+  AMINO_1MQ_FULL_DOSE_DATE,
+  AMINO_1MQ_START_DATE,
   CYCLE_START_DATE,
   FAT_LOSS_DRIVERS,
   GOAL_WEIGHT_LB,
@@ -22,7 +24,7 @@ import { saveState } from '../utils/storage'
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-09-12-stack-v3'
+export const PROTOCOL_DEFINITION_VERSION = '2026-09-14-amino1mq-v4'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -37,6 +39,7 @@ export const PHASE_NOTES = {
     'KLOW 10 mg: 0.5 mg = 15 units, evening',
     'MOTS-c: 0.5 mg = 15 units, Mon/Wed/Fri morning',
     'NAD+: 50 mg = 25 units, Mon/Wed/Fri evening',
+    '5-Amino-1MQ: starts Tue Sept 15. 2.5 mg = 15 u for 2 days, then 5 mg = 30 u morning fasted from Thu Sept 17. Not 50 mg SC.',
   ],
   weeks5to8: [
     'Reta 4 mg = 80 units IF GI stays mild at 2.5 mg; else hold 50 units',
@@ -46,12 +49,13 @@ export const PHASE_NOTES = {
     'NAD+ 100 mg M/W/F = 50 units if burn is tolerable',
     'GHK-Cu optional 2 mg = 6 units, 3–5×/week',
     'KLOW 1 mg = 30 units if no site issues',
+    '5-Amino-1MQ: HOLD 30 units daily',
     'All others: hold',
   ],
   weeks9to12: [
     'Reta stay 4 mg (80 u) unless weight stall AND GI easy, then 5 mg = 100 units. Do not jump to 8–12 mg this cycle.',
     'Tesamorelin 2.0 mg = 30 units only if fasting glucose is good and IGF-1 is not already high; else stay 21 units.',
-    'Everything else: hold week 5–8 doses',
+    'Everything else: hold week 5–8 doses, including 5-Amino-1MQ at 30 u',
   ],
 }
 
@@ -260,6 +264,47 @@ export function buildLxrdgatsbyStack(startDate: string): {
             30,
             '5 mg = 30 units only if sites/energy are fine; else hold 15 units'
           ),
+        ],
+      }),
+    },
+    {
+      id: 'amino1mq',
+      name: '5-Amino-1MQ',
+      dose: '2.5mg',
+      frequency: 'daily',
+      timing: 'Morning, fasted',
+      startsOn: AMINO_1MQ_START_DATE,
+      notes:
+        'NAD+/NNMT support on top of NAD+ already in the stack — overlap, not a second fat-loss drug. Start 2.5 mg = 15 units Tue–Wed Sept 15–16, then 5 mg = 30 units if sites/energy are fine. Optional later: split 15 u AM + 15 u PM. Do not schedule 50 mg SC.',
+      vialSize: '50mg',
+      protocol: protocol({
+        vialMg: 50,
+        bacWaterUnits: 300,
+        startingDoseMg: 2.5,
+        startingSyringeUnits: 15,
+        extraSteps: [
+          '50 mg / 3 mL = 16.67 mg/mL. 15 units = 2.5 mg. 30 units = 5 mg. Not 50 mg as the injectable daily dose.',
+        ],
+        titration: [
+          {
+            weeks: '4-4',
+            startDate: AMINO_1MQ_START_DATE,
+            endDate: '2026-09-16',
+            doseMg: 2.5,
+            doseLabel: uLabel(15),
+            syringeUnits: 15,
+            notes:
+              '2.5 mg = 15 units, morning fasted. First 2 days (Tue–Wed Sept 15–16).',
+          },
+          {
+            weeks: '4-12',
+            startDate: AMINO_1MQ_FULL_DOSE_DATE,
+            doseMg: 5,
+            doseLabel: uLabel(30),
+            syringeUnits: 30,
+            notes:
+              '5 mg = 30 units, morning fasted. Hold. Optional later: split 15 u AM + 15 u PM if sites/energy are fine. Not 50 mg SC.',
+          },
         ],
       }),
     },
@@ -508,7 +553,7 @@ export function refreshProtocolDefinition(
   current: TrackerState,
   username?: string | null,
 ): TrackerState | null {
-  if (username && !isLxrdgatsbyUser(username) && !hasStack(current)) return null
+  if (username && !isLxrdgatsbyUser(username)) return null
   if (!hasStack(current) && !isLxrdgatsbyUser(username)) return null
   if (!stackNeedsDefinitionRefresh(current) && hasStack(current)) {
     const tesa = current.peptides.find((p) => p.id === 'tesamorelin')
@@ -539,7 +584,15 @@ export function refreshProtocolDefinition(
     }
   })
   for (const p of fresh) {
-    if (!merged.some((m) => m.id === p.id)) merged.push(p)
+    if (merged.some((m) => m.id === p.id)) continue
+    if (p.id === 'amino1mq') {
+      const ssIdx = merged.findIndex((m) => m.id === 'ss31')
+      if (ssIdx >= 0) {
+        merged.splice(ssIdx + 1, 0, p)
+        continue
+      }
+    }
+    merged.push(p)
   }
 
   const next: TrackerState = {

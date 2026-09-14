@@ -62,13 +62,29 @@ describe('reminders', () => {
     expect(tue.shots.map((s) => s.short)).toEqual(['AOD', 'SS-31', 'GHK-Cu'])
 
     const mon = getShotsForSlot('morning', new Date(2026, 7, 24))
-    expect(mon.body).toBe('AOD 15u + SS-31 + GHK-Cu + MOTS-c')
+    expect(mon.body).toBe('AOD 15u + SS-31 + MOTS-c + GHK-Cu')
     expect(mon.shots.some((s) => s.short === 'MOTS-c')).toBe(true)
   })
 
   it('uses week 2+ AOD units in morning text', () => {
     const week2Mon = getShotsForSlot('morning', new Date(2026, 7, 31))
-    expect(week2Mon.body).toBe('AOD 30u + SS-31 + GHK-Cu + MOTS-c')
+    expect(week2Mon.body).toBe('AOD 30u + SS-31 + MOTS-c + GHK-Cu')
+  })
+
+  it('inserts 5-Amino-1MQ from Sept 15 at 15 u, then 30 u from Sept 17', () => {
+    const sept14 = getShotsForSlot('morning', new Date(2026, 8, 14))
+    expect(sept14.shots.some((s) => s.id === 'amino1mq')).toBe(false)
+
+    const sept15 = getShotsForSlot('morning', new Date(2026, 8, 15))
+    expect(sept15.body).toContain('5-Amino-1MQ')
+    expect(sept15.shots.find((s) => s.id === 'amino1mq')?.detail).toBe(
+      '5-Amino-1MQ 15u'
+    )
+
+    const sept17 = getShotsForSlot('morning', new Date(2026, 8, 17))
+    expect(sept17.shots.find((s) => s.id === 'amino1mq')?.detail).toBe(
+      '5-Amino-1MQ 30u'
+    )
   })
 
   it('builds evening shots with NAD+ on M/W/F', () => {
@@ -77,7 +93,7 @@ describe('reminders', () => {
     expect(tue.body).toBe('KLOW + BPC')
 
     const wed = getShotsForSlot('evening', new Date(2026, 7, 26))
-    expect(wed.body).toBe('KLOW + BPC + NAD+')
+    expect(wed.body).toBe('KLOW + NAD+ + BPC')
   })
 
   it('builds nightly tesamorelin with fasted note and week 2 units', () => {
