@@ -184,15 +184,20 @@ export function getScheduleDates(startDate: string, count: number): string[] {
 
 /** Last `count` calendar days ending today, skipping dates before the cycle start. Oldest first. */
 export function getRecentScheduleDates(
-  startDate: string,
-  count: number
+  startDate: string | null | undefined,
+  count: number,
+  now = new Date()
 ): string[] {
-  const start = parseISO(startDate)
-  const today = new Date()
+  const startIso =
+    typeof startDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(startDate.trim())
+      ? startDate.trim().slice(0, 10)
+      : null
+  const start = startIso ? parseISO(startIso) : null
   const dates: string[] = []
   for (let i = count - 1; i >= 0; i--) {
-    const date = addDays(today, -i)
-    if (date >= start) dates.push(format(date, 'yyyy-MM-dd'))
+    const date = addDays(now, -i)
+    if (start && date < start) continue
+    dates.push(format(date, 'yyyy-MM-dd'))
   }
   return dates
 }

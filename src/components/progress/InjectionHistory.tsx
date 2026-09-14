@@ -20,7 +20,7 @@ export function InjectionHistory({
   onToggleInjection,
 }: InjectionHistoryProps) {
   const { profile, peptides, injectionLogs } = state
-  const [range, setRange] = useState<7 | 30>(7)
+  const [range, setRange] = useState<7 | 30 | 90>(7)
   const today = format(new Date(), 'yyyy-MM-dd')
 
   const scheduleDates = useMemo(
@@ -38,9 +38,10 @@ export function InjectionHistory({
             logged doses stay as logged. Undo / Done still works.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
+            className="shrink-0 whitespace-nowrap"
             variant={range === 7 ? 'primary' : 'secondary'}
             onClick={() => setRange(7)}
           >
@@ -48,12 +49,26 @@ export function InjectionHistory({
           </Button>
           <Button
             size="sm"
+            className="shrink-0 whitespace-nowrap"
             variant={range === 30 ? 'primary' : 'secondary'}
             onClick={() => setRange(30)}
           >
             30 Days
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => window.print()}>
+          <Button
+            size="sm"
+            className="shrink-0 whitespace-nowrap"
+            variant={range === 90 ? 'primary' : 'secondary'}
+            onClick={() => setRange(90)}
+          >
+            90 Days
+          </Button>
+          <Button
+            size="sm"
+            className="shrink-0 whitespace-nowrap"
+            variant="secondary"
+            onClick={() => window.print()}
+          >
             <Printer size={14} />
             Print
           </Button>
