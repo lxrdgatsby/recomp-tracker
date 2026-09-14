@@ -1,4 +1,5 @@
 import { addDays, differenceInDays, format, parseISO } from 'date-fns'
+import { CYCLE_DAYS } from '../constants/defaults'
 import type { InjectionLog, Peptide } from '../types'
 import { formatSyringeUnits, getTitrationForDay } from './recompProtocol'
 import { formatUnits } from './doseMath'
@@ -182,22 +183,81 @@ export function getScheduleDates(startDate: string, count: number): string[] {
   )
 }
 
-/** Last `count` calendar days ending today, skipping dates before the cycle start. Oldest first. */
+export type HistoryRange = 7 | 30 | 90
+
+export function parseLocalYmd(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1)
+}
+
+export function formatLocalYmd(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function planStartIso(startDate: string | null | undefined): string | null {
+  if (typeof startDate !== 'string') return null
+  const trimmed = startDate.trim()
+  return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : null
+}
+
+function addLocalDays(iso: string, days: number): string {
+  const date = parseLocalYmd(iso)
+  date.setDate(date.getDate() + days)
+  return formatLocalYmd(date)
+}
+
+export function getPlanEndDate(startDate: string): string {
+  return addLocalDays(startDate, CYCLE_DAYS - 1)
+}
+
+/**
+ * Progress Injection History windows (not rolling lookbacks).
+ * 7 = today + next 6 days
+ * 30 = current calendar month, clipped to plan start/end
+ * 90 = that user's start through start + 89 days
+ */
+export function getHistoryRangeDates(
+  startDate: string | null | undefined,
+  range: HistoryRange,
+  now = new Date()
+): string[] {
+  const startIso = planStartIso(startDate)
+  const todayIso = formatLocalYmd(now)
+  const endIso = startIso
+    ? getPlanEndDate(startIso)
+    : addLocalDays(todayIso, CYCLE_DAYS - 1)
+
+  if (range === 7) {
+    return Array.from({ length: 7 }, (_, i) => addLocalDays(todayIso, i))
+  }
+
+  if (range === 30) {
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const lastDay = new Date(year, month + 1, 0).getDate()
+    const dates: string[] = []
+    for (let day = 1; day <= lastDay; day++) {
+      const iso = formatLocalYmd(new Date(year, month, day))
+      if (startIso && iso < startIso) continue
+      if (iso > endIso) continue
+      dates.push(iso)
+    }
+    return dates
+  }
+
+  const planStart = startIso ?? todayIso
+  return Array.from({ length: CYCLE_DAYS }, (_, i) => addLocalDays(planStart, i))
+}
+
+/** @deprecated Use getHistoryRangeDates. Kept for existing imports. */
 export function getRecentScheduleDates(
   startDate: string | null | undefined,
   count: number,
   now = new Date()
 ): string[] {
-  const startIso =
-    typeof startDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(startDate.trim())
-      ? startDate.trim().slice(0, 10)
-      : null
-  const start = startIso ? parseISO(startIso) : null
-  const dates: string[] = []
-  for (let i = count - 1; i >= 0; i--) {
-    const date = addDays(now, -i)
-    if (start && date < start) continue
-    dates.push(format(date, 'yyyy-MM-dd'))
-  }
-  return dates
+  const range: HistoryRange = count === 7 || count === 30 || count === 90 ? count : 90
+  return getHistoryRangeDates(startDate, range, now)
 }

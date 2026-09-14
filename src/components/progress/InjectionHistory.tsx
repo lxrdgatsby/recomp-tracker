@@ -1,10 +1,12 @@
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { Check, Printer } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { TrackerState } from '../../types'
 import {
+  getHistoryRangeDates,
   getInjectionsForDate,
-  getRecentScheduleDates,
+  parseLocalYmd,
+  type HistoryRange,
   isInjectionDone,
 } from '../../utils/peptideSchedule'
 import { Button } from '../ui/Button'
@@ -20,13 +22,19 @@ export function InjectionHistory({
   onToggleInjection,
 }: InjectionHistoryProps) {
   const { profile, peptides, injectionLogs } = state
-  const [range, setRange] = useState<7 | 30 | 90>(7)
+  const [range, setRange] = useState<HistoryRange>(7)
+  const todayRef = useRef<HTMLDivElement | null>(null)
   const today = format(new Date(), 'yyyy-MM-dd')
 
   const scheduleDates = useMemo(
-    () => getRecentScheduleDates(profile.startDate, range),
+    () => getHistoryRangeDates(profile.startDate, range),
     [profile.startDate, range]
   )
+
+  useEffect(() => {
+    if (range === 7) return
+    todayRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [range, scheduleDates])
 
   return (
     <div className="mb-8">
@@ -34,7 +42,8 @@ export function InjectionHistory({
         <div>
           <h2 className="text-lg font-semibold text-white">Injection History</h2>
           <p className="mt-0.5 text-sm text-slate-400">
-            Dated cards from {format(parseISO(profile.startDate), 'MMM d, yyyy')} —
+            Dated cards from{' '}
+            {format(parseLocalYmd(profile.startDate), 'MMM d, yyyy')} —
             logged doses stay as logged. Undo / Done still works.
           </p>
         </div>
@@ -77,24 +86,26 @@ export function InjectionHistory({
 
       <div className="print-checklist space-y-4">
         <h3 className="hidden text-lg font-bold print:block">
-          {range}-Day Injection Checklist
+          {range === 30
+            ? `${format(new Date(), 'MMMM yyyy')} Injection Checklist`
+            : `${range}-Day Injection Checklist`}
         </h3>
         {scheduleDates.map((dateStr) => {
           const injections = getInjectionsForDate(
             peptides,
-            parseISO(dateStr),
+            parseLocalYmd(dateStr),
             profile.startDate
           )
           if (injections.length === 0) return null
           const isToday = dateStr === today
           return (
+            <div key={dateStr} ref={isToday ? todayRef : undefined}>
             <Card
-              key={dateStr}
               className={isToday ? 'ring-1 ring-teal-500/40' : ''}
             >
               <div className="mb-3 flex items-center justify-between">
                 <h4 className="font-semibold text-white">
-                  {format(parseISO(dateStr), 'EEE, MMM d')}
+                  {format(parseLocalYmd(dateStr), 'EEE, MMM d')}
                   {isToday && (
                     <span className="ml-2 text-xs font-normal text-teal-400">
                       Today
@@ -150,6 +161,7 @@ export function InjectionHistory({
                 })}
               </div>
             </Card>
+            </div>
           )
         })}
       </div>
