@@ -17,6 +17,7 @@ import {
 import {
   doseMgForDate,
   getActiveVialForPeptide,
+  isReplacedVial,
   peptideIdOf,
   remainingDosesForVial,
 } from '../../utils/vialUsage'
@@ -224,16 +225,24 @@ export function VialInventory({
   const renderCard = (vial: Vial) => {
     const peptideId = peptideIdOf(vial)
     const peptide = peptideById.get(peptideId)
-    const empty = peptideId !== 'test-cyp' && vial.remainingMg <= 0.001
+    const replaced = isReplacedVial(vial)
+    const empty =
+      peptideId !== 'test-cyp' && (replaced || vial.remainingMg <= 0.001)
     const dose = peptide
       ? doseMgForDate(peptide, todayIso, planStart)
       : { doseMg: doseHintFor(vial.compoundName), units: 0 }
     const left = peptide
       ? remainingDosesForVial(vial, peptide, planStart)
       : Math.max(0, Math.floor((vial.remainingMg || 0) / (dose.doseMg || 1)))
-    const low = !empty && peptideId !== 'test-cyp' && left <= 3
+    const low = !empty && !replaced && peptideId !== 'test-cyp' && left <= 3
     const hasActive = Boolean(getActiveVialForPeptide(vials, peptideId))
-    const status = empty ? 'Empty' : vial.isPowder ? 'Powder' : 'Mixed'
+    const status = replaced
+      ? 'Replaced'
+      : empty
+        ? 'Empty'
+        : vial.isPowder
+          ? 'Powder'
+          : 'Mixed'
     const statusClass = empty
       ? 'bg-red-500/15 text-red-300'
       : vial.isPowder
@@ -279,7 +288,11 @@ export function VialInventory({
             </div>
             <div className="mt-0.5 text-xs text-slate-400">
               Opened {formatOpened(vial.mixedDate)}
-              {empty && vial.finishedAt ? ` · Empty ${formatOpened(vial.finishedAt)}` : ''}
+              {replaced && vial.replacedAt
+                ? ` · Replaced ${formatOpened(vial.replacedAt)}`
+                : empty && vial.finishedAt
+                  ? ` · Empty ${formatOpened(vial.finishedAt)}`
+                  : ''}
             </div>
             <div className="mt-0.5 text-xs text-slate-400">
               {peptideId === 'test-cyp'

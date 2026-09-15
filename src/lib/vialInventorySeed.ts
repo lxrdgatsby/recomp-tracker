@@ -9,7 +9,7 @@ import { recalculateVialInventory } from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { isLxrdgatsbyUser } from './protocolSeed'
 
-export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v3'
+export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v4'
 
 function vial(partial: Vial): Vial {
   const isTest = partial.compoundId === 'test-cyp'
@@ -33,6 +33,8 @@ function activeVial(opts: {
   startingMl?: number | null
   drawsUsed?: number
   depleted?: boolean
+  replacedAt?: string
+  finishedAt?: string
 }): Vial {
   return vial({
     id: opts.id,
@@ -50,6 +52,8 @@ function activeVial(opts: {
     startingMl: opts.startingMl,
     drawsUsed: opts.drawsUsed,
     notes: opts.notes,
+    replacedAt: opts.replacedAt,
+    finishedAt: opts.finishedAt,
   })
 }
 
@@ -64,8 +68,11 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 16.67,
       opened,
-      remainingMg: 50,
-      notes: 'Vial A · 50 mg / 3 mL · 16.67 mg/mL · 2.5 mg = 15 u',
+      remainingMg: 0,
+      depleted: true,
+      replacedAt: '2026-09-13',
+      finishedAt: '2026-09-13',
+      notes: 'Vial A · replaced Sept 13. Archived.',
     }),
     activeVial({
       id: 'vial-ss31-b',
@@ -86,8 +93,11 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 3.33,
       opened,
-      remainingMg: 10,
-      notes: 'Vial A · 10 mg / 3 mL (old recon)',
+      remainingMg: 0,
+      depleted: true,
+      replacedAt: '2026-09-13',
+      finishedAt: '2026-09-13',
+      notes: 'Vial A · replaced Sept 13. Archived. Old 10 mg / 3 mL recon.',
     }),
     activeVial({
       id: 'vial-aod-b',
@@ -259,6 +269,8 @@ function mergeVialTemplates(existing: Vial[], templates: Vial[]): Vial[] {
         compoundId: prev.compoundId || t.compoundId,
         notes: t.notes,
         startingMl: prev.startingMl ?? t.startingMl,
+        replacedAt: t.replacedAt ?? prev.replacedAt,
+        finishedAt: t.finishedAt ?? prev.finishedAt,
       })
       byId.delete(t.id)
     } else {

@@ -60,6 +60,7 @@ function normalizeVial(raw: Partial<Vial> & { id?: string }): Vial | null {
     createdAt,
     depleted: raw.depleted || (compoundId !== 'test-cyp' && remainingMg <= 0.001),
     finishedAt: raw.finishedAt,
+    replacedAt: raw.replacedAt,
     remainingMl: raw.remainingMl,
     startingMl: raw.startingMl,
     drawsUsed: raw.drawsUsed,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATE } from '../constants/defaults'
 import { getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
 import { getReconstitutionCompound } from '../constants/reconstitutionTable'
-import { getTitrationForDay } from '../utils/recompProtocol'
+import { formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
 import { getInjectionsForDate } from '../utils/peptideSchedule'
 import { u100UnitsFromMg } from '../utils/doseMath'
 import {
@@ -82,6 +82,22 @@ describe('90-day protocol definition', () => {
     const reta = peptides.find((p) => p.id === 'retatrutide')!
     expect(getTitrationForDay(tesa, 35)?.syringeUnits).toBe(21)
     expect(getTitrationForDay(reta, 35)?.syringeUnits).toBe(80)
+  })
+
+  it('Active stack uses Week 4 doses not Week 1 starting labels', () => {
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const now = new Date(2026, 8, 14)
+    const tesa = peptides.find((p) => p.id === 'tesamorelin')!
+    const aod = peptides.find((p) => p.id === 'aod9604')!
+    const reta = peptides.find((p) => p.id === 'retatrutide')!
+    const amino = peptides.find((p) => p.id === 'amino1mq')!
+    expect(formatCurrentStackDose(tesa, '2026-08-23', now)).toContain('1 mg')
+    expect(formatCurrentStackDose(tesa, '2026-08-23', now)).toContain('15 u')
+    expect(formatCurrentStackDose(aod, '2026-08-23', now)).toContain('1 mg')
+    expect(formatCurrentStackDose(aod, '2026-08-23', now)).toContain('20 u')
+    expect(formatCurrentStackDose(reta, '2026-08-23', now)).toContain('2.5 mg')
+    expect(formatCurrentStackDose(reta, '2026-08-23', now)).toContain('50 u')
+    expect(formatCurrentStackDose(amino, '2026-08-23', now)).toContain('starts Tue Sept 15')
   })
 
   it('AOD is 30 u through Sept 12 and 20 u from Sept 13 on the 10 mg / 2 mL vial', () => {

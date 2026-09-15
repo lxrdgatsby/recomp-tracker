@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTrackerStore } from '../hooks/useTrackerStore'
 import type { Peptide, TitrationWeek } from '../types'
-import { getTitrationForDay } from '../utils/recompProtocol'
+import { formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
 import { loadDoseLogs } from '../utils/inventoryStorage'
 import { EmptyState } from './ui/EmptyState'
 import { VialInventory } from './inventory/VialInventory'
@@ -84,7 +84,7 @@ export default function PeptidesPage() {
         .map((peptide) => {
           const step = getNextTitrationStep(peptide, dayInCycle)
           if (!step) return null
-          const currentTier = getTitrationForDay(peptide, dayInCycle)
+          const currentTier = getTitrationForDay(peptide, dayInCycle, new Date())
           return {
             peptide,
             current: currentTier ?? step.current,
@@ -120,7 +120,14 @@ export default function PeptidesPage() {
       {/* Active stack summary */}
       <section className={`mb-6 ${card}`}>
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-medium text-white">Active stack</h2>
+          <h2 className="text-sm font-medium text-white">
+            Active stack
+            {Number.isFinite(dayInCycle) ? (
+              <span className="ml-2 font-normal text-slate-500">
+                Week {Math.floor(dayInCycle / 7) + 1}
+              </span>
+            ) : null}
+          </h2>
           <Link
             to="/app/profile"
             className="text-xs text-emerald-400 hover:text-emerald-300"
@@ -145,7 +152,7 @@ export default function PeptidesPage() {
               >
                 <span className="font-medium text-white">{peptide.name}</span>
                 <span className="truncate text-xs text-slate-500">
-                  {peptide.dose}
+                  {formatCurrentStackDose(peptide, profile.startDate)}
                   {peptide.protocol?.reconstituted === false && (
                     <span className="ml-2 text-amber-400">Not mixed</span>
                   )}

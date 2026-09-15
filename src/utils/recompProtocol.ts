@@ -379,6 +379,41 @@ export function rebuildPeptideForVialSize(
   }
 }
 
+export function formatCurrentStackDose(
+  peptide: Peptide,
+  startDate: string,
+  now = new Date()
+): string {
+  if (peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)) {
+    return `${peptide.dose} weekly`
+  }
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const [sy, sm, sd] = startDate.slice(0, 10).split('-').map(Number)
+  const start = new Date(sy, (sm ?? 1) - 1, sd ?? 1)
+  const cycleDay = Math.max(
+    0,
+    Math.round((today.getTime() - start.getTime()) / 86_400_000)
+  )
+  const tier = getTitrationForDay(peptide, cycleDay, today)
+  const mg = tier?.doseMg ?? peptide.protocol?.startingDoseMg
+  const units = tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
+  const freq =
+    peptide.frequency === 'weekly'
+      ? 'weekly'
+      : peptide.frequency === 'mwf'
+        ? 'M/W/F'
+        : peptide.timing?.split(',')[0] || 'daily'
+
+  if (peptide.id === 'amino1mq' && todayIso < '2026-09-15') {
+    return '2.5 mg · 15 u · starts Tue Sept 15'
+  }
+  if (mg == null) return peptide.dose
+  const amount = mg < 1 ? `${Math.round(mg * 1000)} mcg` : `${mg} mg`
+  const unitPart = units != null && units > 0 ? ` · ${units} u` : ''
+  return `${amount}${unitPart} · ${freq}`
+}
+
 export function getCurrentInjectionDose(
   peptide: Peptide,
   startDate: string

@@ -16,13 +16,19 @@ export function vialsForPeptide(vials: Vial[], peptideId: string): Vial[] {
   return vials.filter((v) => peptideIdOf(v) === peptideId)
 }
 
+export function isReplacedVial(vial: Vial): boolean {
+  return Boolean(vial.replacedAt) || vial.id === 'vial-ss31-a' || vial.id === 'vial-aod-a'
+}
+
 export function getActiveVialForPeptide(vials: Vial[], peptideId: string): Vial | undefined {
-  return vials.find(
+  const live = vials.filter(
     (v) =>
       peptideIdOf(v) === peptideId &&
+      !isReplacedVial(v) &&
       !v.depleted &&
       (peptideId === 'test-cyp' || v.remainingMg > 0.001)
   )
+  return [...live].sort((a, b) => openedIso(b).localeCompare(openedIso(a)))[0]
 }
 
 export function doseMgForDate(
@@ -60,19 +66,25 @@ export function vialIdForDate(
     if (day < '2026-09-13') {
       return matches.find((v) => v.id === 'vial-ss31-a')?.id ?? oldestOnOrBefore(matches, day)
     }
-    return matches.find((v) => v.id === 'vial-ss31-b')?.id ?? latestOnOrBefore(matches, day)
+    return (
+      matches.find((v) => v.id === 'vial-ss31-b' && !isReplacedVial(v))?.id ??
+      latestLiveOnOrBefore(matches, day)
+    )
   }
   if (peptideId === 'aod9604') {
     if (day < '2026-09-13') {
       return matches.find((v) => v.id === 'vial-aod-a')?.id ?? oldestOnOrBefore(matches, day)
     }
-    return matches.find((v) => v.id === 'vial-aod-b')?.id ?? latestOnOrBefore(matches, day)
+    return (
+      matches.find((v) => v.id === 'vial-aod-b' && !isReplacedVial(v))?.id ??
+      latestLiveOnOrBefore(matches, day)
+    )
   }
   if (peptideId === 'amino1mq') {
     if (day < AMINO_1MQ_START_DATE) return undefined
     return matches.find((v) => v.id === 'vial-amino1mq-a')?.id ?? latestOnOrBefore(matches, day)
   }
-  return latestOnOrBefore(matches, day)
+  return latestLiveOnOrBefore(matches, day)
 }
 
 function openedIso(vial: Vial): string {
@@ -101,13 +113,18 @@ function latestOnOrBefore(vials: Vial[], date: string): string | undefined {
   return sorted[0]?.id
 }
 
+function latestLiveOnOrBefore(vials: Vial[], date: string): string | undefined {
+  const live = vials.filter((v) => !isReplacedVial(v))
+  return latestOnOrBefore(live.length ? live : vials, date)
+}
+
 export function remainingDosesForVial(
   vial: Vial,
   peptide: Peptide | undefined,
   startDate: string,
   fromDate = new Date()
 ): number {
-  if (vial.remainingMg <= 0.001) return 0
+  if (isReplacedVial(vial) || vial.remainingMg <= 0.001) return 0
   if (!peptide || peptide.id === 'test-cyp') return 0
   if (peptide.id === 'amino1mq') {
     let remaining = vial.remainingMg
@@ -173,6 +190,15 @@ export function recalculateVialInventory(opts: {
 
   return vials.map((vial) => {
     const isTest = peptideIdOf(vial) === 'test-cyp'
+    if (isReplacedVial(vial)) {
+      return {
+        ...vial,
+        remainingMg: 0,
+        depleted: true,
+        replacedAt: vial.replacedAt || '2026-09-13',
+        finishedAt: vial.finishedAt || vial.replacedAt || '2026-09-13',
+      }
+    }
     const spent = used.get(vial.id) ?? { mg: 0, ml: 0, draws: 0 }
     const remainingMg = isTest
       ? vial.remainingMg
@@ -210,7 +236,7 @@ export function applyVialToggle(opts: {
   if (peptideId === 'amino1mq' && date < AMINO_1MQ_START_DATE) {
     return { vials: opts.vials, doseMg: 0, logs: opts.logs }
   }
-  const vialId = vialIdForDate(opts.vials, peptideId, date)
+  const vialId = getActiveVialForPeptide(opts.vials, peptideId)?.id
   const logs = turningOn
     ? [
         ...opts.logs.filter((l) => !(l.date.slice(0, 10) === date && l.peptideId === peptideId)),

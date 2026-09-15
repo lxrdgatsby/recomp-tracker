@@ -18,17 +18,14 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     localStorage.clear()
   })
 
-  it('starts every vial full when nothing is marked Done', () => {
+  it('keeps SS-31 and AOD Vial A replaced even with no Done logs', () => {
     const vials = buildLxrdgatsbyVials()
-    expect(vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(50)
-    expect(vials.find((v) => v.id === 'vial-ss31-a')?.depleted).toBe(false)
-    expect(vials.find((v) => v.id === 'vial-aod-a')?.remainingMg).toBe(10)
-    expect(vials.find((v) => v.id === 'vial-reta-a')?.remainingMg).toBe(10)
-    expect(vials.find((v) => v.id === 'vial-bpc-a')?.remainingMg).toBe(10)
-    expect(vials.find((v) => v.id === 'vial-klow-a')?.remainingMg).toBe(10)
-    expect(vials.find((v) => v.id === 'vial-amino1mq-a')?.remainingMg).toBe(50)
+    expect(vials.find((v) => v.id === 'vial-ss31-a')?.replacedAt).toBe('2026-09-13')
+    expect(vials.find((v) => v.id === 'vial-aod-a')?.replacedAt).toBe('2026-09-13')
     expect(vials.find((v) => v.id === 'vial-ss31-b')?.remainingMg).toBe(50)
     expect(vials.find((v) => v.id === 'vial-aod-b')?.remainingMg).toBe(10)
+    expect(vials.find((v) => v.id === 'vial-reta-a')?.remainingMg).toBe(10)
+    expect(vials.find((v) => v.id === 'vial-amino1mq-a')?.remainingMg).toBe(50)
   })
 
   it('only subtracts Done logs, not missed scheduled days', () => {
@@ -47,10 +44,10 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
       peptides,
       startDate: '2026-08-23',
     })
-    expect(vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(45)
-    expect(vials.find((v) => v.id === 'vial-ss31-a')?.depleted).toBe(false)
+    expect(vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(0)
+    expect(vials.find((v) => v.id === 'vial-ss31-a')?.depleted).toBe(true)
     expect(vials.find((v) => v.id === 'vial-ss31-b')?.remainingMg).toBe(50)
-    expect(vials.find((v) => v.id === 'vial-aod-a')?.remainingMg).toBe(9.5)
+    expect(vials.find((v) => v.id === 'vial-aod-a')?.remainingMg).toBe(0)
     expect(vials.find((v) => v.id === 'vial-reta-a')?.remainingMg).toBe(7.5)
     expect(vials.find((v) => v.id === 'vial-reta-a')?.depleted).toBe(false)
     expect(vials.find((v) => v.id === 'vial-bpc-a')?.remainingMg).toBe(9.5)
@@ -96,8 +93,8 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     )
     const a = next?.vialInventory?.find((v) => v.id === 'vial-ss31-a')
     const b = next?.vialInventory?.find((v) => v.id === 'vial-ss31-b')
-    expect(a?.remainingMg).toBe(47.5)
-    expect(a?.depleted).toBe(false)
+    expect(a?.remainingMg).toBe(0)
+    expect(a?.replacedAt).toBe('2026-09-13')
     expect(b?.remainingMg).toBe(47.5)
     expect(next?.vialInventory?.find((v) => v.id === 'vial-amino1mq-a')?.remainingMg).toBe(50)
   })
@@ -114,18 +111,19 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
       turningOn: true,
       logs: [],
     })
-    expect(first.vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(47.5)
+    expect(first.vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(0)
+    expect(first.vials.find((v) => v.id === 'vial-ss31-b')?.remainingMg).toBe(47.5)
     const second = applyVialToggle({
       vials: first.vials,
       peptides,
       startDate: '2026-08-23',
-      date: '2026-08-25',
+      date: '2026-09-14',
       peptideId: 'ss31',
       turningOn: true,
       logs: first.logs,
     })
-    expect(second.vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(45)
-    expect(second.vials.find((v) => v.id === 'vial-ss31-b')?.remainingMg).toBe(50)
+    expect(second.vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(0)
+    expect(second.vials.find((v) => v.id === 'vial-ss31-b')?.remainingMg).toBe(45)
   })
 
   it('does not pull 5-Amino-1MQ before Sept 15', () => {
