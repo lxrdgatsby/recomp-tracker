@@ -153,22 +153,18 @@ export function AppLayout() {
         (l) => l.date === date && l.peptideId === peptideId
       )
       const turningOn = !exists
-      const { vials, vialId, doseMg } = applyVialToggle({
-        vials: loadVials(),
+      const { vials, logs: injectionLogs } = applyVialToggle({
+        vials:
+          trackerState.vialInventory && trackerState.vialInventory.length > 0
+            ? trackerState.vialInventory
+            : loadVials(),
         peptides: trackerState.peptides,
         startDate: trackerState.profile.startDate,
         date,
         peptideId,
         turningOn,
+        logs: trackerState.injectionLogs,
       })
-      const injectionLogs = exists
-        ? trackerState.injectionLogs.filter(
-            (l) => !(l.date === date && l.peptideId === peptideId)
-          )
-        : [
-            ...trackerState.injectionLogs,
-            { date, peptideId, doseMg, vialId },
-          ]
       await persistState({
         ...trackerState,
         injectionLogs,

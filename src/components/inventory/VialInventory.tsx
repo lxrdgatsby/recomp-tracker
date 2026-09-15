@@ -112,11 +112,17 @@ export function VialInventory({
   }, [peptides])
 
   const active = useMemo(
-    () => vials.filter((v) => !v.depleted && (v.compoundId === 'test-cyp' || v.remainingMg > 0.001)),
+    () =>
+      vials.filter(
+        (v) => v.compoundId === 'test-cyp' || v.remainingMg > 0.001
+      ),
     [vials]
   )
   const finished = useMemo(
-    () => vials.filter((v) => v.depleted || (v.compoundId !== 'test-cyp' && v.remainingMg <= 0.001)),
+    () =>
+      vials.filter(
+        (v) => v.compoundId !== 'test-cyp' && v.remainingMg <= 0.001
+      ),
     [vials]
   )
 
@@ -218,7 +224,7 @@ export function VialInventory({
   const renderCard = (vial: Vial) => {
     const peptideId = peptideIdOf(vial)
     const peptide = peptideById.get(peptideId)
-    const empty = Boolean(vial.depleted) || (peptideId !== 'test-cyp' && vial.remainingMg <= 0.001)
+    const empty = peptideId !== 'test-cyp' && vial.remainingMg <= 0.001
     const dose = peptide
       ? doseMgForDate(peptide, todayIso, planStart)
       : { doseMg: doseHintFor(vial.compoundName), units: 0 }
@@ -400,6 +406,9 @@ export function VialInventory({
           <h2 className="text-xl font-semibold text-white">Vial Inventory</h2>
           <p className="mt-1 text-sm text-slate-400">
             Powder vs mixed · concentration · remaining doses
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Remaining is based on checked doses only. Missed days stay in the vial.
           </p>
         </div>
         <button

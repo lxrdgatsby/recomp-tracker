@@ -5,35 +5,11 @@ import {
   loadVials,
   saveVials,
 } from '../utils/inventoryStorage'
+import { recalculateVialInventory } from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { isLxrdgatsbyUser } from './protocolSeed'
 
-export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v2'
-export const VIAL_LEDGER_KEY = 'pt-v2-vial-ledger'
-/** Remaining already includes scheduled use through this date. */
-export const VIAL_SEED_THROUGH = '2026-09-14'
-
-type Ledger = Record<string, { vialId: string; doseMg: number; doseMl?: number }>
-
-function ledgerKey(date: string, peptideId: string): string {
-  return `${date}:${peptideId}`
-}
-
-export function loadVialLedger(): Ledger {
-  if (typeof localStorage === 'undefined') return {}
-  try {
-    const raw = localStorage.getItem(VIAL_LEDGER_KEY)
-    if (!raw) return {}
-    return JSON.parse(raw) as Ledger
-  } catch {
-    return {}
-  }
-}
-
-export function saveVialLedger(ledger: Ledger): void {
-  if (typeof localStorage === 'undefined') return
-  localStorage.setItem(VIAL_LEDGER_KEY, JSON.stringify(ledger))
-}
+export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v3'
 
 function vial(partial: Vial): Vial {
   const isTest = partial.compoundId === 'test-cyp'
@@ -41,34 +17,6 @@ function vial(partial: Vial): Vial {
     ...partial,
     depleted: partial.depleted ?? (!isTest && partial.remainingMg <= 0.001),
   }
-}
-
-function emptyVial(opts: {
-  id: string
-  peptideId: string
-  name: string
-  vialMg: number
-  bacMl: number
-  conc: number
-  opened: string
-  emptyDate: string
-  notes?: string
-}): Vial {
-  return vial({
-    id: opts.id,
-    compoundName: opts.name,
-    compoundId: opts.peptideId,
-    vialMg: opts.vialMg,
-    bacWaterMl: opts.bacMl,
-    concentrationMgPerMl: opts.conc,
-    mixedDate: opts.opened,
-    isPowder: false,
-    remainingMg: 0,
-    createdAt: `${opts.opened}T12:00:00.000Z`,
-    depleted: true,
-    finishedAt: opts.emptyDate,
-    notes: opts.notes,
-  })
 }
 
 function activeVial(opts: {
@@ -108,7 +56,7 @@ function activeVial(opts: {
 export function buildLxrdgatsbyVials(): Vial[] {
   const opened = CYCLE_START_DATE
   return [
-    emptyVial({
+    activeVial({
       id: 'vial-ss31-a',
       peptideId: 'ss31',
       name: 'SS-31 (Elamipretide)',
@@ -116,8 +64,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 16.67,
       opened,
-      emptyDate: '2026-09-13',
-      notes: 'Vial A · ran out Sept 13, 2026',
+      remainingMg: 50,
+      notes: 'Vial A · 50 mg / 3 mL · 16.67 mg/mL · 2.5 mg = 15 u',
     }),
     activeVial({
       id: 'vial-ss31-b',
@@ -127,10 +75,10 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 16.67,
       opened: '2026-09-13',
-      remainingMg: 45,
-      notes: 'Vial B · mixed Sept 13. Sept 13 + Sept 14 already drawn (5 mg).',
+      remainingMg: 50,
+      notes: 'Vial B · mixed Sept 13 · 50 mg / 3 mL',
     }),
-    emptyVial({
+    activeVial({
       id: 'vial-aod-a',
       peptideId: 'aod9604',
       name: 'AOD-9604',
@@ -138,8 +86,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 3.33,
       opened,
-      emptyDate: '2026-09-13',
-      notes: 'Vial A · 10 mg / 3 mL · ran out Sept 13, 2026',
+      remainingMg: 10,
+      notes: 'Vial A · 10 mg / 3 mL (old recon)',
     }),
     activeVial({
       id: 'vial-aod-b',
@@ -149,8 +97,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 2,
       conc: 5,
       opened: '2026-09-13',
-      remainingMg: 8,
-      notes: 'Vial B · 10 mg / 2 mL = 5 mg/mL · 1.0 mg = 20 u. Sept 13 + Sept 14 already drawn.',
+      remainingMg: 10,
+      notes: 'Vial B · 10 mg / 2 mL = 5 mg/mL · 1.0 mg = 20 u',
     }),
     activeVial({
       id: 'vial-amino1mq-a',
@@ -161,9 +109,9 @@ export function buildLxrdgatsbyVials(): Vial[] {
       conc: 16.67,
       opened: '2026-09-14',
       remainingMg: 50,
-      notes: 'Mixed Sept 14. First dose Tue Sept 15. Do not decrement today.',
+      notes: 'Mixed Sept 14. First dose Tue Sept 15.',
     }),
-    emptyVial({
+    activeVial({
       id: 'vial-reta-a',
       peptideId: 'retatrutide',
       name: 'Retatrutide',
@@ -171,8 +119,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 2,
       conc: 5,
       opened,
-      emptyDate: '2026-09-13',
-      notes: 'Vial A · 2.5 mg × 4 Sundays (Aug 23, 30, Sept 6, 13) = 10 mg. Add a replacement vial.',
+      remainingMg: 10,
+      notes: 'Vial A · 10 mg / 2 mL · 2.5 mg = 50 u weekly',
     }),
     activeVial({
       id: 'vial-tesa-a',
@@ -182,10 +130,10 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 6.67,
       opened,
-      remainingMg: 0.5,
-      notes: 'Week 1 0.5 mg × 7 + Aug 30–Sept 14 1.0 mg × 16 = 19.5 mg used. Almost empty.',
+      remainingMg: 20,
+      notes: 'Vial A · 20 mg / 3 mL',
     }),
-    emptyVial({
+    activeVial({
       id: 'vial-bpc-a',
       peptideId: 'bpc157',
       name: 'BPC-157',
@@ -193,8 +141,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 2,
       conc: 5,
       opened,
-      emptyDate: '2026-09-11',
-      notes: 'Vial A · 0.5 mg daily emptied after 20 days. Add a replacement vial.',
+      remainingMg: 10,
+      notes: 'Vial A · 10 mg / 2 mL · 500 mcg = 10 u',
     }),
     activeVial({
       id: 'vial-ghk-a',
@@ -204,10 +152,10 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 33.3,
       opened,
-      remainingMg: 77,
-      notes: '1 mg daily × 23 days = 23 mg used.',
+      remainingMg: 100,
+      notes: 'Vial A · 100 mg / 3 mL · 1 mg = 3 u',
     }),
-    emptyVial({
+    activeVial({
       id: 'vial-klow-a',
       peptideId: 'klow',
       name: 'KLOW',
@@ -215,8 +163,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 3.33,
       opened,
-      emptyDate: '2026-09-11',
-      notes: 'Vial A · 0.5 mg daily emptied after 20 days. Add a replacement vial.',
+      remainingMg: 10,
+      notes: 'Vial A · 10 mg / 3 mL · 0.5 mg = 15 u',
     }),
     activeVial({
       id: 'vial-mots-a',
@@ -226,8 +174,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 3,
       conc: 3.33,
       opened,
-      remainingMg: 5.5,
-      notes: '0.5 mg M/W/F × 9 doses through Sept 14 (no MOTS Sept 14) = 4.5 mg used.',
+      remainingMg: 10,
+      notes: 'Vial A · 10 mg / 3 mL · 0.5 mg M/W/F',
     }),
     activeVial({
       id: 'vial-nad-a',
@@ -237,8 +185,8 @@ export function buildLxrdgatsbyVials(): Vial[] {
       bacMl: 5,
       conc: 200,
       opened,
-      remainingMg: 550,
-      notes: '50 mg M/W/F × 9 doses = 450 mg used.',
+      remainingMg: 1000,
+      notes: 'Vial A · 1000 mg / 5 mL · 50 mg M/W/F',
     }),
     activeVial({
       id: 'vial-test-a',
@@ -250,86 +198,18 @@ export function buildLxrdgatsbyVials(): Vial[] {
       opened,
       remainingMg: 0,
       depleted: false,
-      drawsUsed: 4,
+      drawsUsed: 0,
       startingMl: null,
       remainingMl: null,
       notes:
-        '4 draws of 0.75 mL used (Aug 23, 30, Sept 6, 13). Set starting mL to track remaining volume.',
+        'Draws counted from checked Sunday doses only. Set starting mL to track remaining volume.',
     }),
   ]
-}
-
-function eachDate(from: string, to: string): string[] {
-  const out: string[] = []
-  const [fy, fm, fd] = from.split('-').map(Number)
-  const end = to
-  const cur = new Date(fy, (fm ?? 1) - 1, fd ?? 1)
-  for (let i = 0; i < 120; i++) {
-    const y = cur.getFullYear()
-    const m = String(cur.getMonth() + 1).padStart(2, '0')
-    const d = String(cur.getDate()).padStart(2, '0')
-    const iso = `${y}-${m}-${d}`
-    if (iso > end) break
-    out.push(iso)
-    cur.setDate(cur.getDate() + 1)
-  }
-  return out
-}
-
-function isSunday(iso: string): boolean {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, (m ?? 1) - 1, d ?? 1).getDay() === 0
-}
-
-function isMwf(iso: string): boolean {
-  const [y, m, d] = iso.split('-').map(Number)
-  const dow = new Date(y, (m ?? 1) - 1, d ?? 1).getDay()
-  return dow === 1 || dow === 3 || dow === 5
-}
-
-export function buildLxrdgatsbyVialLedger(): Ledger {
-  const ledger: Ledger = {}
-  const mark = (date: string, peptideId: string, vialId: string, doseMg: number, doseMl?: number) => {
-    ledger[ledgerKey(date, peptideId)] = { vialId, doseMg, doseMl }
-  }
-
-  for (const date of eachDate(CYCLE_START_DATE, VIAL_SEED_THROUGH)) {
-    if (date <= '2026-09-12') mark(date, 'ss31', 'vial-ss31-a', 2.5)
-    if (date === '2026-09-13' || date === '2026-09-14') mark(date, 'ss31', 'vial-ss31-b', 2.5)
-
-    if (date <= '2026-09-12') mark(date, 'aod9604', 'vial-aod-a', date < '2026-08-30' ? 0.5 : 1)
-    if (date === '2026-09-13' || date === '2026-09-14') mark(date, 'aod9604', 'vial-aod-b', 1)
-
-    if (date < '2026-08-30') mark(date, 'tesamorelin', 'vial-tesa-a', 0.5)
-    else mark(date, 'tesamorelin', 'vial-tesa-a', 1)
-
-    if (date <= '2026-09-11') {
-      mark(date, 'bpc157', 'vial-bpc-a', 0.5)
-      mark(date, 'klow', 'vial-klow-a', 0.5)
-    }
-
-    mark(date, 'ghkcu', 'vial-ghk-a', 1)
-
-    if (isMwf(date) && date !== '2026-09-14') {
-      mark(date, 'motsc', 'vial-mots-a', 0.5)
-      mark(date, 'nad', 'vial-nad-a', 50)
-    }
-
-    if (isSunday(date)) {
-      mark(date, 'retatrutide', 'vial-reta-a', 2.5)
-      mark(date, 'test-cyp', 'vial-test-a', 0, 0.75)
-    }
-  }
-  return ledger
 }
 
 function looksLikeLxrdgatsbyStack(state: TrackerState): boolean {
   const ids = new Set(state.peptides.map((p) => p.id))
   return ids.has('test-cyp') && ids.has('klow') && ids.has('tesamorelin')
-}
-
-function hasSeededVialIds(vials: Vial[]): boolean {
-  return vials.some((v) => v.id === 'vial-ss31-b' || v.id === 'vial-amino1mq-a')
 }
 
 function toCalculatorVial(v: Vial): InventoryVial {
@@ -348,12 +228,9 @@ function toCalculatorVial(v: Vial): InventoryVial {
   }
 }
 
-function persistLocalVials(vials: Vial[], resetLedger = false) {
+function persistLocalVials(vials: Vial[]) {
   saveVials(vials)
   saveInventoryVials(vials.map(toCalculatorVial))
-  if (resetLedger || !localStorage.getItem(VIAL_LEDGER_KEY)) {
-    saveVialLedger(buildLxrdgatsbyVialLedger())
-  }
   try {
     localStorage.setItem(VIAL_SEED_FLAG, 'true')
   } catch {
@@ -364,6 +241,32 @@ function persistLocalVials(vials: Vial[], resetLedger = false) {
   } catch {
     /* ignore */
   }
+}
+
+function mergeVialTemplates(existing: Vial[], templates: Vial[]): Vial[] {
+  const byId = new Map(existing.map((v) => [v.id, v]))
+  const out: Vial[] = []
+  for (const t of templates) {
+    const prev = byId.get(t.id)
+    if (prev) {
+      out.push({
+        ...t,
+        mixedDate: prev.mixedDate || t.mixedDate,
+        bacWaterMl: prev.bacWaterMl || t.bacWaterMl,
+        vialMg: prev.vialMg || t.vialMg,
+        concentrationMgPerMl: prev.concentrationMgPerMl || t.concentrationMgPerMl,
+        compoundName: prev.compoundName || t.compoundName,
+        compoundId: prev.compoundId || t.compoundId,
+        notes: t.notes,
+        startingMl: prev.startingMl ?? t.startingMl,
+      })
+      byId.delete(t.id)
+    } else {
+      out.push(t)
+    }
+  }
+  for (const extra of byId.values()) out.push(extra)
+  return out
 }
 
 export function applyLxrdgatsbyVialInventorySeed(
@@ -378,19 +281,14 @@ export function applyLxrdgatsbyVialInventorySeed(
 
   const fromState = current.vialInventory ?? []
   const fromStorage = loadVials()
-  const existing = hasSeededVialIds(fromState)
-    ? fromState
-    : hasSeededVialIds(fromStorage)
-      ? fromStorage
-      : []
-
-  if (existing.length > 0) {
-    persistLocalVials(existing, false)
-    if (current.vialInventory === existing) return null
-    return { ...current, vialInventory: existing }
-  }
-
-  const vials = buildLxrdgatsbyVials()
-  persistLocalVials(vials, true)
+  const existing = fromState.length > 0 ? fromState : fromStorage
+  const merged = mergeVialTemplates(existing, buildLxrdgatsbyVials())
+  const vials = recalculateVialInventory({
+    vials: merged,
+    logs: current.injectionLogs ?? [],
+    peptides: current.peptides,
+    startDate: current.profile.startDate || CYCLE_START_DATE,
+  })
+  persistLocalVials(vials)
   return { ...current, vialInventory: vials }
 }

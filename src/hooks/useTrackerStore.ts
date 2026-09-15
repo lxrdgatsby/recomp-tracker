@@ -3,7 +3,6 @@ import type { DoseLog, SavedProtocolData } from '../components/DoseCalculator'
 import { useAuth } from '../contexts/AuthContext'
 import { applyProtocolSave } from '../utils/protocolSave'
 import type {
-  InjectionLog,
   Peptide,
   Profile,
   TrackerState,
@@ -11,6 +10,8 @@ import type {
 } from '../types'
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
+import { loadVials } from '../utils/inventoryStorage'
+import { applyVialToggle } from '../utils/vialUsage'
 import { usePersistTrackerState } from './usePersistTrackerState'
 
 export interface TrackerStoreApi {
@@ -89,12 +90,19 @@ function useTrackerStoreApi(): TrackerStoreApi {
       const exists = trackerState.injectionLogs.some(
         (l) => l.date === date && l.peptideId === peptideId
       )
-      const injectionLogs: InjectionLog[] = exists
-        ? trackerState.injectionLogs.filter(
-            (l) => !(l.date === date && l.peptideId === peptideId)
-          )
-        : [...trackerState.injectionLogs, { date, peptideId }]
-      await persistState({ ...trackerState, injectionLogs })
+      const { vials, logs: injectionLogs } = applyVialToggle({
+        vials:
+          trackerState.vialInventory && trackerState.vialInventory.length > 0
+            ? trackerState.vialInventory
+            : loadVials(),
+        peptides: trackerState.peptides,
+        startDate: trackerState.profile.startDate,
+        date,
+        peptideId,
+        turningOn: !exists,
+        logs: trackerState.injectionLogs,
+      })
+      await persistState({ ...trackerState, injectionLogs, vialInventory: vials })
     },
     [trackerState, persistState]
   )
