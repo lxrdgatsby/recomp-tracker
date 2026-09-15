@@ -69,14 +69,19 @@ export function RemindersCard() {
           aria-checked={settings.enabled}
           aria-label="Toggle reminders"
           disabled={busy}
-          onClick={() => void run(() => setRemindersEnabled(!settings.enabled))}
-          className={`relative inline-flex h-7 w-12 shrink-0 items-center overflow-hidden rounded-full border-0 p-0 transition disabled:opacity-50 ${
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (busy) return
+            void run(() => setRemindersEnabled(!settings.enabled))
+          }}
+          className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer items-center overflow-hidden rounded-full border-0 p-0 touch-manipulation transition disabled:opacity-50 ${
             settings.enabled ? 'bg-emerald-500' : 'bg-zinc-700'
           }`}
         >
           <span
-            className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-              settings.enabled ? 'translate-x-6' : 'translate-x-1'
+            className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow transition-transform ${
+              settings.enabled ? 'translate-x-7' : 'translate-x-1'
             }`}
           />
         </button>
