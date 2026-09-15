@@ -3,10 +3,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { SAFETY_COPY } from '../../lib/protocolSeed'
 import {
   enableNotifications,
+  setRemindersEnabled,
+} from '../../lib/reminderEnable'
+import {
   getReminderSettings,
   getReminderStatusLabel,
   REMINDER_CHANGED_EVENT,
-  setRemindersEnabled,
   updateReminderTimes,
   type ReminderSettings,
 } from '../../lib/reminders'
