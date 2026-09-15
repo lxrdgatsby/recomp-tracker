@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTrackerStore } from '../hooks/useTrackerStore'
+import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import type { Peptide, TitrationWeek } from '../types'
 import { formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
 import { loadDoseLogs } from '../utils/inventoryStorage'
@@ -37,6 +38,7 @@ function getNextTitrationStep(
 export default function PeptidesPage() {
   const state = useTrackerStore((store) => store.state)
   const addInjectionLog = useTrackerStore((store) => store.addInjectionLog)
+  const { persistState } = usePersistTrackerState()
   const saveActiveProtocol = useTrackerStore((store) => store.saveActiveProtocol)
   const setPeptides = useTrackerStore((store) => store.setPeptides)
   const { userProfile } = useAuth()
@@ -168,10 +170,14 @@ export default function PeptidesPage() {
           peptides={peptides}
           startDate={profile.startDate}
           initialVials={state.vialInventory}
+          injectionLogs={state.injectionLogs}
           defaultDoseByName={Object.fromEntries(
             peptides.map((p) => [p.name, p.protocol?.startingDoseMg ?? 0.5])
           )}
           onChange={() => setLogTick((n) => n + 1)}
+          onInventoryChange={(next) => {
+            void persistState({ ...state, vialInventory: next })
+          }}
         />
       </div>
 

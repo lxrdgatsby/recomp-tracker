@@ -5,9 +5,13 @@ import {
   buildLxrdgatsbyVials,
 } from './vialInventorySeed'
 import {
+  addReplacementVial,
   applyVialToggle,
+  getActiveVialForPeptide,
+  isReplacedVial,
   recalculateVialInventory,
   remainingDosesForVial,
+  retireVial,
   vialIdForDate,
 } from '../utils/vialUsage'
 import { getInjectionsForDate } from '../utils/peptideSchedule'
@@ -124,6 +128,28 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     })
     expect(second.vials.find((v) => v.id === 'vial-ss31-a')?.remainingMg).toBe(0)
     expect(second.vials.find((v) => v.id === 'vial-ss31-b')?.remainingMg).toBe(45)
+  })
+
+  it('Finished archives a live vial and Add replacement creates a new Mixed vial', () => {
+    const start = buildLxrdgatsbyVials()
+    const retired = retireVial(start, 'vial-reta-a', '2026-09-15')
+    const old = retired.find((v) => v.id === 'vial-reta-a')!
+    expect(old.remainingMg).toBe(0)
+    expect(old.replacedAt).toBe('2026-09-15')
+    expect(old.depleted).toBe(true)
+    const next = addReplacementVial(retired, old, {
+      vialMg: 10,
+      bacWaterMl: 2,
+      mixedDate: '2026-09-15',
+    })
+    const live = getActiveVialForPeptide(next, 'retatrutide')
+    expect(live?.id).not.toBe('vial-reta-a')
+    expect(live?.remainingMg).toBe(10)
+    expect(live?.bacWaterMl).toBe(2)
+    expect(live?.isPowder).toBe(false)
+    expect(next.find((v) => v.id === 'vial-reta-a')?.replacedAt).toBe('2026-09-15')
+    expect(isReplacedVial(next.find((v) => v.id === 'vial-ss31-a')!)).toBe(true)
+    expect(isReplacedVial(next.find((v) => v.id === 'vial-aod-a')!)).toBe(true)
   })
 
   it('does not pull 5-Amino-1MQ before Sept 15', () => {

@@ -10,7 +10,7 @@ import type {
 } from '../types'
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
-import { loadVials } from '../utils/inventoryStorage'
+import { loadVials, saveVials } from '../utils/inventoryStorage'
 import { applyVialToggle } from '../utils/vialUsage'
 import { usePersistTrackerState } from './usePersistTrackerState'
 
@@ -102,6 +102,7 @@ function useTrackerStoreApi(): TrackerStoreApi {
         turningOn: !exists,
         logs: trackerState.injectionLogs,
       })
+      saveVials(vials)
       await persistState({ ...trackerState, injectionLogs, vialInventory: vials })
     },
     [trackerState, persistState]

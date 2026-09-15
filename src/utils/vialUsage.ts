@@ -1,8 +1,10 @@
 import { AMINO_1MQ_START_DATE } from '../constants/reconstitutionTable'
+import { generateId } from '../lib/generateId'
 import type { InjectionLog, Peptide } from '../types'
 import type { Vial } from '../types/v2'
 import { getInjectionsForDate, parseLocalYmd } from './peptideSchedule'
 import { getTitrationForDay } from './recompProtocol'
+import { calcConcentrationMgPerMl } from './vialMath'
 
 function roundMg(n: number): number {
   return Math.round(n * 1000) / 1000
@@ -251,4 +253,84 @@ export function applyVialToggle(opts: {
     startDate,
   })
   return { vials, vialId, doseMg: dose.doseMg, logs }
+}
+
+function todayIsoDate(now = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+export function retireVial(
+  vials: Vial[],
+  id: string,
+  date = todayIsoDate()
+): Vial[] {
+  return vials.map((vial) =>
+    vial.id === id
+      ? {
+          ...vial,
+          remainingMg: 0,
+          depleted: true,
+          replacedAt: vial.replacedAt || date,
+          finishedAt: date,
+        }
+      : vial
+  )
+}
+
+export function addReplacementVial(
+  vials: Vial[],
+  oldVial: Vial,
+  input: {
+    vialMg: number
+    bacWaterMl: number
+    mixedDate: string
+    notes?: string
+  }
+): Vial[] {
+  const date = input.mixedDate.slice(0, 10)
+  const archived = retireVial(vials, oldVial.id, date)
+  const conc = calcConcentrationMgPerMl(input.vialMg, input.bacWaterMl)
+  const next: Vial = {
+    id: generateId(),
+    compoundName: oldVial.compoundName,
+    compoundId: oldVial.compoundId,
+    vialMg: input.vialMg,
+    bacWaterMl: input.bacWaterMl,
+    concentrationMgPerMl: conc,
+    mixedDate: date,
+    isPowder: false,
+    remainingMg: input.vialMg,
+    notes: input.notes?.trim() || undefined,
+    createdAt: new Date().toISOString(),
+    depleted: false,
+  }
+  return [next, ...archived.filter((v) => v.id !== next.id)]
+}
+
+export function applyVialEdits(
+  vials: Vial[],
+  id: string,
+  patch: Partial<Vial>,
+  logs: InjectionLog[],
+  peptides: Peptide[],
+  startDate: string
+): Vial[] {
+  const patched = vials.map((vial) => {
+    if (vial.id !== id) return vial
+    const next = { ...vial, ...patch, id: vial.id }
+    if (!next.isPowder && next.vialMg > 0 && next.bacWaterMl > 0) {
+      next.concentrationMgPerMl = calcConcentrationMgPerMl(
+        next.vialMg,
+        next.bacWaterMl
+      )
+    }
+    if (next.isPowder) next.concentrationMgPerMl = 0
+    return next
+  })
+  return recalculateVialInventory({
+    vials: patched,
+    logs,
+    peptides,
+    startDate,
+  })
 }

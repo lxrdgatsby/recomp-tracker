@@ -15,7 +15,7 @@ import type { DoseLog } from '../components/DoseCalculator'
 import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
-import { loadVials } from '../utils/inventoryStorage'
+import { loadVials, saveVials } from '../utils/inventoryStorage'
 import { applyVialToggle } from '../utils/vialUsage'
 
 const ROUTE_MAP: Record<string, ViewId> = {
@@ -165,6 +165,7 @@ export function AppLayout() {
         turningOn,
         logs: trackerState.injectionLogs,
       })
+      saveVials(vials)
       await persistState({
         ...trackerState,
         injectionLogs,
