@@ -22,48 +22,69 @@ export const RECONSTITUTION_QUIZ: QuizQuestion[] = [
   {
     id: 'bac-5mg',
     prompt:
-      'For a 5mg peptide vial, how many units of bacteriostatic water should you draw into the vial using a U-100 insulin syringe for proper potency?',
+      'For a 5mg peptide vial, how many units of bacteriostatic water should you draw into the vial using a U-100 insulin syringe?',
     options: [
-      { id: '50', label: '50 units' },
-      { id: '100', label: '100 units' },
-      { id: '200', label: '200 units' },
-      { id: '300', label: '300 units' },
+      { id: '50', label: '50 units (0.5mL)' },
+      { id: '100', label: '100 units (1mL)' },
+      { id: '200', label: '200 units (2mL)' },
+      { id: '300', label: '300 units (3mL)' },
     ],
     correctOptionId: '100',
-    explanation:
-      'A 5mg vial uses 100 units of BAC (1ml) — standard for proper concentration with a U-100 syringe.',
+    explanation: 'A 5mg vial uses 100 units of BAC (1mL).',
   },
   {
     id: 'bac-10mg',
-    prompt:
-      'For a 10mg peptide vial, how many units of bacteriostatic water should you add?',
+    prompt: 'For a 10mg peptide vial, how much bacteriostatic water should you add?',
     options: [
-      { id: '100', label: '100 units' },
-      { id: '150', label: '150 units' },
-      { id: '200', label: '200 units' },
-      { id: '300', label: '300 units' },
+      { id: '100', label: '100 units (1mL)' },
+      { id: '200', label: '200 units (2mL)' },
+      { id: '300', label: '300 units (3mL)' },
+      { id: '500', label: '500 units (5mL)' },
     ],
     correctOptionId: '200',
-    explanation:
-      'A 10mg vial uses 200 units of BAC (2ml) for the correct concentration and dosing math.',
+    explanation: 'A 10mg vial uses 200 units of BAC (2mL).',
   },
   {
-    id: 'bac-15mg',
+    id: 'bac-15-20mg',
     prompt:
-      'For a 15mg peptide vial, how many units of bacteriostatic water should you add?',
+      'For a 15mg or 20mg peptide vial, how much bacteriostatic water should you add?',
     options: [
-      { id: '100', label: '100 units' },
-      { id: '200', label: '200 units' },
-      { id: '300', label: '300 units' },
-      { id: '400', label: '400 units' },
+      { id: '100', label: '100 units (1mL)' },
+      { id: '200', label: '200 units (2mL)' },
+      { id: '300', label: '300 units (3mL)' },
+      { id: '500', label: '500 units (5mL)' },
     ],
     correctOptionId: '300',
-    explanation:
-      'A 15mg vial uses 300 units of BAC (3ml) — match BAC volume to vial size for accurate syringe units.',
+    explanation: '15mg and 20mg vials both use 300 units of BAC (3mL).',
+  },
+  {
+    id: 'bac-50-100mg',
+    prompt:
+      'For a 50mg or 100mg peptide vial, how much bacteriostatic water should you add?',
+    options: [
+      { id: '200', label: '200 units (2mL)' },
+      { id: '300', label: '300 units (3mL)' },
+      { id: '400', label: '400 units (4mL)' },
+      { id: '500', label: '500 units (5mL)' },
+    ],
+    correctOptionId: '300',
+    explanation: '50mg and 100mg vials both use 300 units of BAC (3mL).',
+  },
+  {
+    id: 'bac-1000mg',
+    prompt: 'For a 1000mg peptide vial, how much bacteriostatic water should you add?',
+    options: [
+      { id: '200', label: '200 units (2mL)' },
+      { id: '300', label: '300 units (3mL)' },
+      { id: '500', label: '500 units (5mL)' },
+      { id: '1000', label: '1000 units (10mL)' },
+    ],
+    correctOptionId: '500',
+    explanation: 'A 1000mg vial uses 500 units of BAC (5mL).',
   },
 ]
 
-/** Skip the self-assessment question — only score the 3 BAC volume questions. */
+/** Skip the self-assessment question — only score the BAC volume questions. */
 export const RECONSTITUTION_QUIZ_SCORED = RECONSTITUTION_QUIZ.filter(
   (q) => q.id.startsWith('bac-') && q.id !== 'bac-familiarity'
 )
