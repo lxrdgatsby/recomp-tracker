@@ -68,7 +68,7 @@ export function RemindersCard() {
           role="switch"
           aria-checked={settings.enabled}
           aria-label="Toggle reminders"
-          disabled={busy || unsupported}
+          disabled={busy}
           onClick={() => void run(() => setRemindersEnabled(!settings.enabled))}
           className={`relative inline-flex h-7 w-12 shrink-0 items-center overflow-hidden rounded-full border-0 p-0 transition disabled:opacity-50 ${
             settings.enabled ? 'bg-emerald-500' : 'bg-zinc-700'
@@ -132,14 +132,20 @@ export function RemindersCard() {
           Status:{' '}
           <span
             className={
-              granted
+              settings.enabled
                 ? 'text-emerald-400'
                 : blocked
                   ? 'text-amber-300'
                   : 'text-slate-300'
             }
           >
-            {unsupported ? 'Not enabled' : status}
+            {settings.enabled
+              ? granted
+                ? 'On · notifications allowed'
+                : unsupported
+                  ? 'On · in-app only (add to Home Screen for lock-screen alerts)'
+                  : 'On · tap Enable notifications'
+              : status}
           </span>
         </p>
         {!granted && !unsupported && (
