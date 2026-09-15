@@ -6,6 +6,7 @@ export const AUTHORITATIVE_PEPTIDE_KNOWLEDGE = `=== AUTHORITATIVE PEPTIDE EXPERT
 
 RECONSTITUTION WITH BACTERIOSTATIC WATER (BAC):
 - Peptide vials arrive lyophilized (freeze-dried powder). Reconstitute with bacteriostatic water using a U-100 insulin syringe (100 units = 1ml).
+- Standard BAC water by vial size: 5mg = 100 units (1mL); 10mg = 200 units (2mL); 15mg = 300 units (3mL); 20mg = 300 units (3mL); 50mg = 300 units (3mL); 100mg = 300 units (3mL); 1000mg = 500 units (5mL).
 - Inject BAC water slowly down the inside wall of the vial. Do NOT shake — swirl gently until fully dissolved.
 - Concentration (mg/ml) = total vial mg ÷ BAC water ml. Syringe units per dose = (dose in mg ÷ concentration mg/ml) × 100.
 - NEVER confuse total vial size (e.g. 10mg in vial) with per-injection dose.

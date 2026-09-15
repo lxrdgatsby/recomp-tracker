@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { ChevronDown, Syringe } from 'lucide-react'
-import { RECONSTITUTION_FAQ_QUESTION } from '../../constants/reconstitutionGuide'
+import {
+  BAC_WATER_GUIDE_ROWS,
+  formatBacWaterGuideCompact,
+  RECONSTITUTION_FAQ_QUESTION,
+} from '../../constants/reconstitutionGuide'
 
 export { RECONSTITUTION_FAQ_QUESTION }
 
@@ -26,15 +30,12 @@ function GuideSections() {
       <section className="rounded-2xl border border-white/10 bg-black/20 p-4">
         <h4 className="mb-2 font-semibold text-emerald-400">2. Add BAC Water</h4>
         <ul className="mb-3 space-y-1 text-slate-300">
-          <li>
-            <strong className="text-white">5mg vial</strong>: 100 units (1mL)
-          </li>
-          <li>
-            <strong className="text-white">10mg vial</strong>: 200 units (2mL)
-          </li>
-          <li>
-            <strong className="text-white">15mg vial</strong>: 300 units (3mL)
-          </li>
+          {BAC_WATER_GUIDE_ROWS.map((row) => (
+            <li key={row.vialMg}>
+              <strong className="text-white">{row.vialMg}mg vial</strong>:{' '}
+              {row.units} units ({row.ml}mL)
+            </li>
+          ))}
         </ul>
         <p className="text-slate-300">
           Draw air into syringe, inject into BAC water vial, then draw exact
@@ -85,7 +86,7 @@ export function ReconstitutionGuide({
       <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-3 text-xs text-slate-400">
         <p className="font-medium text-teal-300">U-100 insulin syringe basics</p>
         <p className="mt-1">
-          100 units = 1mL. 5mg → 100u, 10mg → 200u, 15mg → 300u BAC water.
+          100 units = 1mL. {formatBacWaterGuideCompact()}.
         </p>
       </div>
     )
