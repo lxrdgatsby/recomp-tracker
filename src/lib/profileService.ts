@@ -153,6 +153,16 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
   return mapDbProfile(data as DbProfile)
 }
 
+/** Best-effort heartbeat so Admin “Last active” is real. */
+export async function touchLastActive(userId: string): Promise<void> {
+  if (!supabase || !userId) return
+  const { error } = await supabase
+    .from('profiles')
+    .update({ last_active_at: new Date().toISOString() })
+    .eq('id', userId)
+  if (error && /last_active_at/i.test(error.message)) return
+}
+
 export async function completeOnboarding(
   userId: string,
   username: string,

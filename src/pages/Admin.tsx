@@ -3,12 +3,23 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ADMIN_EMAIL, isAdminEmail } from '../constants/admin'
 import { supabase } from '../lib/supabase'
 
+type AdminUserRow = {
+  id: string
+  email: string | null
+  created_at: string | null
+  last_sign_in_at?: string | null
+  last_active_at?: string | null
+  updated_at?: string | null
+  username?: string | null
+}
+
 export default function Admin() {
-  const [users, setUsers] = useState<any[]>([])
-  const [filteredUsers, setFilteredUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<AdminUserRow[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<AdminUserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [authorized, setAuthorized] = useState(false)
   const [search, setSearch] = useState('')
+  const [loadError, setLoadError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -20,7 +31,8 @@ export default function Admin() {
     const filtered = users.filter(
       (u) =>
         u.email?.toLowerCase().includes(term) ||
-        u.id?.toLowerCase().includes(term)
+        u.id?.toLowerCase().includes(term) ||
+        u.username?.toLowerCase().includes(term)
     )
     setFilteredUsers(filtered)
   }, [search, users])
@@ -48,17 +60,34 @@ export default function Admin() {
     if (!supabase) return
 
     setLoading(true)
+    setLoadError(null)
+
+    const rpc = await supabase.rpc('admin_list_users')
+    if (!rpc.error && Array.isArray(rpc.data)) {
+      setUsers(rpc.data as AdminUserRow[])
+      setFilteredUsers(rpc.data as AdminUserRow[])
+      setLoading(false)
+      return
+    }
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, email, created_at, last_active_at, updated_at, username')
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error(error)
+      setLoadError(error.message)
+      setUsers([])
+      setFilteredUsers([])
     } else {
-      setUsers(data || [])
-      setFilteredUsers(data || [])
+      setUsers((data || []) as AdminUserRow[])
+      setFilteredUsers((data || []) as AdminUserRow[])
+      if (rpc.error) {
+        setLoadError(
+          `Auth user list RPC is not installed (${rpc.error.message}). Showing profiles rows only. Run supabase/migrations/004_admin_list_all_users.sql in the SQL Editor.`
+        )
+      }
     }
 
     setLoading(false)
@@ -66,6 +95,10 @@ export default function Admin() {
 
   const handleDeleteUser = async (userId: string, email: string) => {
     if (!supabase) return
+    if (isAdminEmail(email)) {
+      alert('The master admin account cannot be deleted.')
+      return
+    }
 
     if (
       !confirm(
@@ -75,10 +108,6 @@ export default function Admin() {
       return
     }
 
-    // Note: For production you should use a Supabase Edge Function
-    // with the service role key for deleting users.
-    // This is a simplified client-side approach.
-
     const { error } = await supabase.from('profiles').delete().eq('id', userId)
 
     if (error) {
@@ -87,6 +116,11 @@ export default function Admin() {
       setUsers((prev) => prev.filter((u) => u.id !== userId))
       alert('User deleted successfully')
     }
+  }
+
+  const lastActive = (user: AdminUserRow) => {
+    const raw = user.last_sign_in_at || user.last_active_at || user.updated_at
+    return raw ? new Date(raw).toLocaleString() : 'Never'
   }
 
   if (!authorized) {
@@ -99,7 +133,6 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pb-[max(6rem,env(safe-area-inset-bottom))]">
-      {/* Header — sticky for mobile */}
       <div className="sticky top-0 z-10 border-b border-white/10 bg-[#0a0a0a]/95 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-5 backdrop-blur-md sm:px-6">
         <Link
           to="/app"
@@ -111,7 +144,6 @@ export default function Admin() {
         <p className="mt-1 text-sm text-gray-400">Master view • {ADMIN_EMAIL}</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-3 px-4 py-5 sm:gap-4 sm:px-6 sm:py-6">
         <div className="rounded-2xl bg-white/5 p-4 sm:p-5">
           <div className="text-sm text-gray-400">Total Users</div>
@@ -127,7 +159,20 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Search */}
+      {loadError && (
+        <div className="mx-4 mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 sm:mx-6">
+          {loadError}{' '}
+          <a
+            href="https://supabase.com/dashboard/project/ylznhxumipcemqbykrcr/sql/new"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-emerald-400"
+          >
+            Open SQL Editor
+          </a>
+        </div>
+      )}
+
       <div className="mb-5 px-4 sm:mb-6 sm:px-6">
         <input
           type="search"
@@ -141,7 +186,6 @@ export default function Admin() {
         />
       </div>
 
-      {/* Users List */}
       <div className="px-4 sm:px-6">
         <h2 className="mb-4 font-medium">All Registered Users</h2>
 
@@ -151,47 +195,56 @@ export default function Admin() {
           <p className="text-gray-400">No users found.</p>
         ) : (
           <div className="space-y-3">
-            {filteredUsers.map((user) => (
-              <div
-                key={user.id}
-                className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="truncate text-base font-medium sm:text-lg">
-                      {user.email || 'No email'}
+            {filteredUsers.map((user) => {
+              const master = isAdminEmail(user.email)
+              return (
+                <div
+                  key={user.id}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="truncate text-base font-medium sm:text-lg">
+                        {user.email || 'No email'}
+                        {user.username ? (
+                          <span className="ml-2 text-sm font-normal text-emerald-400">
+                            @{user.username}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-400">
+                        Joined:{' '}
+                        {user.created_at
+                          ? new Date(user.created_at).toLocaleDateString()
+                          : '—'}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-400">
+                        Last active: {lastActive(user)}
+                      </div>
+                      <div className="mt-1 break-all text-xs text-gray-500">
+                        ID: {user.id}
+                      </div>
                     </div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      Joined:{' '}
-                      {user.created_at
-                        ? new Date(user.created_at).toLocaleDateString()
-                        : '—'}
-                    </div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      Last active:{' '}
-                      {user.last_sign_in_at
-                        ? new Date(user.last_sign_in_at).toLocaleString()
-                        : user.updated_at
-                          ? new Date(user.updated_at).toLocaleString()
-                          : 'Never'}
-                    </div>
-                    <div className="mt-1 break-all text-xs text-gray-500">
-                      ID: {String(user.id).slice(0, 12)}...
-                    </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void handleDeleteUser(user.id, user.email || '')
-                    }
-                    className="min-h-11 w-full shrink-0 rounded-xl bg-red-500/10 px-4 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-500/20 active:bg-red-500/25 sm:w-auto"
-                  >
-                    Delete
-                  </button>
+                    {master ? (
+                      <span className="min-h-11 shrink-0 rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm text-slate-500">
+                        Master
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void handleDeleteUser(user.id, user.email || '')
+                        }
+                        className="min-h-11 w-full shrink-0 rounded-xl bg-red-500/10 px-4 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-500/20 active:bg-red-500/25 sm:w-auto"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

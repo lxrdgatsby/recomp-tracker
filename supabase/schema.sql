@@ -30,6 +30,9 @@ create table if not exists public.profiles (
 alter table public.profiles
   add column if not exists protocol_profile jsonb default '{}'::jsonb;
 
+alter table public.profiles
+  add column if not exists last_active_at timestamptz;
+
 -- Chat conversations (threads)
 create table if not exists public.chat_conversations (
   id uuid default gen_random_uuid() primary key,
@@ -68,8 +71,9 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email)
-  values (new.id, new.email);
+  insert into public.profiles (id, email, created_at, last_active_at)
+  values (new.id, new.email, new.created_at, new.last_sign_in_at)
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
@@ -262,13 +266,32 @@ end $$;
 -- Admin: master account can read all profiles (Admin Dashboard)
 -- Uses JWT email claim (same idea as: auth.jwt() ->> 'email' = admin).
 -- Keep "Users read own profile" above — both SELECT policies apply (OR).
+create or replace function public.is_master_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from auth.users u
+    where u.id = auth.uid()
+      and lower(coalesce(u.email, '')) = lower('itsgatsby@protonmail.com')
+  );
+$$;
+
+revoke all on function public.is_master_admin() from public;
+grant execute on function public.is_master_admin() to authenticated;
+
 create or replace function public.is_admin()
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
-  select lower(coalesce(auth.jwt() ->> 'email', ''))
-    = lower('itsgatsby@protonmail.com');
+  select public.is_master_admin();
 $$;
 
 revoke all on function public.is_admin() from public;
@@ -278,9 +301,43 @@ drop policy if exists "Only master admin can view all profiles" on public.profil
 drop policy if exists "Admin read all profiles" on public.profiles;
 create policy "Only master admin can view all profiles"
   on public.profiles for select
-  using (public.is_admin());
+  using (public.is_master_admin());
 
 drop policy if exists "Only master admin can delete profiles" on public.profiles;
 create policy "Only master admin can delete profiles"
   on public.profiles for delete
-  using (public.is_admin());
+  using (public.is_master_admin() and id <> auth.uid());
+
+create or replace function public.admin_list_users()
+returns table (
+  id uuid,
+  email text,
+  created_at timestamptz,
+  last_sign_in_at timestamptz,
+  last_active_at timestamptz,
+  username text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_master_admin() then
+    raise exception 'not authorized' using errcode = '42501';
+  end if;
+  return query
+  select
+    u.id,
+    coalesce(p.email, u.email),
+    coalesce(p.created_at, u.created_at),
+    u.last_sign_in_at,
+    coalesce(p.last_active_at, u.last_sign_in_at),
+    p.username
+  from auth.users u
+  left join public.profiles p on p.id = u.id
+  order by coalesce(p.created_at, u.created_at) desc;
+end;
+$$;
+
+revoke all on function public.admin_list_users() from public;
+grant execute on function public.admin_list_users() to authenticated;

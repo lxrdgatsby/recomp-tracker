@@ -13,6 +13,7 @@ import {
   fetchProfile,
   persistSeededProtocol,
   profileToTrackerState,
+  touchLastActive,
 } from '../lib/profileService'
 import {
   applyLxrdgatsbyProtocolSeed,
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserData = useCallback(async (userId: string) => {
     const profile = await fetchProfile(userId)
+    void touchLastActive(userId)
     setUserProfile(profile)
     if (profile) {
       let next = profileToTrackerState(profile)

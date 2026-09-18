@@ -27,6 +27,12 @@ If the schema was applied before admin support existed, also run:
 
 `supabase/migrations/002_admin_read_profiles.sql`
 
+To list **every Auth signup** (not just the logged-in admin), also run:
+
+`supabase/migrations/004_admin_list_all_users.sql`
+
+That adds `is_master_admin()`, backfills missing `profiles` rows from `auth.users`, and the `admin_list_users()` RPC. Without it, `/admin` can only see your own row because of RLS.
+
 That adds:
 
 ```sql
