@@ -56,7 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserData = useCallback(async (userId: string) => {
     const profile = await fetchProfile(userId)
-    void touchLastActive(userId)
+    const {
+      data: { user: sessionUser },
+    } = (await supabase?.auth.getUser()) ?? { data: { user: null } }
+    void touchLastActive(userId, sessionUser?.email ?? profile?.email)
     setUserProfile(profile)
     if (profile) {
       let next = profileToTrackerState(profile)

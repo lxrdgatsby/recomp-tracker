@@ -153,14 +153,27 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
   return mapDbProfile(data as DbProfile)
 }
 
-/** Best-effort heartbeat so Admin “Last active” is real. */
-export async function touchLastActive(userId: string): Promise<void> {
+/** Best-effort heartbeat so Admin “Last active” is real. Never crash login. */
+export async function touchLastActive(
+  userId: string,
+  email?: string | null
+): Promise<void> {
   if (!supabase || !userId) return
+  const now = new Date().toISOString()
+  const withActive = {
+    id: userId,
+    ...(email ? { email } : {}),
+    last_active_at: now,
+  }
   const { error } = await supabase
     .from('profiles')
-    .update({ last_active_at: new Date().toISOString() })
-    .eq('id', userId)
-  if (error && /last_active_at/i.test(error.message)) return
+    .upsert(withActive, { onConflict: 'id' })
+  if (!error) return
+  if (!/last_active_at/i.test(error.message || '')) return
+  await supabase.from('profiles').upsert(
+    { id: userId, ...(email ? { email } : {}) },
+    { onConflict: 'id' }
+  )
 }
 
 export async function completeOnboarding(

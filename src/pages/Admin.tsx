@@ -63,33 +63,52 @@ export default function Admin() {
     setLoadError(null)
 
     const rpc = await supabase.rpc('admin_list_users')
-    if (!rpc.error && Array.isArray(rpc.data)) {
+    if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length > 0) {
       setUsers(rpc.data as AdminUserRow[])
       setFilteredUsers(rpc.data as AdminUserRow[])
       setLoading(false)
       return
     }
 
-    const { data, error } = await supabase
+    const withActive = await supabase
       .from('profiles')
-      .select('id, email, created_at, last_active_at, updated_at, username')
+      .select('id, email, created_at, last_active_at')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error(error)
-      setLoadError(error.message)
-      setUsers([])
-      setFilteredUsers([])
+    let rows: AdminUserRow[] | null = null
+    if (!withActive.error) {
+      rows = (withActive.data || []) as AdminUserRow[]
     } else {
-      setUsers((data || []) as AdminUserRow[])
-      setFilteredUsers((data || []) as AdminUserRow[])
-      if (rpc.error) {
-        setLoadError(
-          `Auth user list RPC is not installed (${rpc.error.message}). Showing profiles rows only. Run supabase/migrations/004_admin_list_all_users.sql in the SQL Editor.`
-        )
+      const missingActive = /last_active_at/i.test(withActive.error.message || '')
+      const basic = await supabase
+        .from('profiles')
+        .select('id, email, created_at')
+        .order('created_at', { ascending: false })
+      if (basic.error) {
+        console.error(basic.error)
+        if (!missingActive) setLoadError(basic.error.message)
+      } else {
+        rows = (basic.data || []) as AdminUserRow[]
       }
     }
 
+    if ((!rows || rows.length === 0) && supabase) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        rows = [
+          {
+            id: user.id,
+            email: user.email ?? null,
+            created_at: user.created_at ?? null,
+          },
+        ]
+      }
+    }
+
+    setUsers(rows || [])
+    setFilteredUsers(rows || [])
     setLoading(false)
   }
 
@@ -120,7 +139,7 @@ export default function Admin() {
 
   const lastActive = (user: AdminUserRow) => {
     const raw = user.last_sign_in_at || user.last_active_at || user.updated_at
-    return raw ? new Date(raw).toLocaleString() : 'Never'
+    return raw ? new Date(raw).toLocaleString() : '—'
   }
 
   if (!authorized) {
@@ -159,17 +178,9 @@ export default function Admin() {
         </div>
       </div>
 
-      {loadError && (
+      {loadError && users.length === 0 && (
         <div className="mx-4 mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 sm:mx-6">
-          {loadError}{' '}
-          <a
-            href="https://supabase.com/dashboard/project/ylznhxumipcemqbykrcr/sql/new"
-            target="_blank"
-            rel="noreferrer"
-            className="underline text-emerald-400"
-          >
-            Open SQL Editor
-          </a>
+          {loadError}
         </div>
       )}
 
