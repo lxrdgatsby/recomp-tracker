@@ -63,11 +63,14 @@ export default function Admin() {
     setLoadError(null)
 
     const rpc = await supabase.rpc('admin_list_users')
-    if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length > 0) {
-      setUsers(rpc.data as AdminUserRow[])
-      setFilteredUsers(rpc.data as AdminUserRow[])
-      setLoading(false)
-      return
+    if (!rpc.error && Array.isArray(rpc.data)) {
+      const rows = rpc.data as AdminUserRow[]
+      if (rows.length > 0) {
+        setUsers(rows)
+        setFilteredUsers(rows)
+        setLoading(false)
+        return
+      }
     }
 
     const withActive = await supabase

@@ -31,7 +31,11 @@ To list **every Auth signup** (not just the logged-in admin), also run:
 
 `supabase/migrations/004_admin_list_all_users.sql`
 
-That adds `is_master_admin()`, backfills missing `profiles` rows from `auth.users`, and the `admin_list_users()` RPC. Without it, `/admin` can only see your own row because of RLS.
+Then run:
+
+`supabase/migrations/005_admin_auth_users_list.sql`
+
+That backfills every `auth.users` row into `profiles`, lets the master admin SELECT all profiles, and replaces `admin_list_users()` so `/admin` lists Auth accounts (not a self-filtered profiles query).
 
 That adds:
 
