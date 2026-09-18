@@ -62,56 +62,18 @@ export default function Admin() {
     setLoading(true)
     setLoadError(null)
 
-    const rpc = await supabase.rpc('admin_list_users')
-    if (!rpc.error && Array.isArray(rpc.data)) {
-      const rows = rpc.data as AdminUserRow[]
-      if (rows.length > 0) {
-        setUsers(rows)
-        setFilteredUsers(rows)
-        setLoading(false)
-        return
-      }
+    const { data, error } = await supabase.rpc('admin_list_users')
+    if (error) {
+      setLoadError(error.message)
+      setUsers([])
+      setFilteredUsers([])
+      setLoading(false)
+      return
     }
 
-    const withActive = await supabase
-      .from('profiles')
-      .select('id, email, created_at, last_active_at')
-      .order('created_at', { ascending: false })
-
-    let rows: AdminUserRow[] | null = null
-    if (!withActive.error) {
-      rows = (withActive.data || []) as AdminUserRow[]
-    } else {
-      const missingActive = /last_active_at/i.test(withActive.error.message || '')
-      const basic = await supabase
-        .from('profiles')
-        .select('id, email, created_at')
-        .order('created_at', { ascending: false })
-      if (basic.error) {
-        console.error(basic.error)
-        if (!missingActive) setLoadError(basic.error.message)
-      } else {
-        rows = (basic.data || []) as AdminUserRow[]
-      }
-    }
-
-    if ((!rows || rows.length === 0) && supabase) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        rows = [
-          {
-            id: user.id,
-            email: user.email ?? null,
-            created_at: user.created_at ?? null,
-          },
-        ]
-      }
-    }
-
-    setUsers(rows || [])
-    setFilteredUsers(rows || [])
+    const rows = (Array.isArray(data) ? data : []) as AdminUserRow[]
+    setUsers(rows)
+    setFilteredUsers(rows)
     setLoading(false)
   }
 
@@ -140,10 +102,8 @@ export default function Admin() {
     }
   }
 
-  const lastActive = (user: AdminUserRow) => {
-    const raw = user.last_sign_in_at || user.last_active_at || user.updated_at
-    return raw ? new Date(raw).toLocaleString() : '—'
-  }
+  const lastActive = (user: AdminUserRow) =>
+    user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : '—'
 
   if (!authorized) {
     return (
@@ -181,7 +141,7 @@ export default function Admin() {
         </div>
       </div>
 
-      {loadError && users.length === 0 && (
+      {loadError && (
         <div className="mx-4 mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 sm:mx-6">
           {loadError}
         </div>
