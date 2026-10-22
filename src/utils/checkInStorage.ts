@@ -68,6 +68,19 @@ export interface CheckInData {
   notes: string
   mood: string
   date: string
+  /** Optional clinical log. Absent for users who do not see those fields. */
+  doseMg?: string
+  doseUnits?: string
+  doseSite?: string
+  bloodPressure?: string
+  heartRate?: string
+  waterLiters?: string
+  proteinGrams?: string
+  giScore?: string
+  urineColor?: string
+  flankPain?: string
+  steps?: string
+  resistanceSessions?: string
 }
 
 export function saveCheckIn(data: CheckInData): void {

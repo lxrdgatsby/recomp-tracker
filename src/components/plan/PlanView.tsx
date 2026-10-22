@@ -11,6 +11,12 @@ import {
 } from '../../constants/reconstitutionTable'
 import { CYCLE_DAYS } from '../../constants/defaults'
 import { PHASE_NOTES, hasSeededProtocol } from '../../lib/protocolSeed'
+import {
+  isMaggieUser,
+  MAGGIE_HONEST_NOTE,
+  MAGGIE_PHASE_LINES,
+  maggiePhaseLabel,
+} from '../../lib/maggiePlan'
 import type { TrackerState } from '../../types'
 import { getDaysIntoCycle, weightProgress } from '../../utils/calculations'
 import {
@@ -39,6 +45,7 @@ function phaseLabel(week: number): string {
 
 export function PlanView({ state, onToggleInjection }: PlanViewProps) {
   const { userProfile } = useAuth()
+  const maggie = isMaggieUser(userProfile?.email)
   const { profile, peptides, recompPlan, injectionLogs } = state
   const today = format(new Date(), 'yyyy-MM-dd')
   const { week, dateLabel } = getProtocolHeader(profile.startDate)
@@ -56,7 +63,7 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
     profile.startDate
   )
   const grouped = groupInjectionsBySlot(todayInjections)
-  const phase = phaseLabel(week)
+  const phase = maggie ? maggiePhaseLabel(week) : phaseLabel(week)
   const phaseNotes =
     week <= 4
       ? PHASE_NOTES.weeks1to4
@@ -105,21 +112,30 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         <p className="mt-1 text-sm text-slate-400">
           Window: 90 days from {format(new Date(`${startLabel}T00:00:00`), 'MMM d, yyyy')}
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-slate-300">
-          Scale target is −{scaleTarget} lb (~{profile.weeklyLossTarget} lb/week). Muscle
-          target is preserve lean / maybe +2–4 lb. 7% BF is a stretch; 9–12% is the
-          realistic landing.
-        </p>
-        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <p>
-            <span className="text-slate-500">Fat-loss drivers: </span>
-            <span className="text-emerald-300">{FAT_LOSS_DRIVERS}</span>
+        {maggie ? (
+          <p className="mt-3 text-sm leading-relaxed text-slate-300">
+            {MAGGIE_HONEST_NOTE} 5′1″ · 51-year-old woman. Retatrutide only, starting
+            at 0.5 mg (10 units).
           </p>
-          <p>
-            <span className="text-slate-500">Muscle drivers: </span>
-            <span className="text-emerald-300">{MUSCLE_DRIVERS}</span>
-          </p>
-        </div>
+        ) : (
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-slate-300">
+              Scale target is −{scaleTarget} lb (~{profile.weeklyLossTarget} lb/week). Muscle
+              target is preserve lean / maybe +2–4 lb. 7% BF is a stretch; 9–12% is the
+              realistic landing.
+            </p>
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <p>
+                <span className="text-slate-500">Fat-loss drivers: </span>
+                <span className="text-emerald-300">{FAT_LOSS_DRIVERS}</span>
+              </p>
+              <p>
+                <span className="text-slate-500">Muscle drivers: </span>
+                <span className="text-emerald-300">{MUSCLE_DRIVERS}</span>
+              </p>
+            </div>
+          </>
+        )}
       </Card>
 
       <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-100">
@@ -143,8 +159,12 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
           <p className="mt-1 text-2xl font-bold text-teal-400">{phase}</p>
         </Card>
         <Card className="!p-4">
-          <p className="text-xs text-slate-500">Scale target</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-400">−{scaleTarget} lb</p>
+          <p className="text-xs text-slate-500">
+            {maggie ? 'Day-90 range' : 'Scale target'}
+          </p>
+          <p className="mt-1 text-2xl font-bold text-emerald-400">
+            {maggie ? '162–168 lb' : `−${scaleTarget} lb`}
+          </p>
         </Card>
       </div>
 
@@ -209,13 +229,23 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         )}
       </Card>
 
-      <Card title={`${phase} (auto-selected)`}>
+      <Card title={maggie ? 'Retatrutide titration' : `${phase} (auto-selected)`}>
         <ul className="space-y-2 text-sm text-slate-300">
-          {phaseNotes.map((line) => (
+          {(maggie ? MAGGIE_PHASE_LINES : phaseNotes).map((line) => (
             <li key={line}>· {line}</li>
           ))}
         </ul>
       </Card>
+
+      {maggie && recompPlan?.summary?.length ? (
+        <Card title="Plan notes">
+          <ul className="space-y-2 text-sm text-slate-300">
+            {recompPlan.summary.map((line) => (
+              <li key={line}>· {line}</li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
 
       <Card title="Stack guidance">
         <ul className="space-y-2 text-sm text-slate-300">
@@ -228,9 +258,11 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         </ul>
       </Card>
 
-      <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm leading-relaxed text-rose-100">
-        {KLOW_NOTE}
-      </div>
+      {maggie ? null : (
+        <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm leading-relaxed text-rose-100">
+          {KLOW_NOTE}
+        </div>
+      )}
     </div>
   )
 }

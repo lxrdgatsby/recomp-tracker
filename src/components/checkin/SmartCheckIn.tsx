@@ -36,6 +36,23 @@ interface SmartCheckInProps {
   profile?: Profile
   onSubmit?: (data: CheckInData) => void
   onScheduleChange?: (schedule: CheckInSchedule) => void
+  /** Extra vitals for one clinical plan. Hidden for everyone else. */
+  clinicalTracking?: boolean
+}
+
+const EMPTY_CLINICAL = {
+  doseMg: '',
+  doseUnits: '',
+  doseSite: '',
+  bloodPressure: '',
+  heartRate: '',
+  waterLiters: '',
+  proteinGrams: '',
+  giScore: '',
+  urineColor: '',
+  flankPain: '',
+  steps: '',
+  resistanceSessions: '',
 }
 
 export function SmartCheckIn({
@@ -43,6 +60,7 @@ export function SmartCheckIn({
   profile,
   onSubmit,
   onScheduleChange,
+  clinicalTracking = false,
 }: SmartCheckInProps) {
   const [form, setForm] = useState({
     weight: defaultWeight,
@@ -52,6 +70,7 @@ export function SmartCheckIn({
     notes: '',
     mood: 'Good',
   })
+  const [clinical, setClinical] = useState(EMPTY_CLINICAL)
   const [submitted, setSubmitted] = useState(false)
   const [schedule, setSchedule] = useState<CheckInSchedule>(() =>
     syncCheckInScheduleFromProfile(profile)
@@ -75,6 +94,26 @@ export function SmartCheckIn({
       })
     }
   }, [defaultWeight])
+
+  useEffect(() => {
+    if (!clinicalTracking) return
+    const last = getLastCheckIn()
+    if (!last) return
+    setClinical({
+      doseMg: last.doseMg ?? '',
+      doseUnits: last.doseUnits ?? '',
+      doseSite: last.doseSite ?? '',
+      bloodPressure: last.bloodPressure ?? '',
+      heartRate: last.heartRate ?? '',
+      waterLiters: last.waterLiters ?? '',
+      proteinGrams: last.proteinGrams ?? '',
+      giScore: last.giScore ?? '',
+      urineColor: last.urineColor ?? '',
+      flankPain: last.flankPain ?? '',
+      steps: last.steps ?? '',
+      resistanceSessions: last.resistanceSessions ?? '',
+    })
+  }, [clinicalTracking])
 
   useEffect(() => {
     const sync = () => {
@@ -132,6 +171,7 @@ export function SmartCheckIn({
   const handleSubmit = () => {
     const checkInData: CheckInData = {
       ...form,
+      ...(clinicalTracking ? clinical : {}),
       date: new Date().toISOString(),
     }
     saveCheckIn(checkInData)
@@ -290,6 +330,64 @@ export function SmartCheckIn({
             placeholder="Any side effects today?"
           />
         </div>
+
+        {clinicalTracking ? (
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p className="text-sm text-slate-300">
+              Clinical log. Investigational tracking — not a prescription.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {(
+                [
+                  ['doseMg', 'Dose (mg)', '0.5'],
+                  ['doseUnits', 'Units', '10'],
+                  ['doseSite', 'Site', 'Abdomen, rotate'],
+                  ['bloodPressure', 'BP (SBP/DBP)', '120/80'],
+                  ['heartRate', 'HR seated/standing', '60 / 72'],
+                  ['waterLiters', 'Water (L)', '2.5–3'],
+                  ['proteinGrams', 'Protein (g)', '100–120'],
+                  ['giScore', 'GI score', '0–10'],
+                  ['urineColor', 'Urine color', 'Pale'],
+                  ['steps', 'Steps', ''],
+                  ['resistanceSessions', 'Resistance sessions', '0–1'],
+                ] as const
+              ).map(([key, label, placeholder]) => (
+                <div key={key}>
+                  <label className="text-sm text-slate-400">{label}</label>
+                  <input
+                    value={clinical[key]}
+                    placeholder={placeholder}
+                    onChange={(e) =>
+                      setClinical((prev) => ({ ...prev, [key]: e.target.value }))
+                    }
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              ))}
+              <div>
+                <p className="text-sm text-slate-400">Flank pain</p>
+                <div className="mt-1 flex gap-2">
+                  {(['no', 'yes'] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() =>
+                        setClinical((prev) => ({ ...prev, flankPain: value }))
+                      }
+                      className={`rounded-full px-4 py-2 text-sm ${
+                        clinical.flankPain === value
+                          ? 'bg-emerald-500 text-black'
+                          : 'bg-black/40 text-slate-300'
+                      }`}
+                    >
+                      {value === 'yes' ? 'Yes' : 'No'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <button

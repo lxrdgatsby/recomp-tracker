@@ -326,6 +326,7 @@ async function persistPeptideData(
     gender?: string | null
     age?: number | null
     trainingActivities?: string | null
+    onboardingCompleted?: boolean
   }
 ): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Supabase not configured' }
@@ -361,6 +362,8 @@ async function persistPeptideData(
   if (extras?.age !== undefined) update.age = extras.age
   if (extras?.trainingActivities !== undefined)
     update.training_activities = extras.trainingActivities
+  if (extras && 'onboardingCompleted' in extras && extras.onboardingCompleted)
+    update.onboarding_completed = true
 
   update.protocol_profile = withProfile.protocolProfile
 
@@ -424,6 +427,10 @@ export async function persistSeededProtocol(
   extras?: {
     mainGoal?: string | null
     additionalInfo?: string | null
+    gender?: string | null
+    age?: number | null
+    trainingActivities?: string | null
+    onboardingCompleted?: boolean
   }
 ): Promise<{ error: string | null }> {
   return persistPeptideData(

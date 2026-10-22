@@ -13,6 +13,7 @@ import {
   blankTrackerState,
   fetchProfile,
   persistSeededProtocol,
+  profileToTrackerState,
   touchLastActive,
   trackerForSignedInUser,
 } from '../lib/profileService'
@@ -21,6 +22,13 @@ import {
   isLxrdgatsbyUser,
   refreshProtocolDefinition,
 } from '../lib/protocolSeed'
+import {
+  applyMaggiePlan,
+  isMaggieUser,
+  MAGGIE_ADDITIONAL_INFO,
+  MAGGIE_MAIN_GOAL,
+  MAGGIE_TRAINING,
+} from '../lib/maggiePlan'
 import { setProtocolStorageScope } from '../lib/protocolStorageScope'
 import { withNadHorizon } from '../lib/lxrdRestart'
 import { applyLxrdgatsbyVialInventorySeed } from '../lib/vialInventorySeed'
@@ -75,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserProfile(profile)
     let next = trackerForSignedInUser({ ...profile, email: profile.email ?? email })
     let changed = false
+    let maggieExtras = false
     if (lxrd) {
       const seeded = applyLxrdgatsbyProtocolSeed(next, profile.username, email)
       if (seeded) {
@@ -101,6 +110,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         next = vialsSeeded
         changed = true
       }
+    } else if (isMaggieUser(email)) {
+      const source = profileToTrackerState({
+        ...profile,
+        email: profile.email ?? email,
+      })
+      const seeded = applyMaggiePlan(source, email, {
+        preserveStartDate: Boolean(
+          profile.onboardingCompleted && source.profile.startDate
+        ),
+      })
+      if (seeded) {
+        next = seeded
+        changed = true
+        maggieExtras = true
+      } else {
+        next = source
+        if (!profile.onboardingCompleted) {
+          changed = true
+          maggieExtras = true
+        }
+      }
+      if (maggieExtras) {
+        setUserProfile({
+          ...profile,
+          email: profile.email ?? email,
+          onboardingCompleted: true,
+          gender: 'female',
+          age: 51,
+          height: next.profile.height ?? profile.height,
+          currentWeight: next.profile.currentWeight,
+          goalWeight: next.profile.goalWeight,
+          startDate: next.profile.startDate,
+          weeklyLossTarget: next.profile.weeklyLossTarget,
+          mainGoal: MAGGIE_MAIN_GOAL,
+          additionalInfo: MAGGIE_ADDITIONAL_INFO,
+          trainingActivities: MAGGIE_TRAINING,
+          peptideStack: next.peptides,
+          trackerData: next,
+        })
+      }
     } else if (!profile.onboardingCompleted) {
       const storedPeptides =
         profile.trackerData?.peptides?.length ?? profile.peptideStack.length
@@ -109,10 +158,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (changed) {
       try {
-        await persistSeededProtocol(userId, next, {
-          mainGoal: profile.mainGoal ?? next.recompPlan?.summary?.[1],
-          additionalInfo: profile.additionalInfo,
-        })
+        await persistSeededProtocol(
+          userId,
+          next,
+          maggieExtras
+            ? {
+                mainGoal: MAGGIE_MAIN_GOAL,
+                additionalInfo: MAGGIE_ADDITIONAL_INFO,
+                gender: 'female',
+                age: 51,
+                trainingActivities: MAGGIE_TRAINING,
+                onboardingCompleted: true,
+              }
+            : {
+                mainGoal: profile.mainGoal ?? next.recompPlan?.summary?.[1],
+                additionalInfo: profile.additionalInfo,
+              }
+        )
       } catch (err) {
         console.error('persist protocol definition:', err)
       }

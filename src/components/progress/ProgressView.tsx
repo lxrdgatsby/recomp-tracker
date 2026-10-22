@@ -1,6 +1,8 @@
 import { differenceInCalendarDays, format, parse, parseISO } from 'date-fns'
 import { Calendar, Download, Target, TrendingUp, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
+import { isMaggieUser } from '../../lib/maggiePlan'
 import {
   CartesianGrid,
   Line,
@@ -150,6 +152,8 @@ export function ProgressView({
   onToggleInjection,
   onCheckInScheduleChange,
 }: ProgressViewProps) {
+  const { userProfile } = useAuth()
+  const clinicalTracking = isMaggieUser(userProfile?.email)
   const { profile, weightHistory } = state
   const [showLogModal, setShowLogModal] = useState(false)
   const [weightInput, setWeightInput] = useState('')
@@ -233,6 +237,7 @@ export function ProgressView({
           profile={profile}
           onSubmit={handleCheckIn}
           onScheduleChange={onCheckInScheduleChange}
+          clinicalTracking={clinicalTracking}
         />
       </div>
 
