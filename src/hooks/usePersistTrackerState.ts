@@ -10,21 +10,19 @@ export function usePersistTrackerState() {
 
   const persistState = useCallback(
     async (next: TrackerState) => {
-      if (user) {
-        const { error } = await saveProfileToDb(
-          user.id,
-          next.profile,
-          next.peptides,
-          next,
-          undefined,
-          userProfile?.peptideSelections ?? []
-        )
-        if (error) throw new Error(error)
-        await refreshProfile()
-        return
-      }
       setTrackerState(next)
       saveState(next)
+      if (!user) return
+      const { error } = await saveProfileToDb(
+        user.id,
+        next.profile,
+        next.peptides,
+        next,
+        undefined,
+        userProfile?.peptideSelections ?? []
+      )
+      if (error) throw new Error(error)
+      await refreshProfile()
     },
     [user, userProfile?.peptideSelections, refreshProfile, setTrackerState]
   )

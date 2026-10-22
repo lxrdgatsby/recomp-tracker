@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import { readLocal } from '../lib/protocolStorageScope'
 import autoTable from 'jspdf-autotable'
 import { buildCheckInSummary } from './checkInInsights'
 import { getCheckInHistory } from './checkInStorage'
@@ -181,7 +182,7 @@ function addCheckInsSection(
 
 function addDoseCalculatorSection(doc: jsPDF, startY: number): number {
   try {
-    const raw = localStorage.getItem('doseCalculator')
+    const raw = readLocal('doseCalculator')
     if (!raw) return startY
     const data = JSON.parse(raw) as {
       vialMg?: number

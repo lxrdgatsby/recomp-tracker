@@ -27,6 +27,12 @@ describe('dose calculator reconstitution math', () => {
     expect(u100UnitsFromMg(4, 10, 3)).toBe(120)
   })
 
+  it('Selank + Semax 250 / 500 mcg each on 10 mg / 3 mL → 7.5 / 15 units', () => {
+    // units = (desired_mcg / (10000 / 3)) * 100
+    expect(u100UnitsFromMg(0.25, 10, 3)).toBe(7.5)
+    expect(u100UnitsFromMg(0.5, 10, 3)).toBe(15)
+  })
+
   it('BPC-157 500 mcg → 10 units', () => {
     expect(u100UnitsFromMg(0.5, 10, 2)).toBe(10)
   })

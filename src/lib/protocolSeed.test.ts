@@ -44,9 +44,14 @@ describe('90-day protocol definition', () => {
     const next = refreshProtocolDefinition(stale, 'lxrdgatsby')
     expect(next).not.toBeNull()
     expect(next?.profile.startDate).toBe(start)
-    expect(next?.profile.currentWeight).toBe(171.2)
+    expect(next?.profile.startWeight).toBe(165)
+    expect(next?.profile.goalWeight).toBe(145)
+    expect(next?.profile.currentWeight).toBe(156)
     expect(next?.injectionLogs).toEqual(stale.injectionLogs)
-    expect(next?.weightHistory).toEqual(stale.weightHistory)
+    expect(next?.weightHistory).toEqual([
+      { date: '2026-08-23', weight: 175 },
+      { date: '2026-10-21', weight: 156 },
+    ])
     expect(next?.recompPlan?.definitionVersion).toBe(PROTOCOL_DEFINITION_VERSION)
 
     const tesa = next?.peptides.find((p) => p.id === 'tesamorelin')
@@ -203,8 +208,13 @@ describe('90-day protocol definition', () => {
 
     const next = refreshProtocolDefinition(stale, 'lxrdgatsby')
     expect(next?.profile.startDate).toBe(start)
+    expect(next?.profile.startWeight).toBe(165)
+    expect(next?.profile.goalWeight).toBe(145)
     expect(next?.injectionLogs).toEqual(stale.injectionLogs)
-    expect(next?.weightHistory).toEqual(stale.weightHistory)
+    expect(next?.weightHistory).toEqual([
+      { date: '2026-08-23', weight: 175 },
+      { date: '2026-10-21', weight: 156 },
+    ])
     expect(next?.peptides.some((p) => p.id === 'amino1mq')).toBe(true)
     expect(next?.peptides.find((p) => p.id === 'retatrutide')?.protocol?.titration[0]?.syringeUnits).toBe(50)
   })

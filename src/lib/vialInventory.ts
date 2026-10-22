@@ -1,4 +1,5 @@
 import { generateId } from './generateId'
+import { readLocal, writeLocal } from './protocolStorageScope'
 import { STORAGE_KEY } from '../constants/defaults'
 import {
   getCatalogEntry,
@@ -153,6 +154,17 @@ export const PROTOCOL_PEPTIDE_OPTIONS: {
     notes: '0.5 mg = 15 units. Treated as 10 mg vial, not an 80 mg blend.',
   },
   {
+    id: 'selank-semax',
+    name: 'Selank + Semax',
+    defaultVialMg: 10,
+    defaultBacMl: 3,
+    targetDoseMg: 0.25,
+    frequency: 'daily',
+    timing: 'Once daily',
+    notes:
+      '10 mg Selank + 10 mg Semax / 3 mL. Start 250 mcg of each ≈ 7.5–8 units once daily and hold 1–2 weeks. Nasal has the published human data. Research-use only.',
+  },
+  {
     id: 'nad',
     name: 'NAD+',
     defaultVialMg: 1000,
@@ -175,6 +187,7 @@ const NAME_ALIASES: Record<string, string> = {
   'klow': 'KLOW',
   'retatrutide': 'Retatrutide',
   'reta-cagri': 'Reta + Cagrilintide',
+  'selank-semax': 'Selank + Semax',
   'tesamorelin': 'Tesamorelin',
   'amino1mq': '5-Amino-1MQ',
 }
@@ -307,7 +320,7 @@ export function buildPeptideForNewVial(opts: {
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = readLocal(key)
     if (!raw) return fallback
     return JSON.parse(raw) as T
   } catch {
@@ -365,7 +378,7 @@ export function loadInventoryVials(): InventoryVial[] {
 }
 
 export function saveInventoryVials(vials: InventoryVial[]) {
-  localStorage.setItem(VIALS_STORAGE_KEY, JSON.stringify(vials))
+  writeLocal(VIALS_STORAGE_KEY, JSON.stringify(vials))
 }
 
 export function upsertInventoryVial(vial: InventoryVial): InventoryVial[] {
@@ -512,7 +525,7 @@ export function migratePeptideVialSizes(peptides: Peptide[]): Peptide[] {
 
 export function runVialSizeMigrationV2(state?: TrackerState | null): TrackerState | null {
   if (typeof localStorage === 'undefined') return state ?? null
-  if (localStorage.getItem(VIAL_SIZE_MIGRATION_FLAG) === 'true') {
+  if (readLocal(VIAL_SIZE_MIGRATION_FLAG) === 'true') {
     return state ? { ...state, peptides: migratePeptideVialSizes(state.peptides) } : null
   }
 
@@ -520,7 +533,7 @@ export function runVialSizeMigrationV2(state?: TrackerState | null): TrackerStat
     const vials = loadInventoryVials().map(correctInventoryVial)
     saveInventoryVials(vials)
 
-    const calcRaw = localStorage.getItem('doseCalculator')
+    const calcRaw = readLocal('doseCalculator')
     if (calcRaw) {
       const calc = JSON.parse(calcRaw) as {
         selectedPeptideId?: string
@@ -539,30 +552,30 @@ export function runVialSizeMigrationV2(state?: TrackerState | null): TrackerStat
         calc.vialMg = selectedFix.newMg
         calc.bacWaterMl = selectedFix.bacMl
       }
-      localStorage.setItem('doseCalculator', JSON.stringify(calc))
+      writeLocal('doseCalculator', JSON.stringify(calc))
     }
 
-    const trackerRaw = localStorage.getItem(STORAGE_KEY)
+    const trackerRaw = readLocal(STORAGE_KEY)
     if (trackerRaw) {
       const parsed = JSON.parse(trackerRaw) as TrackerState
       if (Array.isArray(parsed.peptides)) {
         parsed.peptides = migratePeptideVialSizes(parsed.peptides)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed))
+        writeLocal(STORAGE_KEY, JSON.stringify(parsed))
       }
     }
 
-    const stackRaw = localStorage.getItem('activeStack')
+    const stackRaw = readLocal('activeStack')
     if (stackRaw) {
       const stack = JSON.parse(stackRaw) as Peptide[]
       if (Array.isArray(stack)) {
-        localStorage.setItem('activeStack', JSON.stringify(migratePeptideVialSizes(stack)))
+        writeLocal('activeStack', JSON.stringify(migratePeptideVialSizes(stack)))
       }
     }
 
-    localStorage.setItem(VIAL_SIZE_MIGRATION_FLAG, 'true')
+    writeLocal(VIAL_SIZE_MIGRATION_FLAG, 'true')
   } catch {
     try {
-      localStorage.setItem(VIAL_SIZE_MIGRATION_FLAG, 'true')
+      writeLocal(VIAL_SIZE_MIGRATION_FLAG, 'true')
     } catch {
       /* ignore */
     }

@@ -11,12 +11,14 @@ import { saveProfileToDb, saveReconstitutionPlan } from '../lib/profileService'
 import type { PeptideSelection } from '../constants/peptideCatalog'
 import type { Peptide, Profile, TrackerState, ViewId } from '../types'
 import { useReminderRuntime } from '../hooks/useReminderRuntime'
+import { isLxrdgatsbyUser } from '../lib/protocolSeed'
 import type { DoseLog } from '../components/DoseCalculator'
 import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
 import { loadVials, saveVials } from '../utils/inventoryStorage'
 import { applyVialToggle } from '../utils/vialUsage'
+import { recordWeight } from '../utils/calculations'
 
 const ROUTE_MAP: Record<string, ViewId> = {
   '/app': 'dashboard',
@@ -92,7 +94,9 @@ export function AppLayout() {
     setShowOnboarding(!userProfile?.onboardingCompleted)
   }, [userProfile?.onboardingCompleted])
 
-  useReminderRuntime(!showOnboarding)
+  useReminderRuntime(
+    !showOnboarding && isLxrdgatsbyUser(userProfile?.username, userProfile?.email)
+  )
 
   const activeView = ROUTE_MAP[location.pathname] ?? 'dashboard'
 
@@ -138,15 +142,7 @@ export function AppLayout() {
     state: trackerState,
     saveProfile: saveProfileHandler,
     logWeight: async (date, weight) => {
-      const existing = trackerState.weightHistory.filter((e) => e.date !== date)
-      const weightHistory = [...existing, { date, weight }].sort((a, b) =>
-        a.date.localeCompare(b.date)
-      )
-      await persistState({
-        ...trackerState,
-        weightHistory,
-        profile: { ...trackerState.profile, currentWeight: weight },
-      })
+      await persistState(recordWeight(trackerState, date, weight))
     },
     toggleInjection: async (date, peptideId) => {
       const exists = trackerState.injectionLogs.some(

@@ -52,6 +52,7 @@ const SLOT_BY_ID: Record<string, InjectionSlot> = {
   'test-cyp': 'weekly',
   retatrutide: 'weekly',
   'reta-cagri': 'weekly',
+  'selank-semax': 'morning',
 }
 
 const MORNING_ORDER: Record<string, number> = {

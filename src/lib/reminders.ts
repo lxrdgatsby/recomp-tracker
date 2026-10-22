@@ -1,4 +1,5 @@
 import { STORAGE_KEY } from '../constants/defaults'
+import { readLocal, writeLocal } from './protocolStorageScope'
 import type { InjectionLog } from '../types'
 import {
   nadActiveUntil,
@@ -143,7 +144,7 @@ function parseLocalDate(iso: string): Date {
 function readJson<T>(key: string, fallback: T): T {
   if (!isBrowser()) return fallback
   try {
-    const raw = localStorage.getItem(key)
+    const raw = readLocal(key)
     if (raw == null) return fallback
     return JSON.parse(raw) as T
   } catch {
@@ -153,7 +154,7 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson(key: string, value: unknown) {
   if (!isBrowser()) return
-  localStorage.setItem(key, JSON.stringify(value))
+  writeLocal(key, JSON.stringify(value))
 }
 
 function emitChanged() {
@@ -164,7 +165,7 @@ function emitChanged() {
 export function getProtocolStartDate(): string | null {
   if (!isBrowser()) return null
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = readLocal(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as { profile?: { startDate?: string } }
       if (parsed.profile?.startDate) return parsed.profile.startDate
@@ -172,7 +173,7 @@ export function getProtocolStartDate(): string | null {
   } catch {
     // ignore corrupt tracker state
   }
-  return localStorage.getItem('protocolStartDate')
+  return readLocal('protocolStartDate')
 }
 
 /** Week 1 before start date. Week 2+ begins 7 days after protocol start. */
@@ -273,7 +274,7 @@ function emptySlot(slot: ReminderSlot, title: string): SlotShots {
 function nadStillScheduled(date: Date): boolean {
   const iso = toIsoDate(date)
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = readLocal(STORAGE_KEY)
     const parsed = raw ? (JSON.parse(raw) as { injectionLogs?: InjectionLog[] }) : null
     const until = nadActiveUntil(nadRemainingFromLogs(parsed?.injectionLogs ?? []).remainingMg)
     if (!until) return false

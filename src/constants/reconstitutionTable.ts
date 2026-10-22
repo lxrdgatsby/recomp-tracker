@@ -3,14 +3,19 @@
 export const CYCLE_START_DATE = '2026-08-23'
 export const AMINO_1MQ_START_DATE = '2026-09-15'
 export const AMINO_1MQ_FULL_DOSE_DATE = '2026-09-17'
-export const START_WEIGHT_LB = 175
-export const GOAL_WEIGHT_LB = 160
+export const START_WEIGHT_LB = 165
+export const GOAL_WEIGHT_LB = 145
+/** Latest known weigh-in. A newer log replaces this. */
+export const CURRENT_WEIGHT_LB = 156
+export const WEIGHT_AS_OF = '2026-10-21'
+/** 20 lb over 90 days. */
+export const WEEKLY_LOSS_LB = 1.6
 
 export const RESEARCH_DISCLAIMER =
   'Research-use / compounding stack tracker. Not a medically supervised protocol. Tesamorelin and testosterone are prescription drugs with labeled uses; retatrutide is still investigational; other compounds have limited or no approved human recomp dosing. This app maps math + published ranges. Get labs and a clinician before changing doses.'
 
 export const HONEST_OUTCOME_COPY =
-  'Scale target is −15 lb (~1.2 lb/week). Muscle target is preserve lean / maybe +2–4 lb. 7% BF is a stretch; 9–12% is the realistic landing.'
+  'Scale target is −20 lb (~1.6 lb/week). Muscle target is preserve lean / maybe +2–4 lb. 7% BF is a stretch; 9–12% is the realistic landing.'
 
 export const FAT_LOSS_DRIVERS = 'Retatrutide + food + steps'
 export const MUSCLE_DRIVERS = 'Test + Tesamorelin + progressive overload + protein'
@@ -40,6 +45,8 @@ export interface ReconstitutionCompound {
   doseUnit: DoseUnit
   keyDraws: KeyDraw[]
   isTestCyp?: boolean
+  /** Shown under the calculator when this compound is selected. */
+  note?: string
 }
 
 export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
@@ -196,6 +203,22 @@ export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
       { label: '25 u = 50 mg', desiredMg: 50, units: 25 },
       { label: '50 u = 100 mg', desiredMg: 100, units: 50 },
     ],
+  },
+  {
+    id: 'selank-semax',
+    name: 'Selank + Semax',
+    vialMg: 10,
+    bacMl: 3,
+    concentrationLabel: '3.33 mg/mL each',
+    defaultDoseMg: 0.25,
+    defaultDoseMl: null,
+    doseUnit: 'mcg',
+    keyDraws: [
+      { label: '7.5 u ≈ 250 mcg each', desiredMg: 0.25, units: 7.5 },
+      { label: '15 u ≈ 500 mcg each', desiredMg: 0.5, units: 15 },
+    ],
+    note:
+      'Human data is primarily nasal. No published human SC trials. Research-use only. Start 250 mcg of each (~7.5–8 u) once daily and hold 1–2 weeks.',
   },
   {
     id: 'test-cyp',

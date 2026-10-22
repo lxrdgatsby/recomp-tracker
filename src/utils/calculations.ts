@@ -1,6 +1,6 @@
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns'
 import { CYCLE_DAYS } from '../constants/defaults'
-import type { Profile, WeightEntry } from '../types'
+import type { Profile, TrackerState, WeightEntry } from '../types'
 
 export function getLatestWeight(profile: Profile, history: WeightEntry[]): number {
   if (history.length === 0) return profile.currentWeight
@@ -9,9 +9,42 @@ export function getLatestWeight(profile: Profile, history: WeightEntry[]): numbe
 }
 
 export function getStartWeight(profile: Profile, history: WeightEntry[]): number {
+  if (profile.startWeight && profile.startWeight > 0) return profile.startWeight
   if (history.length === 0) return profile.currentWeight
   const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date))
   return sorted[0].weight
+}
+
+/** Save one weigh-in. The newest date becomes current weight. Older points stay. */
+export function recordWeight(
+  state: TrackerState,
+  date: string,
+  weight: number
+): TrackerState {
+  const day = date.slice(0, 10)
+  const weightHistory = [
+    ...state.weightHistory.filter((entry) => entry.date.slice(0, 10) !== day),
+    { date: day, weight },
+  ].sort((a, b) => a.date.localeCompare(b.date))
+  const latest = weightHistory[weightHistory.length - 1]
+  return {
+    ...state,
+    weightHistory,
+    profile: {
+      ...state.profile,
+      currentWeight: latest?.weight ?? weight,
+    },
+  }
+}
+
+export function weightProgress(profile: Profile, history: WeightEntry[]) {
+  const startWeight = getStartWeight(profile, history)
+  const currentWeight = getLatestWeight(profile, history)
+  const goalWeight = profile.goalWeight
+  const remainingLb = getWeightToLose(currentWeight, goalWeight)
+  const percent = getProgressPercent(startWeight, currentWeight, goalWeight)
+  const lostLb = Math.round((startWeight - currentWeight) * 10) / 10
+  return { startWeight, currentWeight, goalWeight, remainingLb, percent, lostLb }
 }
 
 export function getWeightToLose(current: number, goal: number): number {

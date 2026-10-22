@@ -2,6 +2,7 @@ import {
   requestNotificationPermission,
   showReminderNotification,
 } from '../lib/reminders'
+import { readLocal, writeLocal } from '../lib/protocolStorageScope'
 import {
   getCheckInSchedule,
   hasWeighInLoggedToday,
@@ -42,7 +43,7 @@ function isBrowser(): boolean {
 function readFired(): Record<string, number> {
   if (!isBrowser()) return {}
   try {
-    const raw = localStorage.getItem(WEIGH_IN_LAST_FIRED_KEY)
+    const raw = readLocal(WEIGH_IN_LAST_FIRED_KEY)
     return raw ? (JSON.parse(raw) as Record<string, number>) : {}
   } catch {
     return {}
@@ -51,7 +52,7 @@ function readFired(): Record<string, number> {
 
 function writeFired(map: Record<string, number>) {
   if (!isBrowser()) return
-  localStorage.setItem(WEIGH_IN_LAST_FIRED_KEY, JSON.stringify(map))
+  writeLocal(WEIGH_IN_LAST_FIRED_KEY, JSON.stringify(map))
 }
 
 export function weighInFiredKey(ymd: string): string {

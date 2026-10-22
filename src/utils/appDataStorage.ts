@@ -1,4 +1,5 @@
 import { STORAGE_KEY } from '../constants/defaults'
+import { readLocal, scopedStorageKey } from '../lib/protocolStorageScope'
 import type { TrackerState } from '../types'
 import { getCheckInHistory, getLastCheckIn } from './checkInStorage'
 import { getWorkoutLogs } from './workoutLogStorage'
@@ -25,7 +26,7 @@ export interface AppDataExport {
 
 function readJson(key: string): unknown {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = readLocal(key)
     if (!raw) return null
     return JSON.parse(raw)
   } catch {
@@ -76,36 +77,30 @@ export function exportAllLocalData(
 }
 
 export function getAppLocalStorageKeys(userId?: string | null): string[] {
-  const keys = new Set<string>([
-    STORAGE_KEY,
-    'onboardingData',
-    'ninetyDayPlan',
-    'lastCheckIn',
-    'checkInHistory',
-    'checkIns',
-    'doseCalculator',
-    'injectionSites',
-    'workoutLogs',
-    'workoutSetLogs',
-    'reminderSettings',
-    'reminderLastFired',
-    'vials',
-    'migration_vial_sizes_v2',
-  ])
+  const keys = new Set<string>(
+    [
+      STORAGE_KEY,
+      'onboardingData',
+      'ninetyDayPlan',
+      'lastCheckIn',
+      'checkInHistory',
+      'checkIns',
+      'doseCalculator',
+      'injectionSites',
+      'workoutLogs',
+      'workoutSetLogs',
+      'reminderSettings',
+      'reminderLastFired',
+      'vials',
+      'pt-v2-vials',
+      'pt-v2-dose-logs',
+      'migration_vial_sizes_v2',
+    ].map((key) => scopedStorageKey(key))
+  )
 
   if (userId) {
     keys.add(`peptide-tracker-chat:${userId}`)
     keys.add(`peptide-tracker-active-conversation:${userId}`)
-  }
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (
-      key?.startsWith('peptide-tracker-chat:') ||
-      key?.startsWith('peptide-tracker-active-conversation:')
-    ) {
-      keys.add(key)
-    }
   }
 
   return [...keys]

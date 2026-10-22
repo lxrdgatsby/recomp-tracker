@@ -1,10 +1,11 @@
 import { DEFAULT_STATE, STORAGE_KEY } from '../constants/defaults'
+import { readLocal, writeLocal } from '../lib/protocolStorageScope'
 import { runVialSizeMigrationV2 } from '../lib/vialInventory'
 import type { TrackerState } from '../types'
 
 export function loadState(): TrackerState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = readLocal(STORAGE_KEY)
     if (!raw) return { ...DEFAULT_STATE, peptides: [...DEFAULT_STATE.peptides] }
     const parsed = JSON.parse(raw) as TrackerState
     const loaded = {
@@ -23,7 +24,7 @@ export function loadState(): TrackerState {
 }
 
 export function saveState(state: TrackerState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  writeLocal(STORAGE_KEY, JSON.stringify(state))
 }
 
 export function exportState(state: TrackerState): void {

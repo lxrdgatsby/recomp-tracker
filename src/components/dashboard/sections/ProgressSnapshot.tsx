@@ -1,4 +1,5 @@
 import { Activity, Scale } from 'lucide-react'
+import { getProgressPercent } from '../../../utils/calculations'
 
 interface ProgressSnapshotProps {
   latestWeight: number
@@ -22,6 +23,7 @@ export function ProgressSnapshot({
   const deltaLabel =
     delta === 0 ? '0 lb' : `${delta > 0 ? '+' : ''}${delta} lb since start`
   const towardGoal = Math.round((latestWeight - goalWeight) * 10) / 10
+  const percent = getProgressPercent(startWeight, latestWeight, goalWeight)
 
   const spark = buildSpark(weightSeries)
 
@@ -67,8 +69,8 @@ export function ProgressSnapshot({
               {towardGoal === 0
                 ? 'At goal weight'
                 : towardGoal > 0
-                  ? `${towardGoal} lb to goal`
-                  : `${Math.abs(towardGoal)} lb under goal`}
+                  ? `${towardGoal} lb to goal · ${percent}%`
+                  : `${Math.abs(towardGoal)} lb under goal · ${percent}%`}
             </p>
           </div>
         </div>

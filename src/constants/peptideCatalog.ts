@@ -290,6 +290,19 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     notes: 'Often stacked with Semax. Non-sedating anxiolytic.',
   },
   {
+    id: 'selank-semax',
+    name: 'Selank + Semax',
+    tagline:
+      '10 mg Selank + 10 mg Semax · 3 mL BAC · start ~250 mcg each (~8 u) once daily, hold 1–2 weeks',
+    doseOptions: ['10mg'],
+    defaultDose: '10mg',
+    defaultBacWaterUnits: 300,
+    frequency: 'daily',
+    timing: 'Once daily. Nasal is the route with published human data.',
+    notes:
+      '10 mg Selank + 10 mg Semax in 3 mL BAC. Each peptide ≈ 3.33 mg/mL. units = (desired_mcg_per_component / (10000 / 3)) * 100. Conservative start: 250 mcg of each (500 mcg total blend) ≈ 7.5–8 units on U-100, once daily. Hold 1–2 weeks before any step. 500 mcg each ≈ 15 units. Human data is primarily nasal; no published human SC trials. Research-use only.',
+  },
+  {
     id: 'melanotan2',
     name: 'Melanotan II',
     tagline: 'Tanning peptide — melanogenesis support',
@@ -331,6 +344,11 @@ const CATALOG_NAME_ALIASES: Record<string, string> = {
   'reta cagrilintide': 'reta-cagri',
   'reta cagrilintide fused': 'reta-cagri',
   '10 mg reta + 10 mg cagrilintide': 'reta-cagri',
+  'selank/semax fused': 'selank-semax',
+  'selank/semax': 'selank-semax',
+  'selank + semax': 'selank-semax',
+  'selank+semax': 'selank-semax',
+  '10 mg selank + 10 mg semax': 'selank-semax',
 }
 
 export function getCatalogEntryByName(name: string): PeptideCatalogEntry | undefined {

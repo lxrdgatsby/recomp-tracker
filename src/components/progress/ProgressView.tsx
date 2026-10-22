@@ -20,9 +20,8 @@ import type { CheckInData } from '../../utils/checkInStorage'
 import type { CheckInSchedule } from '../../utils/checkInSchedule'
 import { computeAdherence } from '../../utils/adherence'
 import {
-  getLatestWeight,
   getMilestones,
-  getStartWeight,
+  weightProgress,
 } from '../../utils/calculations'
 
 interface ProgressViewProps {
@@ -61,7 +60,7 @@ interface UpcomingMilestone {
 function buildChartData(state: TrackerState): ChartPoint[] {
   const { profile, weightHistory } = state
   const start = parseISO(profile.startDate)
-  const startWeight = getStartWeight(profile, weightHistory)
+  const startWeight = weightProgress(profile, weightHistory).startWeight
 
   const entries = [...weightHistory].sort((a, b) => a.date.localeCompare(b.date))
 
@@ -112,8 +111,7 @@ function getYDomain(chartData: ChartPoint[], goalWeight: number): [number, numbe
 
 function buildUpcomingMilestones(state: TrackerState): UpcomingMilestone[] {
   const { profile, weightHistory } = state
-  const startWeight = getStartWeight(profile, weightHistory)
-  const currentWeight = getLatestWeight(profile, weightHistory)
+  const { startWeight, currentWeight } = weightProgress(profile, weightHistory)
   const today = new Date()
   const milestones = getMilestones(profile, startWeight)
 
@@ -158,9 +156,10 @@ export function ProgressView({
   const [checkInVersion, setCheckInVersion] = useState(0)
 
   const adherence = useMemo(() => computeAdherence(state), [state])
-  const currentWeight = getLatestWeight(profile, weightHistory)
-  const startWeight = getStartWeight(profile, weightHistory)
-  const totalLoss = Math.round((startWeight - currentWeight) * 10) / 10
+  const progress = weightProgress(profile, weightHistory)
+  const currentWeight = progress.currentWeight
+  const startWeight = progress.startWeight
+  const totalLoss = progress.lostLb
 
   const adherenceValues = {
     overall: adherence.overall,
@@ -249,6 +248,17 @@ export function ProgressView({
       <InjectionHistory state={state} onToggleInjection={onToggleInjection} />
 
       <div className="mb-8">
+        <div className="mb-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+          <p className="text-xs tracking-[0.14em] text-emerald-400 uppercase">
+            Weight
+          </p>
+          <p className="mt-2 text-lg font-semibold">
+            {startWeight} lb → {currentWeight} lb → {profile.goalWeight} lb
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            {progress.percent}% of the way · {progress.remainingLb} lb to go
+          </p>
+        </div>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-medium">Weight Trend</h2>
           {totalLoss > 0 && (

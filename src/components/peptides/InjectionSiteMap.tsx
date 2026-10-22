@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { readLocal, writeLocal } from '../../lib/protocolStorageScope'
 import type { Peptide } from '../../types'
 
 const SITES = [
@@ -27,7 +28,7 @@ export function InjectionSiteMap({
   const [usedSites, setUsedSites] = useState<string[]>([])
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = readLocal(STORAGE_KEY)
     if (!saved) return
     try {
       const parsed = JSON.parse(saved)
@@ -46,7 +47,7 @@ export function InjectionSiteMap({
       : [...usedSites, id]
 
     setUsedSites(updated)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    writeLocal(STORAGE_KEY, JSON.stringify(updated))
     onSiteSelect?.(id)
   }
 

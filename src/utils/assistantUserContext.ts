@@ -11,6 +11,7 @@ import {
 } from './peptideSchedule'
 import { getProtocolHeader } from './protocolHeader'
 import { nadRemainingFromLogs, PROTOCOL_NOTE } from '../lib/lxrdRestart'
+import { isLxrdgatsbyUser } from '../lib/protocolSeed'
 import { getTitrationForDay, displayTierForDate } from './recompProtocol'
 import { formatUnits } from './doseMath'
 import { planNutritionFocus, inferWeightGoalMode } from '../constants/onboardingGoals'
@@ -244,7 +245,11 @@ export function buildAssistantUserContext(
   const peptides = trackerState.peptides ?? []
   const activePeptides = peptides.filter((p) => isPeptideOnActiveStack(p))
   const hasPlan = peptides.length > 0
-  const restarted = peptides.some((p) => p.schedulePause)
+  const viewerIsSomeoneElse =
+    userProfile != null &&
+    !isLxrdgatsbyUser(userProfile.username, userProfile.email)
+  const restarted =
+    !viewerIsSomeoneElse && peptides.some((p) => p.schedulePause)
   const nadLeft = restarted ? nadRemainingFromLogs(trackerState.injectionLogs ?? []) : null
   const protocolNote = restarted
     ? `${PROTOCOL_NOTE} TRT / Test Cyp stays off until December 2026. Do not schedule a Sunday testosterone dose before then. Reta + Cagrilintide starts at 1.5 mg Reta-equivalent (~45 units) for 2 weeks after Oct 25, 2026 (through Nov 7). Do not auto-step it. Plain Retatrutide, SS-31, BPC-157, and KLOW are off. NAD+ remaining on the existing vial: ${nadLeft?.remainingMg ?? 0} mg from ${nadLeft?.doneCount ?? 0} logged doses through Oct 24 (a missing dose counts as 50 mg). Do not open a second NAD+ vial.`
@@ -340,6 +345,9 @@ export function getAssistantQuickPrompts(peptides: Peptide[]): string[] {
   chips.push('Can I titrate this week?')
   if (ids.has('amino1mq')) {
     chips.push('How do I dose 5-Amino-1MQ?')
+  }
+  if (ids.has('selank-semax')) {
+    chips.push('What is my Selank + Semax starting dose?')
   }
   chips.push('Why is my weight stalling?')
   if (ids.has('tesamorelin')) {

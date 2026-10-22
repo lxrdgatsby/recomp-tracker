@@ -1,3 +1,5 @@
+import { readLocal, writeLocal } from '../lib/protocolStorageScope'
+
 const WORKOUT_LOGS_KEY = 'workoutLogs'
 
 export interface WorkoutQuickLog {
@@ -21,7 +23,7 @@ function migrateLegacyWorkoutLogs(): void {
   legacyMigrated = true
 
   try {
-    const raw = localStorage.getItem(WORKOUT_LOGS_KEY)
+    const raw = readLocal(WORKOUT_LOGS_KEY)
     if (!raw) return
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed) || parsed.length === 0) return
@@ -43,7 +45,7 @@ function migrateLegacyWorkoutLogs(): void {
         loggedAt: String(entry.loggedAt ?? entry.date ?? new Date().toISOString()),
       }))
 
-    localStorage.setItem(WORKOUT_LOGS_KEY, JSON.stringify(migrated))
+    writeLocal(WORKOUT_LOGS_KEY, JSON.stringify(migrated))
   } catch {
     // ignore parse errors
   }
@@ -52,7 +54,7 @@ function migrateLegacyWorkoutLogs(): void {
 export function getWorkoutLogs(): WorkoutQuickLog[] {
   migrateLegacyWorkoutLogs()
   try {
-    const raw = localStorage.getItem(WORKOUT_LOGS_KEY)
+    const raw = readLocal(WORKOUT_LOGS_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? (parsed as WorkoutQuickLog[]) : []
@@ -81,7 +83,7 @@ export function saveWorkoutQuickLog(log: WorkoutQuickLog): void {
     const existing = getWorkoutLogs().filter(
       (entry) => sessionKey(entry.week, entry.dayIndex, entry.date) !== key
     )
-    localStorage.setItem(WORKOUT_LOGS_KEY, JSON.stringify([...existing, log]))
+    writeLocal(WORKOUT_LOGS_KEY, JSON.stringify([...existing, log]))
   } catch {
     // ignore quota errors
   }

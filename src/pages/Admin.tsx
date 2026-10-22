@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ADMIN_EMAIL, isAdminEmail } from '../constants/admin'
+import {
+  adminLastActive,
+  isMasterAdminRow,
+  loadAdminUsers,
+  type AdminUserRow,
+} from '../lib/adminUsers'
 import { supabase } from '../lib/supabase'
-
-type AdminUserRow = {
-  id: string
-  email: string | null
-  created_at: string | null
-  last_sign_in_at?: string | null
-  last_active_at?: string | null
-  updated_at?: string | null
-  username?: string | null
-}
 
 export default function Admin() {
   const [users, setUsers] = useState<AdminUserRow[]>([])
@@ -20,6 +16,7 @@ export default function Admin() {
   const [authorized, setAuthorized] = useState(false)
   const [search, setSearch] = useState('')
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -52,6 +49,7 @@ export default function Admin() {
       return
     }
 
+    setCurrentUserId(user.id)
     setAuthorized(true)
     void fetchUsers()
   }
@@ -62,24 +60,16 @@ export default function Admin() {
     setLoading(true)
     setLoadError(null)
 
-    const { data, error } = await supabase.rpc('admin_list_users')
-    if (error) {
-      setLoadError(error.message)
-      setUsers([])
-      setFilteredUsers([])
-      setLoading(false)
-      return
-    }
-
-    const rows = (Array.isArray(data) ? data : []) as AdminUserRow[]
-    setUsers(rows)
-    setFilteredUsers(rows)
+    const loaded = await loadAdminUsers(supabase)
+    setLoadError(loaded.error)
+    setUsers(loaded.users)
+    setFilteredUsers(loaded.users)
     setLoading(false)
   }
 
   const handleDeleteUser = async (userId: string, email: string) => {
     if (!supabase) return
-    if (isAdminEmail(email)) {
+    if (isMasterAdminRow({ id: userId, email }, currentUserId)) {
       alert('The master admin account cannot be deleted.')
       return
     }
@@ -102,8 +92,7 @@ export default function Admin() {
     }
   }
 
-  const lastActive = (user: AdminUserRow) =>
-    user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : '—'
+  const lastActive = (user: AdminUserRow) => adminLastActive(user)
 
   if (!authorized) {
     return (
@@ -170,7 +159,7 @@ export default function Admin() {
         ) : (
           <div className="space-y-3">
             {filteredUsers.map((user) => {
-              const master = isAdminEmail(user.email)
+              const master = isMasterAdminRow(user, currentUserId)
               return (
                 <div
                   key={user.id}

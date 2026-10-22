@@ -7,6 +7,7 @@ import {
 } from '../utils/inventoryStorage'
 import { recalculateVialInventory } from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
+import { writeLocal } from './protocolStorageScope'
 import { isLxrdgatsbyUser } from './protocolSeed'
 
 export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v4'
@@ -311,11 +312,6 @@ export function buildLxrdgatsbyVials(): Vial[] {
   ]
 }
 
-function looksLikeLxrdgatsbyStack(state: TrackerState): boolean {
-  const ids = new Set(state.peptides.map((p) => p.id))
-  return ids.has('test-cyp') && ids.has('klow') && ids.has('tesamorelin')
-}
-
 function toCalculatorVial(v: Vial): InventoryVial {
   return {
     id: v.id,
@@ -336,7 +332,7 @@ function persistLocalVials(vials: Vial[]) {
   saveVials(vials)
   saveInventoryVials(vials.map(toCalculatorVial))
   try {
-    localStorage.setItem(VIAL_SEED_FLAG, 'true')
+    writeLocal(VIAL_SEED_FLAG, 'true')
   } catch {
     /* ignore */
   }
@@ -381,9 +377,7 @@ export function applyLxrdgatsbyVialInventorySeed(
   email?: string | null,
 ): TrackerState | null {
   if (typeof localStorage === 'undefined') return null
-  const allowed =
-    isLxrdgatsbyUser(username, email) || looksLikeLxrdgatsbyStack(current)
-  if (!allowed) return null
+  if (!isLxrdgatsbyUser(username, email)) return null
 
   const fromState = current.vialInventory ?? []
   const fromStorage = loadVials()

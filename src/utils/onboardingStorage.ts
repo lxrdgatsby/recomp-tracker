@@ -1,4 +1,5 @@
 import type { OnboardingCompleteData } from '../components/onboarding/OnboardingWizard'
+import { readLocal, writeLocal } from '../lib/protocolStorageScope'
 import { getCatalogEntry } from '../constants/peptideCatalog'
 import { generateGoalAware90DayPlan } from './goalAwarePlan'
 
@@ -58,7 +59,7 @@ export function onboardingDataFromComplete(
 
 export function saveOnboardingData(data: OnboardingData): void {
   try {
-    localStorage.setItem(ONBOARDING_KEY, JSON.stringify(data))
+    writeLocal(ONBOARDING_KEY, JSON.stringify(data))
   } catch {
     // ignore quota errors
   }
@@ -66,7 +67,7 @@ export function saveOnboardingData(data: OnboardingData): void {
 
 export function getOnboardingData(): OnboardingData | null {
   try {
-    const saved = localStorage.getItem(ONBOARDING_KEY)
+    const saved = readLocal(ONBOARDING_KEY)
     if (!saved) return null
     return JSON.parse(saved) as OnboardingData
   } catch {
@@ -80,7 +81,7 @@ export function generate90DayPlan(data: OnboardingData): Generated90DayPlan {
 
 export function save90DayPlan(plan: Generated90DayPlan): void {
   try {
-    localStorage.setItem(PLAN_KEY, JSON.stringify(plan))
+    writeLocal(PLAN_KEY, JSON.stringify(plan))
   } catch {
     // ignore quota errors
   }
@@ -88,7 +89,7 @@ export function save90DayPlan(plan: Generated90DayPlan): void {
 
 export function get90DayPlan(): Generated90DayPlan | null {
   try {
-    const saved = localStorage.getItem(PLAN_KEY)
+    const saved = readLocal(PLAN_KEY)
     if (!saved) return null
     return JSON.parse(saved) as Generated90DayPlan
   } catch {

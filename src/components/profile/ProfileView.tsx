@@ -24,6 +24,7 @@ import { AutoResizeTextarea } from '../ui/AutoResizeTextarea'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { Input } from '../ui/Input'
+import { AdminProfileLink } from './AdminProfileLink'
 import { PeptideBenefitsAccordion } from './PeptideBenefitsAccordion'
 import { RemindersCard } from '../reminders/RemindersCard'
 
@@ -114,7 +115,7 @@ function clonePeptides(peptides: Peptide[]): Peptide[] {
 }
 
 export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
-  const { userProfile, signOut } = useAuth()
+  const { user, userProfile, signOut } = useAuth()
   const initialFamiliarity = (userProfile?.familiarity ??
     'beginner') as FamiliarityLevel
   const [draftProfile, setDraftProfile] = useState(() =>
@@ -199,7 +200,6 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
 
   const handleLogout = async () => {
     if (!confirm('Are you sure you want to log out?')) return
-    localStorage.clear()
     await signOut()
   }
 
@@ -252,6 +252,7 @@ export function ProfileView({ state, onSaveProfile }: ProfileViewProps) {
           >
             Settings →
           </Link>
+          <AdminProfileLink email={user?.email ?? userProfile?.email} />
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (

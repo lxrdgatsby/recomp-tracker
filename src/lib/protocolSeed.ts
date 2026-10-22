@@ -1,7 +1,9 @@
 import { STORAGE_KEY } from '../constants/defaults'
+import { readLocal, writeLocal } from './protocolStorageScope'
 import {
   AMINO_1MQ_FULL_DOSE_DATE,
   AMINO_1MQ_START_DATE,
+  CURRENT_WEIGHT_LB,
   CYCLE_START_DATE,
   FAT_LOSS_DRIVERS,
   GOAL_WEIGHT_LB,
@@ -11,6 +13,7 @@ import {
   MUSCLE_DRIVERS,
   RESEARCH_DISCLAIMER,
   START_WEIGHT_LB,
+  WEEKLY_LOSS_LB,
 } from '../constants/reconstitutionTable'
 import type {
   Peptide,
@@ -22,10 +25,11 @@ import type {
 import { formatSyringeUnits } from '../utils/recompProtocol'
 import { saveState } from '../utils/storage'
 import { PROTOCOL_NOTE, stampRestartPeptide, withNadHorizon } from './lxrdRestart'
+import { applyLxrdWeightTargets } from './lxrdWeight'
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-reta-cagri'
+export const PROTOCOL_DEFINITION_VERSION = '2026-10-21-weight-targets'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -512,7 +516,10 @@ export function isLxrdgatsbyUser(
   username?: string | null,
   email?: string | null,
 ): boolean {
-  const values = [username, email].map((v) => (v ?? '').trim().toLowerCase())
+  const values = [username, email]
+    .map((v) => (v ?? '').trim().toLowerCase())
+    .filter(Boolean)
+  if (values.some((v) => v === 'itsgatsby@protonmail.com')) return true
   return values.some(
     (v) => v === SEED_USER || v.includes('lxrdgatsby') || v.split('@')[0] === SEED_USER
   )
@@ -520,7 +527,7 @@ export function isLxrdgatsbyUser(
 
 export function hasSeededProtocol(): boolean {
   try {
-    return localStorage.getItem(SEED_FLAG) === 'true'
+    return readLocal(SEED_FLAG) === 'true'
   } catch {
     return false
   }
@@ -528,28 +535,24 @@ export function hasSeededProtocol(): boolean {
 
 function writeLegacyKeys(startDate: string, state: TrackerState, vials: unknown[]) {
   try {
-    const existingStart = localStorage.getItem('protocolStartDate')
-    if (!existingStart) localStorage.setItem('protocolStartDate', startDate)
-    localStorage.setItem('activeStack', JSON.stringify(state.peptides))
-    localStorage.setItem('vials', JSON.stringify(vials))
-    localStorage.setItem('scheduledDoses', JSON.stringify(state.peptides))
-    if (localStorage.getItem('checkIns') == null) {
-      localStorage.setItem('checkIns', '[]')
+    const existingStart = readLocal('protocolStartDate')
+    if (!existingStart) writeLocal('protocolStartDate', startDate)
+    writeLocal('activeStack', JSON.stringify(state.peptides))
+    writeLocal('vials', JSON.stringify(vials))
+    writeLocal('scheduledDoses', JSON.stringify(state.peptides))
+    if (readLocal('checkIns') == null) {
+      writeLocal('checkIns', '[]')
     }
-    if (localStorage.getItem('startWeight') == null) {
-      localStorage.setItem('startWeight', String(START_WEIGHT_LB))
-    }
-    if (localStorage.getItem('targetWeight') == null) {
-      localStorage.setItem('targetWeight', String(GOAL_WEIGHT_LB))
-    }
-    localStorage.setItem('goalNote', HONEST_OUTCOME_COPY)
-    localStorage.setItem('disclaimer', RESEARCH_DISCLAIMER)
-    localStorage.setItem('phaseNotes', JSON.stringify(PHASE_NOTES))
-    localStorage.setItem('safetyCopy', SAFETY_COPY)
-    localStorage.setItem('protocolDefinitionVersion', PROTOCOL_DEFINITION_VERSION)
-    localStorage.setItem(SEED_FLAG, 'true')
+    writeLocal('startWeight', String(START_WEIGHT_LB))
+    writeLocal('targetWeight', String(GOAL_WEIGHT_LB))
+    writeLocal('goalNote', HONEST_OUTCOME_COPY)
+    writeLocal('disclaimer', RESEARCH_DISCLAIMER)
+    writeLocal('phaseNotes', JSON.stringify(PHASE_NOTES))
+    writeLocal('safetyCopy', SAFETY_COPY)
+    writeLocal('protocolDefinitionVersion', PROTOCOL_DEFINITION_VERSION)
+    writeLocal(SEED_FLAG, 'true')
     saveState(state)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    writeLocal(STORAGE_KEY, JSON.stringify(state))
   } catch {
     /* ignore quota */
   }
@@ -566,12 +569,13 @@ function hasStack(state: TrackerState): boolean {
 export function applyLxrdgatsbyProtocolSeed(
   current: TrackerState,
   username?: string | null,
+  email?: string | null,
 ): TrackerState | null {
   if (typeof localStorage === 'undefined') return null
-  if (username && !isLxrdgatsbyUser(username)) return null
+  if (!isLxrdgatsbyUser(username, email)) return null
   if (hasStack(current)) {
     try {
-      localStorage.setItem(SEED_FLAG, 'true')
+      writeLocal(SEED_FLAG, 'true')
     } catch {
       /* ignore */
     }
@@ -584,21 +588,22 @@ export function applyLxrdgatsbyProtocolSeed(
       ? current.profile.startDate
       : CYCLE_START_DATE
   const { peptides, recompPlan, vials } = buildLxrdgatsbyStack(existingStart)
-  const next: TrackerState = {
+  const next = applyLxrdWeightTargets({
     ...current,
     profile: {
       ...current.profile,
-      currentWeight: current.profile.currentWeight || START_WEIGHT_LB,
-      goalWeight: current.profile.goalWeight || GOAL_WEIGHT_LB,
+      currentWeight: current.profile.currentWeight || CURRENT_WEIGHT_LB,
+      goalWeight: GOAL_WEIGHT_LB,
+      startWeight: START_WEIGHT_LB,
       startDate: existingStart,
-      weeklyLossTarget: current.profile.weeklyLossTarget || 1.2,
+      weeklyLossTarget: WEEKLY_LOSS_LB,
     },
     peptides,
     recompPlan,
     injectionLogs: current.injectionLogs ?? [],
     weightHistory: current.weightHistory ?? [],
     workoutCompletions: current.workoutCompletions ?? [],
-  }
+  })
   writeLegacyKeys(existingStart, next, vials)
   return next
 }
@@ -618,9 +623,9 @@ export function stackNeedsDefinitionRefresh(state: TrackerState): boolean {
 export function refreshProtocolDefinition(
   current: TrackerState,
   username?: string | null,
+  email?: string | null,
 ): TrackerState | null {
-  if (username && !isLxrdgatsbyUser(username)) return null
-  if (!hasStack(current) && !isLxrdgatsbyUser(username)) return null
+  if (!isLxrdgatsbyUser(username, email)) return null
   if (!stackNeedsDefinitionRefresh(current) && hasStack(current)) {
     const tesa = current.peptides.find((p) => p.id === 'tesamorelin')
     const hasLaterPhases = tesa?.protocol?.titration.some((t) =>
@@ -668,28 +673,32 @@ export function refreshProtocolDefinition(
     merged.push(p)
   }
 
-  const next = withNadHorizon({
-    ...current,
-    profile: {
-      ...current.profile,
-      startDate,
-      goalWeight: current.profile.goalWeight || GOAL_WEIGHT_LB,
-    },
-    peptides: merged,
-    recompPlan: {
-      ...recompPlan,
-      generatedAt: current.recompPlan?.generatedAt ?? recompPlan.generatedAt,
-    },
-    injectionLogs: current.injectionLogs ?? [],
-    weightHistory: current.weightHistory ?? [],
-    workoutCompletions: current.workoutCompletions ?? [],
-  })
+  const next = applyLxrdWeightTargets(
+    withNadHorizon({
+      ...current,
+      profile: {
+        ...current.profile,
+        startDate,
+        startWeight: START_WEIGHT_LB,
+        goalWeight: GOAL_WEIGHT_LB,
+        weeklyLossTarget: WEEKLY_LOSS_LB,
+      },
+      peptides: merged,
+      recompPlan: {
+        ...recompPlan,
+        generatedAt: current.recompPlan?.generatedAt ?? recompPlan.generatedAt,
+      },
+      injectionLogs: current.injectionLogs ?? [],
+      weightHistory: current.weightHistory ?? [],
+      workoutCompletions: current.workoutCompletions ?? [],
+    })
+  )
 
   try {
-    const existingStart = localStorage.getItem('protocolStartDate')
-    if (!existingStart) localStorage.setItem('protocolStartDate', startDate)
-    localStorage.setItem('activeStack', JSON.stringify(next.peptides))
-    const existingVialsRaw = localStorage.getItem('vials')
+    const existingStart = readLocal('protocolStartDate')
+    if (!existingStart) writeLocal('protocolStartDate', startDate)
+    writeLocal('activeStack', JSON.stringify(next.peptides))
+    const existingVialsRaw = readLocal('vials')
     let mergedVials = vials
     if (existingVialsRaw) {
       try {
@@ -709,13 +718,15 @@ export function refreshProtocolDefinition(
         mergedVials = vials
       }
     }
-    localStorage.setItem('vials', JSON.stringify(mergedVials))
-    localStorage.setItem('goalNote', HONEST_OUTCOME_COPY)
-    localStorage.setItem('disclaimer', RESEARCH_DISCLAIMER)
-    localStorage.setItem('phaseNotes', JSON.stringify(PHASE_NOTES))
-    localStorage.setItem('safetyCopy', SAFETY_COPY)
-    localStorage.setItem('protocolDefinitionVersion', PROTOCOL_DEFINITION_VERSION)
-    localStorage.setItem(SEED_FLAG, 'true')
+    writeLocal('vials', JSON.stringify(mergedVials))
+    writeLocal('startWeight', String(START_WEIGHT_LB))
+    writeLocal('targetWeight', String(GOAL_WEIGHT_LB))
+    writeLocal('goalNote', HONEST_OUTCOME_COPY)
+    writeLocal('disclaimer', RESEARCH_DISCLAIMER)
+    writeLocal('phaseNotes', JSON.stringify(PHASE_NOTES))
+    writeLocal('safetyCopy', SAFETY_COPY)
+    writeLocal('protocolDefinitionVersion', PROTOCOL_DEFINITION_VERSION)
+    writeLocal(SEED_FLAG, 'true')
     saveState(next)
   } catch {
     /* ignore quota */

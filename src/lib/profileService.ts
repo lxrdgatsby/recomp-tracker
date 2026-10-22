@@ -2,7 +2,7 @@ import {
   computeWeeklyWeightTarget,
   inferWeightGoalMode,
 } from '../constants/onboardingGoals'
-import { DEFAULT_PEPTIDES, DEFAULT_PROFILE } from '../constants/defaults'
+import { DEFAULT_PROFILE } from '../constants/defaults'
 import {
   formatPeptideSelections,
   type PeptideSelection,
@@ -15,6 +15,7 @@ import {
 } from '../utils/recompProtocol'
 import type { Questionnaire } from '../types/auth'
 import { formatSupabaseError } from './supabaseErrors'
+import { isLxrdgatsbyUser } from './protocolSeed'
 import { supabase } from './supabase'
 import type { Peptide, Profile, TrackerState } from '../types'
 import { buildAssistantUserContext } from '../utils/assistantUserContext'
@@ -96,7 +97,7 @@ function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
       weightHistory: saved.weightHistory ?? [],
       injectionLogs: saved.injectionLogs ?? [],
       workoutCompletions: saved.workoutCompletions ?? [],
-      vialInventory: saved.vialInventory,
+      vialInventory: saved.vialInventory ?? [],
     }
   }
 
@@ -122,20 +123,55 @@ function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
       weightHistory: saved?.weightHistory ?? [],
       injectionLogs: saved?.injectionLogs ?? [],
       workoutCompletions: saved?.workoutCompletions ?? [],
+      vialInventory: saved?.vialInventory ?? [],
     }
   }
 
   return {
     profile,
     peptides:
-      userProfile.peptideStack.length > 0
-        ? userProfile.peptideStack
-        : [...DEFAULT_PEPTIDES],
+      userProfile.peptideStack.length > 0 ? userProfile.peptideStack : [],
     recompPlan: saved?.recompPlan,
     weightHistory: saved?.weightHistory ?? [],
     injectionLogs: saved?.injectionLogs ?? [],
     workoutCompletions: saved?.workoutCompletions ?? [],
+    vialInventory: saved?.vialInventory ?? [],
   }
+}
+
+function todayYmd(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+/** Empty plan for a signed-in user who has not finished onboarding. */
+export function blankTrackerState(): TrackerState {
+  return {
+    profile: {
+      currentWeight: DEFAULT_PROFILE.currentWeight,
+      goalWeight: DEFAULT_PROFILE.goalWeight,
+      height: '',
+      startDate: todayYmd(),
+      weeklyLossTarget: DEFAULT_PROFILE.weeklyLossTarget,
+    },
+    peptides: [],
+    weightHistory: [],
+    injectionLogs: [],
+    workoutCompletions: [],
+    vialInventory: [],
+  }
+}
+
+/**
+ * lxrdgatsby keeps his saved plan. Anyone else who has not finished
+ * onboarding gets an empty plan, even if a previous bug wrote his stack
+ * onto their row.
+ */
+export function trackerForSignedInUser(profile: UserProfile): TrackerState {
+  if (!isLxrdgatsbyUser(profile.username, profile.email) && !profile.onboardingCompleted) {
+    return blankTrackerState()
+  }
+  return profileToTrackerState(profile)
 }
 
 export function profileToTrackerState(userProfile: UserProfile): TrackerState {
@@ -374,7 +410,9 @@ export async function saveProfileToDb(
     ...trackerState,
     profile,
     peptides,
-    recompPlan: recompPlan ?? trackerState.recompPlan,
+    recompPlan: trackerState.recompPlan?.definitionVersion
+      ? trackerState.recompPlan
+      : recompPlan ?? trackerState.recompPlan,
   }
 
   return persistPeptideData(userId, profile, nextState, selections, extras)

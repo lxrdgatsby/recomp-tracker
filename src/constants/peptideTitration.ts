@@ -174,6 +174,32 @@ export const PEPTIDE_TITRATION: Record<string, TitrationMap> = {
       { weeks: '5-13', doseMg: 5, notes: '1× weekly maintenance' },
     ],
   },
+  'selank-semax': {
+    beginner: [
+      {
+        weeks: '1-13',
+        doseMg: 0.25,
+        notes:
+          'Once daily. 250 mcg of each ≈ 7.5–8 units. Hold 1–2 weeks. Do not auto-step. Nasal has the published human data; SC has no published human trials. Research-use only.',
+      },
+    ],
+    intermediate: [
+      {
+        weeks: '1-13',
+        doseMg: 0.25,
+        notes:
+          'Once daily. 250 mcg of each ≈ 7.5–8 units. Hold 1–2 weeks. Do not auto-step.',
+      },
+    ],
+    advanced: [
+      {
+        weeks: '1-13',
+        doseMg: 0.25,
+        notes:
+          'Once daily. 250 mcg of each ≈ 7.5–8 units. Hold 1–2 weeks. Do not auto-step.',
+      },
+    ],
+  },
   selank: {
     beginner: [
       { weeks: '1-13', doseMg: 0.25, notes: 'Daily AM SubQ or intranasal (250mcg)' },

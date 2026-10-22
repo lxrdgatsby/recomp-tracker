@@ -1,3 +1,5 @@
+import { readLocal, removeLocal, writeLocal } from '../lib/protocolStorageScope'
+
 const LAST_CHECK_IN_KEY = 'lastCheckIn'
 const CHECK_IN_HISTORY_KEY = 'checkInHistory'
 const LEGACY_CHECK_INS_KEY = 'checkIns'
@@ -9,7 +11,7 @@ function migrateLegacyCheckIns(): void {
   legacyMigrated = true
 
   try {
-    const legacyRaw = localStorage.getItem(LEGACY_CHECK_INS_KEY)
+    const legacyRaw = readLocal(LEGACY_CHECK_INS_KEY)
     if (!legacyRaw) return
 
     const legacy = JSON.parse(legacyRaw)
@@ -45,14 +47,14 @@ function migrateLegacyCheckIns(): void {
     }
 
     merged.sort((a, b) => a.date.localeCompare(b.date))
-    localStorage.setItem(CHECK_IN_HISTORY_KEY, JSON.stringify(merged))
+    writeLocal(CHECK_IN_HISTORY_KEY, JSON.stringify(merged))
 
     const latest = merged[merged.length - 1]
     if (latest) {
-      localStorage.setItem(LAST_CHECK_IN_KEY, JSON.stringify(latest))
+      writeLocal(LAST_CHECK_IN_KEY, JSON.stringify(latest))
     }
 
-    localStorage.removeItem(LEGACY_CHECK_INS_KEY)
+    removeLocal(LEGACY_CHECK_INS_KEY)
   } catch {
     // ignore parse errors
   }
@@ -71,14 +73,14 @@ export interface CheckInData {
 export function saveCheckIn(data: CheckInData): void {
   migrateLegacyCheckIns()
   try {
-    localStorage.setItem(LAST_CHECK_IN_KEY, JSON.stringify(data))
+    writeLocal(LAST_CHECK_IN_KEY, JSON.stringify(data))
 
     const history = getCheckInHistory()
     const dateKey = data.date.split('T')[0]
     const withoutToday = history.filter(
       (entry) => entry.date.split('T')[0] !== dateKey
     )
-    localStorage.setItem(
+    writeLocal(
       CHECK_IN_HISTORY_KEY,
       JSON.stringify([...withoutToday, data])
     )
@@ -90,7 +92,7 @@ export function saveCheckIn(data: CheckInData): void {
 export function getLastCheckIn(): CheckInData | null {
   migrateLegacyCheckIns()
   try {
-    const saved = localStorage.getItem(LAST_CHECK_IN_KEY)
+    const saved = readLocal(LAST_CHECK_IN_KEY)
     if (!saved) return null
     return JSON.parse(saved) as CheckInData
   } catch {
@@ -101,7 +103,7 @@ export function getLastCheckIn(): CheckInData | null {
 export function getCheckInHistory(): CheckInData[] {
   migrateLegacyCheckIns()
   try {
-    const saved = localStorage.getItem(CHECK_IN_HISTORY_KEY)
+    const saved = readLocal(CHECK_IN_HISTORY_KEY)
     if (!saved) return []
     const parsed = JSON.parse(saved)
     return Array.isArray(parsed) ? (parsed as CheckInData[]) : []

@@ -10,15 +10,18 @@ import {
 import type { Session, User } from '@supabase/supabase-js'
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth'
 import {
+  blankTrackerState,
   fetchProfile,
   persistSeededProtocol,
-  profileToTrackerState,
   touchLastActive,
+  trackerForSignedInUser,
 } from '../lib/profileService'
 import {
   applyLxrdgatsbyProtocolSeed,
+  isLxrdgatsbyUser,
   refreshProtocolDefinition,
 } from '../lib/protocolSeed'
+import { setProtocolStorageScope } from '../lib/protocolStorageScope'
 import { withNadHorizon } from '../lib/lxrdRestart'
 import { applyLxrdgatsbyVialInventorySeed } from '../lib/vialInventorySeed'
 import { runVialSizeMigrationV2 } from '../lib/vialInventory'
@@ -26,8 +29,6 @@ import { getAuthCallbackUrl } from '../lib/authRedirect'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import type { TrackerState } from '../types'
 import type { UserProfile } from '../types/auth'
-import { DEFAULT_STATE } from '../constants/defaults'
-
 interface AuthContextValue {
   user: User | null
   session: Session | null
@@ -52,7 +53,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, session, ready: sessionReady } = useSupabaseAuth()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [trackerState, setTrackerState] = useState<TrackerState>(DEFAULT_STATE)
+  const [trackerState, setTrackerState] = useState<TrackerState>(blankTrackerState)
   const [profileLoading, setProfileLoading] = useState(false)
 
   const loadUserData = useCallback(async (userId: string) => {
@@ -60,41 +61,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { user: sessionUser },
     } = (await supabase?.auth.getUser()) ?? { data: { user: null } }
-    void touchLastActive(userId, sessionUser?.email ?? profile?.email)
+    const email = sessionUser?.email ?? profile?.email ?? null
+    void touchLastActive(userId, email)
+    if (!profile) {
+      setProtocolStorageScope(userId, false)
+      setUserProfile(null)
+      setTrackerState(blankTrackerState())
+      return
+    }
+
+    const lxrd = isLxrdgatsbyUser(profile.username, email)
+    setProtocolStorageScope(userId, lxrd)
     setUserProfile(profile)
-    if (profile) {
-      let next = profileToTrackerState(profile)
-      const seeded = applyLxrdgatsbyProtocolSeed(next, profile.username)
-      if (seeded) next = seeded
-      const refreshed = refreshProtocolDefinition(next, profile.username)
-      if (refreshed) next = refreshed
-      let horizonChanged = false
-      if (!refreshed) {
+    let next = trackerForSignedInUser({ ...profile, email: profile.email ?? email })
+    let changed = false
+    if (lxrd) {
+      const seeded = applyLxrdgatsbyProtocolSeed(next, profile.username, email)
+      if (seeded) {
+        next = seeded
+        changed = true
+      }
+      const refreshed = refreshProtocolDefinition(next, profile.username, email)
+      if (refreshed) {
+        next = refreshed
+        changed = true
+      } else {
         const horizon = withNadHorizon(next)
         if (horizon !== next) {
           next = horizon
-          horizonChanged = true
+          changed = true
         }
       }
       const vialsSeeded = applyLxrdgatsbyVialInventorySeed(
         next,
         profile.username,
-        profile.email,
+        email,
       )
-      if (vialsSeeded) next = vialsSeeded
-      if (seeded || refreshed || horizonChanged || vialsSeeded) {
-        try {
-          await persistSeededProtocol(userId, next, {
-            mainGoal: profile.mainGoal ?? next.recompPlan?.summary?.[1],
-            additionalInfo: profile.additionalInfo,
-          })
-        } catch (err) {
-          console.error('persist protocol definition:', err)
-        }
+      if (vialsSeeded) {
+        next = vialsSeeded
+        changed = true
       }
-      next = runVialSizeMigrationV2(next) ?? next
-      setTrackerState(next)
+    } else if (!profile.onboardingCompleted) {
+      const storedPeptides =
+        profile.trackerData?.peptides?.length ?? profile.peptideStack.length
+      const storedLogs = profile.trackerData?.injectionLogs?.length ?? 0
+      if (storedPeptides > 0 || storedLogs > 0) changed = true
     }
+    if (changed) {
+      try {
+        await persistSeededProtocol(userId, next, {
+          mainGoal: profile.mainGoal ?? next.recompPlan?.summary?.[1],
+          additionalInfo: profile.additionalInfo,
+        })
+      } catch (err) {
+        console.error('persist protocol definition:', err)
+      }
+    }
+    next = runVialSizeMigrationV2(next) ?? next
+    setTrackerState(next)
   }, [])
 
   const refreshProfile = useCallback(async () => {
@@ -105,13 +129,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!sessionReady) return
 
     if (!user) {
+      setProtocolStorageScope(null, true)
       setUserProfile(null)
-      setTrackerState(DEFAULT_STATE)
+      setTrackerState(blankTrackerState())
       setProfileLoading(false)
       return
     }
 
     let cancelled = false
+    setProtocolStorageScope(user.id, false)
+    setUserProfile(null)
+    setTrackerState(blankTrackerState())
     setProfileLoading(true)
     void loadUserData(user.id).finally(() => {
       if (!cancelled) setProfileLoading(false)

@@ -9,4 +9,12 @@ describe('onboarding peptide picker', () => {
     expect(option.textContent).toMatch(/1\.5 mg/)
     expect(option.textContent).toMatch(/2 weeks/)
   })
+
+  it('lists Selank + Semax fused with the 3 mL / ~8 unit start', () => {
+    render(<PeptideSelector variant="onboarding" selections={[]} onChange={() => undefined} />)
+    const option = screen.getByRole('option', { name: /Selank \+ Semax/i })
+    expect(option.textContent).toMatch(/3 mL/)
+    expect(option.textContent).toMatch(/~8 u/)
+    expect(option.textContent).toMatch(/250 mcg/)
+  })
 })

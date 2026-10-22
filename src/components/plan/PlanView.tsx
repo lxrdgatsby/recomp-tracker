@@ -4,18 +4,15 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   CYCLE_START_DATE,
   FAT_LOSS_DRIVERS,
-  GOAL_WEIGHT_LB,
   GUIDANCE_CARDS,
-  HONEST_OUTCOME_COPY,
   KLOW_NOTE,
   MUSCLE_DRIVERS,
   RESEARCH_DISCLAIMER,
-  START_WEIGHT_LB,
 } from '../../constants/reconstitutionTable'
 import { CYCLE_DAYS } from '../../constants/defaults'
 import { PHASE_NOTES, hasSeededProtocol } from '../../lib/protocolSeed'
 import type { TrackerState } from '../../types'
-import { getDaysIntoCycle } from '../../utils/calculations'
+import { getDaysIntoCycle, weightProgress } from '../../utils/calculations'
 import {
   getInjectionsForDate,
   groupInjectionsBySlot,
@@ -51,6 +48,8 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
     hasSeededProtocol() || peptides.some((p) => p.id === 'test-cyp')
   const startLabel = profile.startDate || CYCLE_START_DATE
 
+  const progress = weightProgress(profile, state.weightHistory)
+  const scaleTarget = Math.round((progress.startWeight - progress.goalWeight) * 10) / 10
   const todayInjections = getInjectionsForDate(
     peptides,
     new Date(),
@@ -98,13 +97,18 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
           User targets
         </p>
         <p className="mt-2 text-lg font-semibold text-white">
-          Start {START_WEIGHT_LB} lb → Goal {GOAL_WEIGHT_LB} lb
+          {progress.startWeight} lb → {progress.currentWeight} lb → {progress.goalWeight} lb
+        </p>
+        <p className="mt-1 text-sm text-slate-300">
+          {progress.percent}% of the way · {progress.remainingLb} lb to go
         </p>
         <p className="mt-1 text-sm text-slate-400">
           Window: 90 days from {format(new Date(`${startLabel}T00:00:00`), 'MMM d, yyyy')}
         </p>
         <p className="mt-3 text-sm leading-relaxed text-slate-300">
-          {HONEST_OUTCOME_COPY}
+          Scale target is −{scaleTarget} lb (~{profile.weeklyLossTarget} lb/week). Muscle
+          target is preserve lean / maybe +2–4 lb. 7% BF is a stretch; 9–12% is the
+          realistic landing.
         </p>
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           <p>
@@ -140,7 +144,7 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
         </Card>
         <Card className="!p-4">
           <p className="text-xs text-slate-500">Scale target</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-400">−15 lb</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-400">−{scaleTarget} lb</p>
         </Card>
       </div>
 

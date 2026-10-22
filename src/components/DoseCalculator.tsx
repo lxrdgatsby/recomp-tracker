@@ -107,8 +107,13 @@ export function DoseCalculator({
     if (!compound) return
     if (compound.vialMg != null) setVialInput(String(compound.vialMg))
     if (compound.bacMl != null) setBacInput(String(compound.bacMl))
-    setDoseUnit(compound.doseUnit === 'mcg' ? 'mcg' : 'mg')
-    if (compound.defaultDoseMg != null) setDoseInput(String(compound.defaultDoseMg))
+    const unit = compound.doseUnit === 'mcg' ? 'mcg' : 'mg'
+    setDoseUnit(unit)
+    if (compound.defaultDoseMg != null) {
+      const shown =
+        unit === 'mcg' ? compound.defaultDoseMg * 1000 : compound.defaultDoseMg
+      setDoseInput(String(shown))
+    }
   }, [selectedId])
 
   const math = useMemo(() => {
@@ -159,6 +164,9 @@ export function DoseCalculator({
             ? ` · ${table.keyDraws.map((d) => d.label).join(' · ')}`
             : ''}
         </p>
+      )}
+      {table?.note && (
+        <p className="mb-4 text-xs leading-relaxed text-amber-100/90">{table.note}</p>
       )}
 
       {isTestCyp ? (

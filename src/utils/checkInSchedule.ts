@@ -1,5 +1,6 @@
 import type { CheckInCadence, Profile } from '../types'
 import { STORAGE_KEY } from '../constants/defaults'
+import { readLocal, writeLocal } from '../lib/protocolStorageScope'
 import { hasCheckInOnCalendarDate } from './checkInStorage'
 
 export const CHECK_IN_SCHEDULE_KEY = 'checkInSchedule'
@@ -128,7 +129,7 @@ export function isWeighInDay(schedule: CheckInSchedule, now = new Date()): boole
 export function getCheckInSchedule(profile?: Partial<Profile> | null): CheckInSchedule {
   if (!isBrowser()) return scheduleFromProfile(profile)
   try {
-    const raw = localStorage.getItem(CHECK_IN_SCHEDULE_KEY)
+    const raw = readLocal(CHECK_IN_SCHEDULE_KEY)
     if (raw) return normalizeSchedule(JSON.parse(raw) as Partial<CheckInSchedule>)
   } catch {
     // ignore corrupt schedule
@@ -139,7 +140,7 @@ export function getCheckInSchedule(profile?: Partial<Profile> | null): CheckInSc
 function patchTrackerProfile(schedule: CheckInSchedule) {
   if (!isBrowser()) return
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = readLocal(STORAGE_KEY)
     if (!raw) return
     const state = JSON.parse(raw) as { profile?: Profile }
     state.profile = {
@@ -148,7 +149,7 @@ function patchTrackerProfile(schedule: CheckInSchedule) {
       weeklyWeighInDay: schedule.weeklyWeighInDay,
       weighInReminderEnabled: schedule.reminderEnabled,
     } as Profile
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    writeLocal(STORAGE_KEY, JSON.stringify(state))
   } catch {
     // ignore quota / parse errors
   }
@@ -157,7 +158,7 @@ function patchTrackerProfile(schedule: CheckInSchedule) {
 export function saveCheckInSchedule(schedule: CheckInSchedule): CheckInSchedule {
   const next = normalizeSchedule(schedule)
   if (isBrowser()) {
-    localStorage.setItem(CHECK_IN_SCHEDULE_KEY, JSON.stringify(next))
+    writeLocal(CHECK_IN_SCHEDULE_KEY, JSON.stringify(next))
     patchTrackerProfile(next)
     window.dispatchEvent(new Event(CHECK_IN_SCHEDULE_CHANGED))
   }
@@ -167,7 +168,7 @@ export function saveCheckInSchedule(schedule: CheckInSchedule): CheckInSchedule 
 export function syncCheckInScheduleFromProfile(profile?: Partial<Profile> | null): CheckInSchedule {
   if (!isBrowser()) return scheduleFromProfile(profile)
   try {
-    if (localStorage.getItem(CHECK_IN_SCHEDULE_KEY)) return getCheckInSchedule(profile)
+    if (readLocal(CHECK_IN_SCHEDULE_KEY)) return getCheckInSchedule(profile)
   } catch {
     // fall through
   }

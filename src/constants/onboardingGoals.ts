@@ -24,7 +24,7 @@ export const GOAL_PEPTIDE_RECOMMENDATIONS: Record<OnboardingGoal, string[]> = {
   Longevity: ['epitalon', 'ghkcu', 'motsc', 'ss31', 'amino1mq'],
   'Clearer skin': ['ghkcu', 'bpc157', 'melanotan2'],
   'Better sleep': ['dsip', 'epitalon', 'pinealon'],
-  'Reduce anxiety': ['selank', 'semax'],
+  'Reduce anxiety': ['selank', 'semax', 'selank-semax'],
 }
 
 const WEIGHT_LOSS_GOALS: OnboardingGoal[] = ['Fat loss', 'Body recomposition']

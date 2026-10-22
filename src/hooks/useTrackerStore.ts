@@ -11,6 +11,7 @@ import type {
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
 import { loadVials, saveVials } from '../utils/inventoryStorage'
+import { recordWeight } from '../utils/calculations'
 import { applyVialToggle } from '../utils/vialUsage'
 import { usePersistTrackerState } from './usePersistTrackerState'
 
@@ -58,15 +59,7 @@ function useTrackerStoreApi(): TrackerStoreApi {
 
   const logWeight = useCallback(
     async (date: string, weight: number) => {
-      const existing = trackerState.weightHistory.filter((e) => e.date !== date)
-      const weightHistory = [...existing, { date, weight }].sort((a, b) =>
-        a.date.localeCompare(b.date)
-      )
-      await persistState({
-        ...trackerState,
-        weightHistory,
-        profile: { ...trackerState.profile, currentWeight: weight },
-      })
+      await persistState(recordWeight(trackerState, date, weight))
     },
     [trackerState, persistState]
   )

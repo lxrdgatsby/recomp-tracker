@@ -4,6 +4,7 @@
  */
 
 import { generateId } from '../lib/generateId'
+import { readLocal, writeLocal } from '../lib/protocolStorageScope'
 import type { DoseLog, Vial } from '../types/v2'
 import { calcConcentrationMgPerMl } from './vialMath'
 
@@ -14,7 +15,7 @@ const KEYS = {
 
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
+    const raw = readLocal(key)
     if (!raw) return fallback
     return JSON.parse(raw) as T
   } catch {
@@ -23,7 +24,7 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function writeJson(key: string, value: unknown): void {
-  localStorage.setItem(key, JSON.stringify(value))
+  writeLocal(key, JSON.stringify(value))
 }
 
 function nowIso(): string {

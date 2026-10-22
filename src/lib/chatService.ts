@@ -125,6 +125,7 @@ export async function fetchConversationMessages(
     .from('chat_messages')
     .select('id, role, content, created_at')
     .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
     .neq('role', 'system')
     .order('created_at', { ascending: true })
     .limit(200)
@@ -348,6 +349,7 @@ export async function saveChatMessage(
       .from('chat_conversations')
       .update({ updated_at: now })
       .eq('id', conversationId)
+      .eq('user_id', userId)
   }
 
   return savedId
@@ -371,6 +373,7 @@ export async function updateConversationTitle(
     .from('chat_conversations')
     .update({ title })
     .eq('id', conversationId)
+    .eq('user_id', userId)
 }
 
 export async function toggleConversationPin(
@@ -387,6 +390,7 @@ export async function toggleConversationPin(
     .from('chat_conversations')
     .update({ pinned })
     .eq('id', conversationId)
+    .eq('user_id', userId)
 }
 
 export async function deleteConversation(
@@ -398,7 +402,11 @@ export async function deleteConversation(
   const caps = await detectDbCapabilities()
   if (!supabase || !caps.conversationsTable) return
 
-  await supabase.from('chat_conversations').delete().eq('id', conversationId)
+  await supabase
+    .from('chat_conversations')
+    .delete()
+    .eq('id', conversationId)
+    .eq('user_id', userId)
 }
 
 export async function migrateLegacyMessages(

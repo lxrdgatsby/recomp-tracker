@@ -61,6 +61,8 @@ export type CheckInCadence = 'daily' | 'weekly'
 export interface Profile {
   currentWeight: number
   goalWeight: number
+  /** Plan start weight. Progress uses this instead of the earliest chart point. */
+  startWeight?: number
   height?: string
   startDate: string
   weeklyLossTarget: number

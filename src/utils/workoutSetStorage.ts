@@ -1,3 +1,5 @@
+import { readLocal, writeLocal } from '../lib/protocolStorageScope'
+
 const WORKOUT_SET_LOGS_KEY = 'workoutSetLogs'
 
 export interface WorkoutSetEntry {
@@ -27,7 +29,7 @@ function sessionKey(week: number, dayIndex: number, date: string): string {
 
 export function getWorkoutSetLogs(): WorkoutSessionLog[] {
   try {
-    const raw = localStorage.getItem(WORKOUT_SET_LOGS_KEY)
+    const raw = readLocal(WORKOUT_SET_LOGS_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? (parsed as WorkoutSessionLog[]) : []
@@ -51,7 +53,7 @@ export function saveWorkoutSessionLog(log: WorkoutSessionLog): void {
     const existing = getWorkoutSetLogs().filter(
       (entry) => sessionKey(entry.week, entry.dayIndex, entry.date) !== key
     )
-    localStorage.setItem(
+    writeLocal(
       WORKOUT_SET_LOGS_KEY,
       JSON.stringify([...existing, log])
     )
