@@ -10,6 +10,32 @@ type TitrationMap = Record<FamiliarityLevel, TitrationPhase[]>
 
 /** Research-aligned dose phases in mg (or mg-equivalent for mcg peptides). */
 export const PEPTIDE_TITRATION: Record<string, TitrationMap> = {
+  'reta-cagri': {
+    beginner: [
+      {
+        weeks: '1-13',
+        doseMg: 1.5,
+        notes:
+          '1× weekly. 10 mg Reta + 10 mg Cagrilintide / 3 mL ≈ 45 units. Hold 2 weeks. Do not auto-step. Later if tolerated: 2.5 mg ≈ 75 u, 4 mg ≈ 120 u.',
+      },
+    ],
+    intermediate: [
+      {
+        weeks: '1-13',
+        doseMg: 1.5,
+        notes:
+          '1× weekly. Start 1.5 mg (~45 u) and hold 2 weeks before any step. Do not auto-step.',
+      },
+    ],
+    advanced: [
+      {
+        weeks: '1-13',
+        doseMg: 1.5,
+        notes:
+          '1× weekly. Start 1.5 mg (~45 u) and hold 2 weeks before any step. Do not auto-step.',
+      },
+    ],
+  },
   retatrutide: {
     beginner: [
       { weeks: '1-4', doseMg: 0.5, notes: '1× weekly — initiation (trial-style start)' },

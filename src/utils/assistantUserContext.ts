@@ -183,10 +183,16 @@ function compoundFromPeptide(
   scheduleDate?: Date,
 ): AssistantCompound {
   const proto = peptide.protocol
+  const todayIso = scheduleDate ? format(scheduleDate, 'yyyy-MM-dd') : ''
+  const pause = peptide.schedulePause
+  const inPause = Boolean(
+    pause && todayIso && todayIso >= pause.from && todayIso <= pause.until
+  )
   const notStarted =
+    !inPause &&
     Boolean(peptide.startsOn) &&
     Boolean(scheduleDate) &&
-    format(scheduleDate as Date, 'yyyy-MM-dd') < (peptide.startsOn as string)
+    todayIso < (peptide.startsOn as string)
   const tier = scheduleDate
     ? displayTierForDate(peptide, dayInCycle, scheduleDate)
     : getTitrationForDay(peptide, dayInCycle, scheduleDate)
@@ -241,7 +247,7 @@ export function buildAssistantUserContext(
   const restarted = peptides.some((p) => p.schedulePause)
   const nadLeft = restarted ? nadRemainingFromLogs(trackerState.injectionLogs ?? []) : null
   const protocolNote = restarted
-    ? `${PROTOCOL_NOTE} TRT / Test Cyp stays off until December 2026. Do not schedule a Sunday testosterone dose before then. Retatrutide holds at 2.5 mg (50 units) through Nov 21, 2026. Do not advance it. NAD+ remaining on the existing vial: ${nadLeft?.remainingMg ?? 0} mg from ${nadLeft?.doneCount ?? 0} logged doses through Oct 24 (a missing dose counts as 50 mg). Do not open a second NAD+ vial.`
+    ? `${PROTOCOL_NOTE} TRT / Test Cyp stays off until December 2026. Do not schedule a Sunday testosterone dose before then. Reta + Cagrilintide starts at 1.5 mg Reta-equivalent (~45 units) for 2 weeks after Oct 25, 2026 (through Nov 7). Do not auto-step it. Plain Retatrutide, SS-31, BPC-157, and KLOW are off. NAD+ remaining on the existing vial: ${nadLeft?.remainingMg ?? 0} mg from ${nadLeft?.doneCount ?? 0} logged doses through Oct 24 (a missing dose counts as 50 mg). Do not open a second NAD+ vial.`
     : undefined
   const onboarding = getOnboardingData()
   const goals =
@@ -326,7 +332,9 @@ export function stringifyAssistantUserContext(
 export function getAssistantQuickPrompts(peptides: Peptide[]): string[] {
   const ids = new Set(peptides.filter((p) => isPeptideOnActiveStack(p)).map((p) => p.id))
   const chips = ['What do I inject today?']
-  if (ids.has('retatrutide') || ids.has('tesamorelin')) {
+  if (ids.has('reta-cagri')) {
+    chips.push('What is my Reta + Cagrilintide dose in units?')
+  } else if (ids.has('retatrutide') || ids.has('tesamorelin')) {
     chips.push('What is my current Reta / Tesamorelin dose in units?')
   }
   chips.push('Can I titrate this week?')

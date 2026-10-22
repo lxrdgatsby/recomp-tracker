@@ -16,9 +16,9 @@ export type OnboardingGoal = (typeof ONBOARDING_GOALS)[number]
 
 /** Catalog IDs recommended when a goal is selected. */
 export const GOAL_PEPTIDE_RECOMMENDATIONS: Record<OnboardingGoal, string[]> = {
-  'Fat loss': ['retatrutide', 'semaglutide', 'tirzepatide', 'aod9604'],
+  'Fat loss': ['retatrutide', 'reta-cagri', 'semaglutide', 'tirzepatide', 'aod9604'],
   'Muscle gain': ['tesamorelin', 'cjc1295', 'ipamorelin', 'bpc157'],
-  'Body recomposition': ['retatrutide', 'aod9604', 'tesamorelin', 'bpc157', 'amino1mq'],
+  'Body recomposition': ['retatrutide', 'reta-cagri', 'aod9604', 'tesamorelin', 'bpc157', 'amino1mq'],
   'Recovery & healing': ['bpc157', 'tb500', 'ghkcu'],
   Performance: ['motsc', 'ss31', 'semax', 'bpc157'],
   Longevity: ['epitalon', 'ghkcu', 'motsc', 'ss31', 'amino1mq'],

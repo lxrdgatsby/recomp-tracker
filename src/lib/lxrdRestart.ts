@@ -12,7 +12,7 @@ export const NAD_DOSE_MG = 50
 export const PROTOCOL_NOTE =
   'Paused ~3 weeks. Restarted Oct 25, 2026. TRT resumes December.'
 
-const STOPPED = new Set(['test-cyp', 'aod9604', 'bpc157', 'ss31', 'ghkcu', 'klow'])
+const STOPPED = new Set(['test-cyp', 'retatrutide', 'bpc157', 'ss31', 'ghkcu', 'klow'])
 
 const PAUSE = { from: PAUSE_FROM, until: PAUSE_UNTIL }
 
@@ -50,20 +50,48 @@ export function stampRestartPeptide(peptide: Peptide): Peptide {
   if (!protocol) return { ...peptide, schedulePause: PAUSE }
 
   const titration = closeOpenDatedTiers(protocol.titration)
-  if (peptide.id === 'retatrutide') {
-    titration.push(
-      restartTier(
-        2.5,
-        50,
-        '2.5 mg = 50 units weekly. Hold through Nov 21, 2026. Do not auto-advance.'
-      )
-    )
+  if (peptide.id === 'reta-cagri') {
+    return {
+      ...peptide,
+      startsOn: RESTART_DATE,
+      schedulePause: PAUSE,
+      timing: 'Sunday evening',
+      vialSize: '10mg',
+      notes:
+        '10 mg Reta + 10 mg Cagrilintide / 3 mL BAC. Dose the Reta portion (≈ 3.33 mg/mL). Start 1.5 mg weekly ≈ 45 units and hold 2 weeks (through Nov 7, 2026). Do not auto-step. Later, if tolerated: 2.5 mg ≈ 75 units, 4 mg ≈ 120 units.',
+      protocol: {
+        ...protocol,
+        vialMg: 10,
+        bacWaterUnits: 300,
+        bacWaterMl: 3,
+        concentrationMgPerMl: 3.33,
+        concentrationLabel: '3.33 mg/mL',
+        startingDoseMg: 1.5,
+        startingSyringeUnits: 45,
+        calculationSummary: '10 mg Reta / 3 mL ≈ 3.33 mg/mL → 1.5 mg ≈ 45 units',
+        titration: [
+          restartTier(
+            1.5,
+            45,
+            '1.5 mg Reta-equivalent ≈ 45 units weekly. Hold through Nov 7, 2026 (first 2 weeks). Do not auto-step. Later if tolerated: 2.5 mg ≈ 75 units, 4 mg ≈ 120 units.'
+          ),
+        ],
+      },
+    }
   } else if (peptide.id === 'tesamorelin') {
     titration.push(
       restartTier(
         1,
         15,
         '1.0 mg = 15 units nightly. Optional later step 1.4 mg (21 units). Not auto-advanced.'
+      )
+    )
+  } else if (peptide.id === 'aod9604') {
+    titration.push(
+      restartTier(
+        1,
+        20,
+        '1.0 mg = 20 units, morning fasted, on the Oct 25 vial (10 mg / 2 mL). Same recon as the Sept 13 vial.'
       )
     )
   } else if (peptide.id === 'amino1mq') {
@@ -124,7 +152,6 @@ export function stampRestartPeptide(peptide: Peptide): Peptide {
   return {
     ...peptide,
     schedulePause: PAUSE,
-    ...(peptide.id === 'retatrutide' ? { timing: 'Sunday evening' } : {}),
     protocol: { ...protocol, titration },
   }
 }

@@ -289,9 +289,10 @@ function restartShots(slot: ReminderSlot, date: Date): SlotShots {
   const amino = iso <= '2026-10-27' ? 15 : 30
   if (slot === 'morning') {
     const shots: ShotForSlot[] = [
+      { id: 'aod9604', short: 'AOD', detail: 'AOD 20u' },
       { id: 'amino1mq', short: '5-Amino-1MQ', detail: `5-Amino-1MQ ${amino}u` },
     ]
-    const names = [`5-Amino-1MQ ${amino}u`]
+    const names = ['AOD 20u', `5-Amino-1MQ ${amino}u`]
     if (mwf) {
       shots.push({ id: 'motsc', short: 'MOTS-c', detail: 'MOTS-c 4u' })
       names.push('MOTS-c 4u')
@@ -318,8 +319,8 @@ function restartShots(slot: ReminderSlot, date: Date): SlotShots {
   return {
     slot,
     title: 'Weekly shots',
-    body: 'Reta 50u',
-    shots: [{ id: 'retatrutide', short: 'Reta', detail: 'Reta 50u' }],
+    body: 'Reta + Cagri 45u',
+    shots: [{ id: 'reta-cagri', short: 'Reta + Cagri', detail: 'Reta + Cagri 45u' }],
   }
 }
 

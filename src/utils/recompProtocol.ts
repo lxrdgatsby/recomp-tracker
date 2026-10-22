@@ -1,5 +1,6 @@
 import {
   DEFAULT_BAC_WATER,
+  defaultBacForCatalog,
   recommendedBacWaterForVial,
   type PeptideSelection,
 } from '../constants/peptideCatalog'
@@ -41,6 +42,15 @@ export function normalizeSelection(
     if (!dose || dose === '50mg') {
       dose = '50mg'
       bacWaterUnits = 300
+    }
+  }
+
+  // Fused Reta + Cagrilintide: 10 mg Reta portion in 3 mL, not the 10 mg → 2 mL default.
+  if (raw.catalogId === 'reta-cagri') {
+    const entry = getCatalogEntry('reta-cagri')
+    if (entry && (!dose || dose === entry.defaultDose)) {
+      dose = entry.defaultDose
+      bacWaterUnits = defaultBacForCatalog(entry, dose)
     }
   }
 

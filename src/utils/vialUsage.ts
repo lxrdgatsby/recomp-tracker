@@ -69,17 +69,24 @@ export function vialIdForDate(
     if (day < '2026-09-13') {
       return matches.find((v) => v.id === 'vial-ss31-a')?.id ?? oldestOnOrBefore(matches, day)
     }
-    return (
-      matches.find((v) => v.id === 'vial-ss31-b' && !isReplacedVial(v))?.id ??
-      latestLiveOnOrBefore(matches, day)
-    )
+    return matches.find((v) => v.id === 'vial-ss31-b')?.id ?? latestLiveOnOrBefore(matches, day)
   }
   if (peptideId === 'aod9604') {
     if (day < '2026-09-13') {
       return matches.find((v) => v.id === 'vial-aod-a')?.id ?? oldestOnOrBefore(matches, day)
     }
+    if (day < RESTART_DATE) {
+      return matches.find((v) => v.id === 'vial-aod-b')?.id ?? latestOnOrBefore(matches, day)
+    }
     return (
-      matches.find((v) => v.id === 'vial-aod-b' && !isReplacedVial(v))?.id ??
+      matches.find((v) => v.id === 'vial-aod-c' && !isReplacedVial(v))?.id ??
+      latestLiveOnOrBefore(matches, day)
+    )
+  }
+  if (peptideId === 'reta-cagri') {
+    if (day < RESTART_DATE) return undefined
+    return (
+      matches.find((v) => v.id === 'vial-reta-cagri' && !isReplacedVial(v))?.id ??
       latestLiveOnOrBefore(matches, day)
     )
   }
@@ -108,6 +115,9 @@ export function vialIdForDate(
           : 'vial-mots-b'
     if (day < RESTART_DATE) {
       return matches.find((v) => v.id === beforeId)?.id ?? oldestOnOrBefore(matches, day)
+    }
+    if (peptideId === 'retatrutide') {
+      return matches.find((v) => v.id === 'vial-reta-b')?.id ?? latestLiveOnOrBefore(matches, day)
     }
     return (
       matches.find((v) => v.id === afterId && !isReplacedVial(v))?.id ??

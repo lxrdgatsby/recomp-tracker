@@ -63,10 +63,18 @@ describe('assistant user context', () => {
     expect(ctx.protocolWeek).toBeGreaterThanOrEqual(3)
     const tesa = ctx.protocol.compounds.find((c) => c.id === 'tesamorelin')
     const reta = ctx.protocol.compounds.find((c) => c.id === 'retatrutide')
+    const fused = ctx.protocol.compounds.find((c) => c.id === 'reta-cagri')
     expect(tesa?.units).toBe(15)
     expect(tesa?.currentDoseMg).toBe(1)
-    expect(reta?.units).toBe(50)
-    expect(reta?.currentDoseMg).toBe(2.5)
+    const today = format(new Date(), 'yyyy-MM-dd')
+    if (today > '2026-10-03') {
+      expect(reta).toBeUndefined()
+      expect(fused?.units).toBe(45)
+      expect(fused?.currentDoseMg).toBe(1.5)
+    } else {
+      expect(reta?.units).toBe(50)
+      expect(reta?.currentDoseMg).toBe(2.5)
+    }
     expect(ctx.profile.email).toBe('user@example.com')
     expect(ctx.profile.trainingNotes).toContain('Weight training')
   })

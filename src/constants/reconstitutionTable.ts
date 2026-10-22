@@ -60,6 +60,21 @@ export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
     ],
   },
   {
+    id: 'reta-cagri',
+    name: 'Reta + Cagrilintide',
+    vialMg: 10,
+    bacMl: 3,
+    concentrationLabel: '3.33 mg/mL',
+    defaultDoseMg: 1.5,
+    defaultDoseMl: null,
+    doseUnit: 'mg',
+    keyDraws: [
+      { label: '45 u ≈ 1.5 mg', desiredMg: 1.5, units: 45 },
+      { label: '75 u ≈ 2.5 mg', desiredMg: 2.5, units: 75 },
+      { label: '120 u ≈ 4 mg', desiredMg: 4, units: 120 },
+    ],
+  },
+  {
     id: 'tesamorelin',
     name: 'Tesamorelin',
     vialMg: 20,

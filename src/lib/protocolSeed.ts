@@ -25,7 +25,7 @@ import { PROTOCOL_NOTE, stampRestartPeptide, withNadHorizon } from './lxrdRestar
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-restart'
+export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-reta-cagri'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -194,6 +194,34 @@ export function buildLxrdgatsbyStack(startDate: string): {
             4,
             80,
             'Stay 4 mg (80 u) unless weight stall AND GI easy, then 5 mg = 100 units'
+          ),
+        ],
+      }),
+    },
+    {
+      id: 'reta-cagri',
+      name: 'Reta + Cagrilintide',
+      dose: '1.5mg',
+      frequency: 'weekly',
+      timing: 'Sunday evening',
+      startsOn: '2026-10-25',
+      notes:
+        '10 mg Reta + 10 mg Cagrilintide / 3 mL BAC. Dose the Reta portion. Start 1.5 mg weekly ≈ 45 units and hold 2 weeks.',
+      vialSize: '10mg',
+      protocol: protocol({
+        vialMg: 10,
+        bacWaterUnits: 300,
+        startingDoseMg: 1.5,
+        startingSyringeUnits: 45,
+        extraSteps: [
+          'Dose the Reta portion. 10 mg Reta + 10 mg Cagrilintide in 3 mL ≈ 3.33 mg/mL. 1.5 mg ≈ 45 u. Hold 2 weeks. 2.5 mg ≈ 75 u. 4 mg ≈ 120 u. Do not auto-step.',
+        ],
+        titration: [
+          tier(
+            '1-2',
+            1.5,
+            45,
+            '1.5 mg Reta-equivalent ≈ 45 units weekly. Hold 2 weeks. Do not auto-step.'
           ),
         ],
       }),
@@ -627,6 +655,13 @@ export function refreshProtocolDefinition(
       const ssIdx = merged.findIndex((m) => m.id === 'ss31')
       if (ssIdx >= 0) {
         merged.splice(ssIdx + 1, 0, p)
+        continue
+      }
+    }
+    if (p.id === 'reta-cagri') {
+      const retaIdx = merged.findIndex((m) => m.id === 'retatrutide')
+      if (retaIdx >= 0) {
+        merged.splice(retaIdx + 1, 0, p)
         continue
       }
     }

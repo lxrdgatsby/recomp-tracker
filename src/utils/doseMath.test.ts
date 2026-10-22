@@ -21,6 +21,12 @@ describe('dose calculator reconstitution math', () => {
     expect(u100UnitsFromMg(5, 10, 2)).toBe(100)
   })
 
+  it('fused Reta + Cagrilintide doses the 10 mg Reta portion in 3 mL', () => {
+    expect(u100UnitsFromMg(1.5, 10, 3)).toBe(45)
+    expect(u100UnitsFromMg(2.5, 10, 3)).toBe(75)
+    expect(u100UnitsFromMg(4, 10, 3)).toBe(120)
+  })
+
   it('BPC-157 500 mcg → 10 units', () => {
     expect(u100UnitsFromMg(0.5, 10, 2)).toBe(10)
   })

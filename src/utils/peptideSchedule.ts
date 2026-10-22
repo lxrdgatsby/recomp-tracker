@@ -51,6 +51,7 @@ const SLOT_BY_ID: Record<string, InjectionSlot> = {
   tesamorelin: 'night',
   'test-cyp': 'weekly',
   retatrutide: 'weekly',
+  'reta-cagri': 'weekly',
 }
 
 const MORNING_ORDER: Record<string, number> = {

@@ -61,6 +61,17 @@ export const PROTOCOL_PEPTIDE_OPTIONS: {
     notes: '2.5 mg = 50 units.',
   },
   {
+    id: 'reta-cagri',
+    name: 'Reta + Cagrilintide',
+    defaultVialMg: 10,
+    defaultBacMl: 3,
+    targetDoseMg: 1.5,
+    frequency: 'weekly',
+    timing: 'Sunday evening',
+    notes:
+      '10 mg Reta + 10 mg Cagrilintide / 3 mL. Start 1.5 mg ≈ 45 units weekly and hold 2 weeks. Do not auto-step.',
+  },
+  {
     id: 'tesamorelin',
     name: 'Tesamorelin',
     defaultVialMg: 20,
@@ -163,6 +174,7 @@ const NAME_ALIASES: Record<string, string> = {
   'nad': 'NAD+',
   'klow': 'KLOW',
   'retatrutide': 'Retatrutide',
+  'reta-cagri': 'Reta + Cagrilintide',
   'tesamorelin': 'Tesamorelin',
   'amino1mq': '5-Amino-1MQ',
 }

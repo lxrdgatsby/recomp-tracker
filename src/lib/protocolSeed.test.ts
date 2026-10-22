@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATE } from '../constants/defaults'
-import { getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
+import { defaultBacForCatalog, getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
+import { GOAL_PEPTIDE_RECOMMENDATIONS } from '../constants/onboardingGoals'
 import { getReconstitutionCompound } from '../constants/reconstitutionTable'
-import { formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
+import { buildPeptideWithProtocol, formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
 import { getInjectionsForDate } from '../utils/peptideSchedule'
 import { u100UnitsFromMg } from '../utils/doseMath'
 import {
@@ -206,6 +207,40 @@ describe('90-day protocol definition', () => {
     expect(next?.weightHistory).toEqual(stale.weightHistory)
     expect(next?.peptides.some((p) => p.id === 'amino1mq')).toBe(true)
     expect(next?.peptides.find((p) => p.id === 'retatrutide')?.protocol?.titration[0]?.syringeUnits).toBe(50)
+  })
+
+  it('offers Reta + Cagrilintide at 1.5 mg / 3 mL with a 2-week hold', () => {
+    const entry = getCatalogEntry('reta-cagri')
+    expect(entry?.name).toBe('Reta + Cagrilintide')
+    expect(entry?.tagline).toMatch(/1\.5 mg/)
+    expect(entry?.tagline).toMatch(/2 weeks/)
+    expect(entry?.notes).toMatch(/2 weeks/)
+    expect(defaultBacForCatalog(entry!)).toBe(300)
+    expect(getCatalogEntryByName('Reta/Cagrilintide fused')?.id).toBe('reta-cagri')
+    expect(getCatalogEntryByName('10 mg Reta + 10 mg Cagrilintide')?.id).toBe('reta-cagri')
+    expect(GOAL_PEPTIDE_RECOMMENDATIONS['Fat loss']).toContain('reta-cagri')
+    expect(GOAL_PEPTIDE_RECOMMENDATIONS['Body recomposition']).toContain('reta-cagri')
+
+    const table = getReconstitutionCompound('reta-cagri')
+    expect(table?.vialMg).toBe(10)
+    expect(table?.bacMl).toBe(3)
+    expect(table?.defaultDoseMg).toBe(1.5)
+    expect(table?.keyDraws.map((draw) => draw.units)).toEqual([45, 75, 120])
+
+    const built = buildPeptideWithProtocol(
+      {
+        catalogId: 'reta-cagri',
+        dose: '10mg',
+        status: 'using',
+        bacWaterUnits: 200,
+        reconstituted: false,
+      },
+      'beginner'
+    )
+    expect(built?.protocol?.bacWaterMl).toBe(3)
+    expect(built?.protocol?.startingDoseMg).toBe(1.5)
+    expect(built?.protocol?.startingSyringeUnits).toBe(45)
+    expect(built?.notes).toMatch(/2 weeks/)
   })
 
   it('does not rewrite another user’s plan', () => {

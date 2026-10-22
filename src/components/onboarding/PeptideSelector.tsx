@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import {
   BAC_WATER_OPTIONS,
   PEPTIDE_CATALOG,
-  recommendedBacWaterForVial,
+  defaultBacForCatalog,
   getCatalogEntry,
   peptideVialSizeOptionLabels,
   type PeptideSelection,
@@ -54,7 +54,7 @@ export function PeptideSelector({
         catalogId,
         dose: entry.defaultDose,
         status: 'interested',
-        bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
+        bacWaterUnits: defaultBacForCatalog(entry),
         reconstituted: false,
       },
     ])
@@ -148,7 +148,7 @@ export function PeptideSelector({
                         const dose = e.target.value
                         updateSelection(selection.catalogId, {
                           dose,
-                          bacWaterUnits: recommendedBacWaterForVial(dose),
+                          bacWaterUnits: defaultBacForCatalog(entry, dose),
                         })
                       }}
                       className={doseClass}

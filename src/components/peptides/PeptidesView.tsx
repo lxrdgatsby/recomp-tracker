@@ -7,7 +7,7 @@ import {
   getCatalogEntry,
   getCatalogEntryByName,
   PEPTIDE_CATALOG,
-  recommendedBacWaterForVial,
+  defaultBacForCatalog,
   type PeptideSelection,
 } from '../../constants/peptideCatalog'
 import type { Peptide, TrackerState } from '../../types'
@@ -202,7 +202,7 @@ export function PeptidesView({
           catalogId: entry.id,
           dose: entry.defaultDose,
           status: 'using' as const,
-          bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
+          bacWaterUnits: defaultBacForCatalog(entry),
           reconstituted: false,
         },
       ]

@@ -63,6 +63,18 @@ export interface PeptideCatalogEntry {
   frequency: PeptideFrequency
   timing: string
   notes: string
+  /** Overrides the vial-size BAC default. 10 mg otherwise becomes 2 mL. */
+  defaultBacWaterUnits?: BacWaterUnits
+}
+
+export function defaultBacForCatalog(
+  entry: PeptideCatalogEntry,
+  dose = entry.defaultDose
+): BacWaterUnits {
+  if (entry.defaultBacWaterUnits && dose === entry.defaultDose) {
+    return entry.defaultBacWaterUnits
+  }
+  return recommendedBacWaterForVial(dose)
 }
 
 export interface PeptideSelection {
@@ -83,6 +95,18 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     frequency: 'weekly',
     timing: 'Weekly, same day each week',
     notes: 'Titrate per clinical protocol. Rotate injection sites.',
+  },
+  {
+    id: 'reta-cagri',
+    name: 'Reta + Cagrilintide',
+    tagline: '10 mg Reta + 10 mg Cagrilintide · start 1.5 mg weekly (~45 u) for 2 weeks',
+    doseOptions: ['10mg'],
+    defaultDose: '10mg',
+    defaultBacWaterUnits: 300,
+    frequency: 'weekly',
+    timing: 'Weekly, same day each week',
+    notes:
+      '10 mg Reta + 10 mg Cagrilintide in 3 mL BAC. Dose the Reta portion (≈ 3.33 mg/mL). units = (desired_reta_mg / (10 / 3)) * 100. Start 1.5 mg weekly (~45 units) and hold 2 weeks before any step. Later, if tolerated: 2.5 mg ≈ 75 units, 4 mg ≈ 120 units. Do not auto-step in the first 2 weeks.',
   },
   {
     id: 'tirzepatide',
@@ -300,6 +324,13 @@ const CATALOG_NAME_ALIASES: Record<string, string> = {
   '5amino1mq': 'amino1mq',
   'amino-1mq': 'amino1mq',
   'amino 1mq': 'amino1mq',
+  'reta/cagrilintide': 'reta-cagri',
+  'reta/cagrilintide fused': 'reta-cagri',
+  'reta + cagri': 'reta-cagri',
+  'reta+cagri': 'reta-cagri',
+  'reta cagrilintide': 'reta-cagri',
+  'reta cagrilintide fused': 'reta-cagri',
+  '10 mg reta + 10 mg cagrilintide': 'reta-cagri',
 }
 
 export function getCatalogEntryByName(name: string): PeptideCatalogEntry | undefined {

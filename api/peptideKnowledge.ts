@@ -29,4 +29,11 @@ INJECTION & HANDLING:
 - 5-Amino-1MQ is NAD+/NNMT support on top of NAD+ already in the stack — overlap, not a second fat-loss drug. Fat-loss drivers stay Reta + food + steps. Muscle drivers stay Test + Tesamorelin + lifting.
 - Do not tell the user to titrate Reta during Week 4. First Reta step is Sunday Sept 20 (Week 5) and only if GI at 2.5 mg stayed mild. Do not jump Reta to 80 u before Sept 20.
 
+RETA + CAGRILINTIDE (fused):
+- Blend vial: 10 mg Retatrutide + 10 mg Cagrilintide reconstituted with 3 mL BAC. Dose the Reta portion. Concentration ≈ 3.33 mg/mL. units = (desired_reta_mg / (10 / 3)) * 100.
+- 1.5 mg Reta-equivalent ≈ 45 units. 2.5 mg ≈ 75 units. 4 mg ≈ 120 units.
+- Default start: 1.5 mg weekly (~45 units) and hold 2 weeks before any step. Do not auto-step on week 1. Do not suggest 4 mg (~120 units) during those first 2 weeks.
+- lxrdgatsby from Oct 25, 2026: 1.5 mg / ~45 units weekly for the first 2 weeks (through Nov 7, 2026). Do not auto-step. Plain Retatrutide, SS-31, BPC-157, and KLOW are off after Oct 3, 2026. This blend does not replace historical plain Retatrutide doses from Aug 23 through Oct 3.
+- TRT / Test Cyp stays off until December 2026. Do not schedule Sunday testosterone before then.
+
 === END AUTHORITATIVE PEPTIDE EXPERT KNOWLEDGE ===`

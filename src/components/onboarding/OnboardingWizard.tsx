@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import {
-  recommendedBacWaterForVial,
+  defaultBacForCatalog,
   getCatalogEntry,
   type PeptideSelection,
 } from '../../constants/peptideCatalog'
@@ -191,7 +191,7 @@ function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         catalogId,
         dose: entry.defaultDose,
         status: 'using',
-        bacWaterUnits: recommendedBacWaterForVial(entry.defaultDose),
+        bacWaterUnits: defaultBacForCatalog(entry),
         reconstituted: false,
       },
     ])
