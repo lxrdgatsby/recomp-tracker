@@ -1,4 +1,12 @@
 import { STORAGE_KEY } from '../constants/defaults'
+import type { InjectionLog } from '../types'
+import {
+  nadActiveUntil,
+  nadRemainingFromLogs,
+  PAUSE_FROM,
+  PAUSE_UNTIL,
+  RESTART_DATE,
+} from './lxrdRestart'
 
 export const REMINDER_SETTINGS_KEY = 'reminderSettings'
 export const REMINDER_LAST_FIRED_KEY = 'reminderLastFired'
@@ -258,7 +266,78 @@ function phaseUnits(week: number) {
   return { tesa: 30, aod: 30, ss31: 30, ghk: 6, klow: 30, mots: 30, nad: 50, reta: 80 }
 }
 
+function emptySlot(slot: ReminderSlot, title: string): SlotShots {
+  return { slot, title, body: '', shots: [] }
+}
+
+function nadStillScheduled(date: Date): boolean {
+  const iso = toIsoDate(date)
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    const parsed = raw ? (JSON.parse(raw) as { injectionLogs?: InjectionLog[] }) : null
+    const until = nadActiveUntil(nadRemainingFromLogs(parsed?.injectionLogs ?? []).remainingMg)
+    if (!until) return false
+    return iso <= until
+  } catch {
+    return true
+  }
+}
+
+function restartShots(slot: ReminderSlot, date: Date): SlotShots {
+  const iso = toIsoDate(date)
+  const mwf = isMwf(date)
+  const amino = iso <= '2026-10-27' ? 15 : 30
+  if (slot === 'morning') {
+    const shots: ShotForSlot[] = [
+      { id: 'amino1mq', short: '5-Amino-1MQ', detail: `5-Amino-1MQ ${amino}u` },
+    ]
+    const names = [`5-Amino-1MQ ${amino}u`]
+    if (mwf) {
+      shots.push({ id: 'motsc', short: 'MOTS-c', detail: 'MOTS-c 4u' })
+      names.push('MOTS-c 4u')
+    }
+    return { slot, title: 'Morning shots', body: names.join(' + '), shots }
+  }
+  if (slot === 'evening') {
+    if (!mwf || !nadStillScheduled(date)) return emptySlot(slot, 'Evening shots')
+    return {
+      slot,
+      title: 'Evening shots',
+      body: 'NAD+ 25u',
+      shots: [{ id: 'nad', short: 'NAD+', detail: 'NAD+ 25u' }],
+    }
+  }
+  if (slot === 'night') {
+    return {
+      slot,
+      title: 'Nightly shot',
+      body: 'Tesamorelin 15u — take 2–3h after last food',
+      shots: [{ id: 'tesamorelin', short: 'Tesamorelin', detail: 'Tesamorelin 15u' }],
+    }
+  }
+  return {
+    slot,
+    title: 'Weekly shots',
+    body: 'Reta 50u',
+    shots: [{ id: 'retatrutide', short: 'Reta', detail: 'Reta 50u' }],
+  }
+}
+
 export function getShotsForSlot(slot: ReminderSlot, date: Date): SlotShots {
+  const iso = toIsoDate(date)
+  if (iso >= PAUSE_FROM && iso <= PAUSE_UNTIL) {
+    const title =
+      slot === 'morning'
+        ? 'Morning shots'
+        : slot === 'evening'
+          ? 'Evening shots'
+          : slot === 'night'
+            ? 'Nightly shot'
+            : 'Weekly shots'
+    return emptySlot(slot, title)
+  }
+  if (iso >= RESTART_DATE) return restartShots(slot, date)
+
   const week = getProtocolWeek(date)
   const u = phaseUnits(week)
   const mwf = isMwf(date)
@@ -517,6 +596,7 @@ export function buildUpcomingReminders(
       const when = atTimeOnDay(day, slotTime(settings, slot))
       if (when.getTime() < from.getTime() - 60_000) continue
       const payload = getShotsForSlot(slot, when)
+      if (!payload.shots.length) continue
       out.push({
         tag: lastFiredKey(slot, iso),
         slot,
@@ -576,18 +656,26 @@ async function scheduleCapacitorReminders(
   const night = parseTime(settings.nightTime) ?? { hour: 22, minute: 0 }
   const today = new Date()
   const morningBody = getShotsForSlot('morning', today).body.replace(
-    ' + MOTS-c',
+    / \+ MOTS-c(?: \d+u)?/,
     ''
   )
-  const eveningBody = getShotsForSlot('evening', today).body.replace(
-    ' + NAD+',
-    ''
-  )
+  const eveningBody = getShotsForSlot('evening', today).body
+    .replace(/ \+ NAD\+(?: \d+u)?/, '')
+    .replace(/^NAD\+(?: \d+u)?$/, '')
   const nightBody = getShotsForSlot('night', today).body
   const sundayBody = getShotsForSlot('sunday', today).body
 
-  await plugin.schedule({
-    notifications: [
+  const notifications: {
+    id: number
+    title: string
+    body: string
+    schedule: {
+      on: { weekday?: number; hour: number; minute: number }
+      allowWhileIdle: boolean
+      repeats?: boolean
+    }
+    extra?: { url: string; slot: ReminderSlot }
+  }[] = [
       {
         id: REMINDER_IDS.morning,
         title: 'Morning shots',
@@ -632,7 +720,9 @@ async function scheduleCapacitorReminders(
         },
         extra: { url: REMINDER_HOME_URL, slot: 'sunday' },
       },
-    ],
+  ]
+  await plugin.schedule({
+    notifications: notifications.filter((item) => item.body.trim().length > 0),
   })
   return true
 }

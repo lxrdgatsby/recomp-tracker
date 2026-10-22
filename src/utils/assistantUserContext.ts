@@ -6,10 +6,12 @@ import { getCheckInHistory } from './checkInStorage'
 import {
   getInjectionsForDate,
   isInjectionDone,
+  isPeptideOnActiveStack,
   type ScheduledInjection,
 } from './peptideSchedule'
 import { getProtocolHeader } from './protocolHeader'
-import { getTitrationForDay } from './recompProtocol'
+import { nadRemainingFromLogs, PROTOCOL_NOTE } from '../lib/lxrdRestart'
+import { getTitrationForDay, displayTierForDate } from './recompProtocol'
 import { formatUnits } from './doseMath'
 import { planNutritionFocus, inferWeightGoalMode } from '../constants/onboardingGoals'
 import { getOnboardingData } from './onboardingStorage'
@@ -53,6 +55,7 @@ export interface AssistantUserContext {
   }
   protocol: {
     compounds: AssistantCompound[]
+    note?: string
   }
   adherence: {
     today: Array<{
@@ -106,7 +109,9 @@ function nextTitrationNote(
       return `Starts ${peptide.startsOn}: 15 units for 2 days, then 30 units daily`
     }
   }
-  const current = getTitrationForDay(peptide, dayInCycle, scheduleDate)
+  const current = scheduleDate
+    ? displayTierForDate(peptide, dayInCycle, scheduleDate)
+    : getTitrationForDay(peptide, dayInCycle, scheduleDate)
   if (!current) return NOT_PROVIDED
   const idx = titration.findIndex(
     (t) => t.weeks === current.weeks && t.doseMg === current.doseMg
@@ -182,7 +187,9 @@ function compoundFromPeptide(
     Boolean(peptide.startsOn) &&
     Boolean(scheduleDate) &&
     format(scheduleDate as Date, 'yyyy-MM-dd') < (peptide.startsOn as string)
-  const tier = getTitrationForDay(peptide, dayInCycle, scheduleDate)
+  const tier = scheduleDate
+    ? displayTierForDate(peptide, dayInCycle, scheduleDate)
+    : getTitrationForDay(peptide, dayInCycle, scheduleDate)
   const isVolume = peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)
   const units = isVolume
     ? NOT_PROVIDED
@@ -229,7 +236,13 @@ export function buildAssistantUserContext(
   const { week } = getProtocolHeader(startDate)
   const dayInCycle = Math.max(0, week * 7 - 7)
   const peptides = trackerState.peptides ?? []
+  const activePeptides = peptides.filter((p) => isPeptideOnActiveStack(p))
   const hasPlan = peptides.length > 0
+  const restarted = peptides.some((p) => p.schedulePause)
+  const nadLeft = restarted ? nadRemainingFromLogs(trackerState.injectionLogs ?? []) : null
+  const protocolNote = restarted
+    ? `${PROTOCOL_NOTE} TRT / Test Cyp stays off until December 2026. Do not schedule a Sunday testosterone dose before then. Retatrutide holds at 2.5 mg (50 units) through Nov 21, 2026. Do not advance it. NAD+ remaining on the existing vial: ${nadLeft?.remainingMg ?? 0} mg from ${nadLeft?.doneCount ?? 0} logged doses through Oct 24 (a missing dose counts as 50 mg). Do not open a second NAD+ vial.`
+    : undefined
   const onboarding = getOnboardingData()
   const goals =
     onboarding?.goals ??
@@ -275,7 +288,8 @@ export function buildAssistantUserContext(
         NOT_PROVIDED,
     },
     protocol: {
-      compounds: peptides.map((p) => compoundFromPeptide(p, dayInCycle, today)),
+      compounds: activePeptides.map((p) => compoundFromPeptide(p, dayInCycle, today)),
+      ...(protocolNote ? { note: protocolNote } : {}),
     },
     adherence: {
       today: todayShots.map((s) => ({
@@ -310,7 +324,7 @@ export function stringifyAssistantUserContext(
 }
 
 export function getAssistantQuickPrompts(peptides: Peptide[]): string[] {
-  const ids = new Set(peptides.map((p) => p.id))
+  const ids = new Set(peptides.filter((p) => isPeptideOnActiveStack(p)).map((p) => p.id))
   const chips = ['What do I inject today?']
   if (ids.has('retatrutide') || ids.has('tesamorelin')) {
     chips.push('What is my current Reta / Tesamorelin dose in units?')

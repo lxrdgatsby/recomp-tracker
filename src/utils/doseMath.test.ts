@@ -58,6 +58,7 @@ describe('dose calculator reconstitution math', () => {
   it('MOTS-c 0.5 / 1.0 mg → 15 / 30 units', () => {
     expect(u100UnitsFromMg(0.5, 10, 3)).toBe(15)
     expect(u100UnitsFromMg(1.0, 10, 3)).toBe(30)
+    expect(u100UnitsFromMg(0.5, 40, 3)).toBe(4)
   })
 
   it('NAD+ 50 / 100 mg → 25 / 50 units', () => {

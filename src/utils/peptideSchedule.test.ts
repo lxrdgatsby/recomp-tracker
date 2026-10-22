@@ -76,7 +76,8 @@ describe('Injection History plan-window doses', () => {
         start
       )
       const hasAmino = shots.some((s) => s.peptideId === 'amino1mq')
-      if (dateStr < '2026-09-15') expect(hasAmino).toBe(false)
+      const paused = dateStr >= '2026-10-04' && dateStr <= '2026-10-24'
+      if (dateStr < '2026-09-15' || paused) expect(hasAmino).toBe(false)
       else expect(hasAmino).toBe(true)
     }
   })

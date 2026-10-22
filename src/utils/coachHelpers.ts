@@ -8,6 +8,7 @@ import type { Peptide, TrackerState } from '../types'
 import type { CheckIn, DoseLog, Vial } from '../types/v2'
 import { getCheckInHistory, getLastCheckIn } from './checkInStorage'
 import { computeWindowAdherence } from './doseAdherence'
+import { isPeptideOnActiveStack } from './peptideSchedule'
 import { getCurrentInjectionDose, formatProtocolContextForAI } from './recompProtocol'
 import { loadDoseLogs } from './inventoryStorage'
 import { activeVials, loadV2CheckIns } from './v2Storage'
@@ -24,7 +25,7 @@ export type ActiveStackItem = {
 
 /** Current active peptide stack with live protocol doses. */
 export function getActiveStack(state: TrackerState): ActiveStackItem[] {
-  return state.peptides.map((p: Peptide) => {
+  return state.peptides.filter((p) => isPeptideOnActiveStack(p)).map((p: Peptide) => {
     const dose = getCurrentInjectionDose(p, state.profile.startDate)
     return {
       id: p.id,

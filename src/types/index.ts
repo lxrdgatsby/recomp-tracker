@@ -39,6 +39,10 @@ export interface Peptide {
   protocol?: PeptideProtocol
   /** First calendar day this compound appears on Today’s Injections. */
   startsOn?: string
+  /** Last calendar day this compound appears. Later days drop off the active stack. */
+  endsOn?: string
+  /** Inclusive gap with no scheduled dose. The compound stays on the active stack. */
+  schedulePause?: { from: string; until: string }
 }
 
 export interface RecompPlan {

@@ -279,23 +279,37 @@ export function getTitrationForDay(
   const dateIso = scheduleDate ? localYmd(scheduleDate) : ymdFromCycleDay(dayInCycle)
 
   const datedTiers = peptide.protocol.titration.filter((t) => t.startDate)
-  if (datedTiers.length > 0) {
-    for (const tier of datedTiers) {
-      if (!tier.startDate) continue
-      if (dateIso < tier.startDate) continue
-      if (tier.endDate && dateIso > tier.endDate) continue
-      return tier
-    }
-    return null
+  for (const tier of datedTiers) {
+    if (!tier.startDate) continue
+    if (dateIso < tier.startDate) continue
+    if (tier.endDate && dateIso > tier.endDate) continue
+    return tier
   }
 
-  for (const tier of peptide.protocol.titration) {
-    if (tier.startDate) continue
+  const weekTiers = peptide.protocol.titration.filter((t) => !t.startDate)
+  for (const tier of weekTiers) {
     const [start, end] = tier.weeks.split('-').map((n) => parseInt(n, 10))
     if (week >= start && week <= (end ?? start)) return tier
   }
 
-  return peptide.protocol.titration[peptide.protocol.titration.length - 1]
+  return weekTiers.length > 0 ? weekTiers[weekTiers.length - 1] : null
+}
+
+/** During the Oct 4–24 pause, show the Oct 25 dose instead of the old week tier. */
+export function displayTierForDate(
+  peptide: Peptide,
+  dayInCycle: number,
+  scheduleDate: Date
+): TitrationWeek | null {
+  const dateIso = localYmd(scheduleDate)
+  const pause = peptide.schedulePause
+  if (pause && dateIso >= pause.from && dateIso <= pause.until) {
+    const upcoming = peptide.protocol?.titration
+      .filter((tier) => tier.startDate && tier.startDate > dateIso)
+      .sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''))[0]
+    if (upcoming) return upcoming
+  }
+  return getTitrationForDay(peptide, dayInCycle, scheduleDate)
 }
 
 export function formatProtocolContextForAI(
@@ -305,11 +319,15 @@ export function formatProtocolContextForAI(
   const dayInCycle = getDaysIntoCycle(startDate)
   const week = Math.floor((dayInCycle - 1) / 7) + 1
 
-  if (peptides.length === 0) {
+  const today = new Date()
+  const visible = peptides.filter(
+    (pep) => !pep.endsOn || localYmd(today) <= pep.endsOn.slice(0, 10)
+  )
+  if (visible.length === 0) {
     return 'No active peptide protocol on file.'
   }
 
-  return peptides
+  return visible
     .map((pep) => {
       const proto = pep.protocol
       if (!proto) {
@@ -320,7 +338,7 @@ export function formatProtocolContextForAI(
       }
 
       const current =
-        getTitrationForDay(pep, dayInCycle - 1, new Date()) ?? proto.titration[0]
+        displayTierForDate(pep, dayInCycle - 1, today) ?? proto.titration[0]
       const schedule =
         pep.frequency === 'weekly' ? 'once weekly' : 'daily'
       const titrationLines = proto.titration
@@ -352,6 +370,12 @@ export function rebuildPeptideForVialSize(
   familiarity: FamiliarityLevel
 ): Peptide {
   const entry = getCatalogEntry(peptide.id) ?? getCatalogEntryByName(peptide.name)
+  const locked =
+    Boolean(peptide.endsOn) ||
+    Boolean(peptide.schedulePause) ||
+    Boolean(peptide.protocol?.titration.some((tier) => tier.startDate))
+  if (locked) return peptide
+
   if (!entry) {
     return { ...peptide, vialSize }
   }
@@ -376,6 +400,8 @@ export function rebuildPeptideForVialSize(
     notes: peptide.notes ?? built.notes,
     vialSize,
     startsOn: peptide.startsOn,
+    endsOn: peptide.endsOn,
+    schedulePause: peptide.schedulePause,
   }
 }
 
@@ -395,7 +421,7 @@ export function formatCurrentStackDose(
     0,
     Math.round((today.getTime() - start.getTime()) / 86_400_000)
   )
-  const tier = getTitrationForDay(peptide, cycleDay, today)
+  const tier = displayTierForDate(peptide, cycleDay, today)
   const mg = tier?.doseMg ?? peptide.protocol?.startingDoseMg
   const units = tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
   const freq =
@@ -419,7 +445,7 @@ export function getCurrentInjectionDose(
   startDate: string
 ): { doseLabel: string; syringeUnits?: number; doseMg?: number } {
   const dayInCycle = Math.max(0, getDaysIntoCycle(startDate) - 1)
-  const tier = getTitrationForDay(peptide, dayInCycle, new Date())
+  const tier = displayTierForDate(peptide, dayInCycle, new Date())
   const syringeUnits =
     tier?.syringeUnits ?? peptide.protocol?.startingSyringeUnits
   const isVolume = peptide.id === 'test-cyp' || /ml/i.test(peptide.dose)

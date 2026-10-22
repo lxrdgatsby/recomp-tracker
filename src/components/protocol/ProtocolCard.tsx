@@ -1,8 +1,9 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns'
 import { KLOW_NOTE, RESEARCH_DISCLAIMER } from '../../constants/reconstitutionTable'
+import { PROTOCOL_NOTE } from '../../lib/lxrdRestart'
 import { PHASE_NOTES } from '../../lib/protocolSeed'
 import type { TrackerState } from '../../types'
-import { getInjectionsForDate } from '../../utils/peptideSchedule'
+import { getInjectionsForDate, isPeptideOnActiveStack } from '../../utils/peptideSchedule'
 import { getProtocolHeader } from '../../utils/protocolHeader'
 
 export function ProtocolCard({
@@ -19,6 +20,10 @@ export function ProtocolCard({
   const diff = differenceInCalendarDays(today, start)
   const preview = diff < 0
   const injections = getInjectionsForDate(state.peptides, today, state.profile.startDate)
+  const onStack = state.peptides.filter((p) => isPeptideOnActiveStack(p, today))
+  const showRestart = state.peptides.some((p) => p.schedulePause)
+  const showTest = onStack.some((p) => p.id === 'test-cyp')
+  const showKlow = onStack.some((p) => p.id === 'klow')
 
   return (
     <section className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -40,17 +45,24 @@ export function ProtocolCard({
       <h3 className="mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
         {preview ? "Sunday's scheduled draws" : "Today's scheduled draws"}
       </h3>
+      {showRestart ? (
+        <p className="mb-3 text-sm text-slate-300">{PROTOCOL_NOTE}</p>
+      ) : null}
       <div className="space-y-2">
-        {injections.map((inj) => (
-          <div
-            key={inj.peptideId}
-            className="flex items-start justify-between gap-3 border-b border-white/5 py-2 last:border-0"
-          >
-            <div>
-              <div className="text-sm font-medium text-white">{inj.cardLine}</div>
+        {injections.length === 0 ? (
+          <p className="text-sm text-slate-500">Nothing scheduled.</p>
+        ) : (
+          injections.map((inj) => (
+            <div
+              key={inj.peptideId}
+              className="flex items-start justify-between gap-3 border-b border-white/5 py-2 last:border-0"
+            >
+              <div>
+                <div className="text-sm font-medium text-white">{inj.cardLine}</div>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {!compact && (
@@ -68,7 +80,7 @@ export function ProtocolCard({
                 </tr>
               </thead>
               <tbody>
-                {state.peptides.map((p) => (
+                {onStack.map((p) => (
                   <tr key={p.id} className="border-t border-white/5">
                     <td className="py-2 pr-3">{p.name}</td>
                     <td className="py-2 pr-3">
@@ -85,13 +97,17 @@ export function ProtocolCard({
             </table>
           </div>
 
-          <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3 text-xs leading-relaxed text-rose-200">
-            {KLOW_NOTE}
-          </div>
-          <div className="mt-2 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
-            Test Cyp dose is 0.75 mL (not insulin units). 150 mg if 200 mg/mL, or 187.5 mg
-            if 250 mg/mL — confirm the vial label.
-          </div>
+          {showKlow ? (
+            <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3 text-xs leading-relaxed text-rose-200">
+              {KLOW_NOTE}
+            </div>
+          ) : null}
+          {showTest ? (
+            <div className="mt-2 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+              Test Cyp dose is 0.75 mL (not insulin units). 150 mg if 200 mg/mL, or 187.5 mg
+              if 250 mg/mL — confirm the vial label.
+            </div>
+          ) : null}
 
           <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
             Labs reminder
@@ -102,22 +118,26 @@ export function ProtocolCard({
             <li>Week 10–12 follow-up</li>
           </ul>
 
-          <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
-            Weeks 5–8 (auto from Aug 23)
-          </h3>
-          <ul className="list-disc space-y-1 pl-4 text-sm text-slate-400">
-            {PHASE_NOTES.weeks5to8.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-          <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
-            Weeks 9–12 (auto from Aug 23)
-          </h3>
-          <ul className="list-disc space-y-1 pl-4 text-sm text-slate-400">
-            {PHASE_NOTES.weeks9to12.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
+          {showRestart ? null : (
+            <>
+              <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
+                Weeks 5–8 (auto from Aug 23)
+              </h3>
+              <ul className="list-disc space-y-1 pl-4 text-sm text-slate-400">
+                {PHASE_NOTES.weeks5to8.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+              <h3 className="mt-5 mb-2 text-xs tracking-[2px] text-slate-400 uppercase">
+                Weeks 9–12 (auto from Aug 23)
+              </h3>
+              <ul className="list-disc space-y-1 pl-4 text-sm text-slate-400">
+                {PHASE_NOTES.weeks9to12.map((n) => (
+                  <li key={n}>{n}</li>
+                ))}
+              </ul>
+            </>
+          )}
           <p className="mt-4 text-[11px] leading-relaxed text-amber-200/90">
             {RESEARCH_DISCLAIMER}
           </p>

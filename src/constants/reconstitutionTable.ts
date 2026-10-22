@@ -160,16 +160,13 @@ export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
   {
     id: 'motsc',
     name: 'MOTS-c',
-    vialMg: 10,
+    vialMg: 40,
     bacMl: 3,
-    concentrationLabel: '3.33 mg/mL',
+    concentrationLabel: '13.33 mg/mL',
     defaultDoseMg: 0.5,
     defaultDoseMl: null,
     doseUnit: 'mg',
-    keyDraws: [
-      { label: '15 u = 0.5 mg', desiredMg: 0.5, units: 15 },
-      { label: '30 u = 1.0 mg', desiredMg: 1, units: 30 },
-    ],
+    keyDraws: [{ label: '4 u ≈ 0.5 mg', desiredMg: 0.5, units: 4 }],
   },
   {
     id: 'nad',

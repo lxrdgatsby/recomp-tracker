@@ -19,6 +19,7 @@ import {
   applyLxrdgatsbyProtocolSeed,
   refreshProtocolDefinition,
 } from '../lib/protocolSeed'
+import { withNadHorizon } from '../lib/lxrdRestart'
 import { applyLxrdgatsbyVialInventorySeed } from '../lib/vialInventorySeed'
 import { runVialSizeMigrationV2 } from '../lib/vialInventory'
 import { getAuthCallbackUrl } from '../lib/authRedirect'
@@ -67,13 +68,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (seeded) next = seeded
       const refreshed = refreshProtocolDefinition(next, profile.username)
       if (refreshed) next = refreshed
+      let horizonChanged = false
+      if (!refreshed) {
+        const horizon = withNadHorizon(next)
+        if (horizon !== next) {
+          next = horizon
+          horizonChanged = true
+        }
+      }
       const vialsSeeded = applyLxrdgatsbyVialInventorySeed(
         next,
         profile.username,
         profile.email,
       )
       if (vialsSeeded) next = vialsSeeded
-      if (seeded || refreshed || vialsSeeded) {
+      if (seeded || refreshed || horizonChanged || vialsSeeded) {
         try {
           await persistSeededProtocol(userId, next, {
             mainGoal: profile.mainGoal ?? next.recompPlan?.summary?.[1],

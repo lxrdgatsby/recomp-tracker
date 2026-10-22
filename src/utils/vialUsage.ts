@@ -1,9 +1,10 @@
 import { AMINO_1MQ_START_DATE } from '../constants/reconstitutionTable'
 import { generateId } from '../lib/generateId'
+import { collapseNadLogs, RESTART_DATE } from '../lib/lxrdRestart'
 import type { InjectionLog, Peptide } from '../types'
 import type { Vial } from '../types/v2'
 import { getInjectionsForDate, parseLocalYmd } from './peptideSchedule'
-import { getTitrationForDay } from './recompProtocol'
+import { displayTierForDate } from './recompProtocol'
 import { calcConcentrationMgPerMl } from './vialMath'
 
 function roundMg(n: number): number {
@@ -44,7 +45,7 @@ export function doseMgForDate(
     0,
     Math.round((day.getTime() - start.getTime()) / 86_400_000)
   )
-  const tier = getTitrationForDay(peptide, dayInCycle, day)
+  const tier = displayTierForDate(peptide, dayInCycle, day)
   if (peptide.id === 'test-cyp') {
     return { doseMg: 0, units: 0, doseMl: 0.75 }
   }
@@ -84,7 +85,34 @@ export function vialIdForDate(
   }
   if (peptideId === 'amino1mq') {
     if (day < AMINO_1MQ_START_DATE) return undefined
-    return matches.find((v) => v.id === 'vial-amino1mq-a')?.id ?? latestOnOrBefore(matches, day)
+    if (day < RESTART_DATE) {
+      return matches.find((v) => v.id === 'vial-amino1mq-a')?.id ?? latestOnOrBefore(matches, day)
+    }
+    return (
+      matches.find((v) => v.id === 'vial-amino1mq-b' && !isReplacedVial(v))?.id ??
+      latestLiveOnOrBefore(matches, day)
+    )
+  }
+  if (peptideId === 'retatrutide' || peptideId === 'tesamorelin' || peptideId === 'motsc') {
+    const beforeId =
+      peptideId === 'retatrutide'
+        ? 'vial-reta-a'
+        : peptideId === 'tesamorelin'
+          ? 'vial-tesa-a'
+          : 'vial-mots-a'
+    const afterId =
+      peptideId === 'retatrutide'
+        ? 'vial-reta-b'
+        : peptideId === 'tesamorelin'
+          ? 'vial-tesa-b'
+          : 'vial-mots-b'
+    if (day < RESTART_DATE) {
+      return matches.find((v) => v.id === beforeId)?.id ?? oldestOnOrBefore(matches, day)
+    }
+    return (
+      matches.find((v) => v.id === afterId && !isReplacedVial(v))?.id ??
+      latestLiveOnOrBefore(matches, day)
+    )
   }
   return latestLiveOnOrBefore(matches, day)
 }
@@ -164,7 +192,7 @@ export function recalculateVialInventory(opts: {
   const { vials, logs, peptides, startDate } = opts
   const used = new Map<string, { mg: number; ml: number; draws: number; lastDate?: string }>()
 
-  for (const log of logs) {
+  for (const log of collapseNadLogs(logs)) {
     const date = (log.date || '').slice(0, 10)
     if (!date || !log.peptideId) continue
     if (log.peptideId === 'amino1mq' && date < AMINO_1MQ_START_DATE) continue

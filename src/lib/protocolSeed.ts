@@ -21,10 +21,11 @@ import type {
 } from '../types'
 import { formatSyringeUnits } from '../utils/recompProtocol'
 import { saveState } from '../utils/storage'
+import { PROTOCOL_NOTE, stampRestartPeptide, withNadHorizon } from './lxrdRestart'
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-09-14-aod20-vials-v5'
+export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-restart'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -436,6 +437,8 @@ export function buildLxrdgatsbyStack(startDate: string): {
     },
   ]
 
+  const stack = peptides.map(stampRestartPeptide)
+
   const recompPlan: RecompPlan = {
     generatedAt: new Date().toISOString(),
     definitionVersion: PROTOCOL_DEFINITION_VERSION,
@@ -446,6 +449,7 @@ export function buildLxrdgatsbyStack(startDate: string): {
       `Fat-loss drivers: ${FAT_LOSS_DRIVERS}`,
       `Muscle drivers: ${MUSCLE_DRIVERS}`,
       RESEARCH_DISCLAIMER,
+      PROTOCOL_NOTE,
     ],
     nutritionNotes: [
       'Protein 200–240 g/day',
@@ -459,7 +463,7 @@ export function buildLxrdgatsbyStack(startDate: string): {
       'U-100: 100 units = 1 mL. Confirm Test mg/mL and whether KLOW is 10 mg or 80 mg before locking units.',
   }
 
-  const vials = peptides.map((p) => ({
+  const vials = stack.map((p) => ({
     id: `vial-${p.id}`,
     name: p.name,
     compound: p.name,
@@ -473,7 +477,7 @@ export function buildLxrdgatsbyStack(startDate: string): {
   }))
 
   void startDate
-  return { peptides, recompPlan, vials }
+  return { peptides: stack, recompPlan, vials }
 }
 
 export function isLxrdgatsbyUser(
@@ -629,7 +633,7 @@ export function refreshProtocolDefinition(
     merged.push(p)
   }
 
-  const next: TrackerState = {
+  const next = withNadHorizon({
     ...current,
     profile: {
       ...current.profile,
@@ -644,7 +648,7 @@ export function refreshProtocolDefinition(
     injectionLogs: current.injectionLogs ?? [],
     weightHistory: current.weightHistory ?? [],
     workoutCompletions: current.workoutCompletions ?? [],
-  }
+  })
 
   try {
     const existingStart = localStorage.getItem('protocolStartDate')

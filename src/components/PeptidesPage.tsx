@@ -6,7 +6,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTrackerStore } from '../hooks/useTrackerStore'
 import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import type { Peptide, TitrationWeek } from '../types'
-import { formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
+import { PROTOCOL_NOTE } from '../lib/lxrdRestart'
+import { isPeptideOnActiveStack } from '../utils/peptideSchedule'
+import { displayTierForDate, formatCurrentStackDose } from '../utils/recompProtocol'
 import { loadDoseLogs } from '../utils/inventoryStorage'
 import { EmptyState } from './ui/EmptyState'
 import { VialInventory } from './inventory/VialInventory'
@@ -16,23 +18,35 @@ import { ReconstitutionGuide } from './peptides/ReconstitutionGuide'
 
 function getNextTitrationStep(
   peptide: Peptide,
-  dayInCycle: number
+  dayInCycle: number,
+  today: Date
 ): { current: TitrationWeek; next: TitrationWeek | null } | null {
   const titration = peptide.protocol?.titration
   if (!titration?.length) return null
+  const current = displayTierForDate(peptide, dayInCycle, today)
+  if (!current) return null
+  const idx = titration.findIndex(
+    (tier) =>
+      tier.weeks === current.weeks &&
+      tier.doseMg === current.doseMg &&
+      tier.startDate === current.startDate &&
+      tier.syringeUnits === current.syringeUnits
+  )
+  const next =
+    titration.slice(idx + 1).find((tier) => {
+      if (!tier.startDate) return false
+      if (current.startDate && tier.startDate <= current.startDate) return false
+      if (tier.doseMg === current.doseMg && tier.syringeUnits === current.syringeUnits) {
+        return false
+      }
+      return true
+    }) ?? null
+  return { current, next }
+}
 
-  const currentWeek = Math.floor(dayInCycle / 7) + 1
-
-  for (let i = 0; i < titration.length; i++) {
-    const tier = titration[i]
-    const [start, end] = tier.weeks.split('-').map((n) => parseInt(n, 10))
-    if (currentWeek >= start && currentWeek <= (end ?? start)) {
-      return { current: tier, next: titration[i + 1] ?? null }
-    }
-  }
-
-  const last = titration[titration.length - 1]
-  return { current: last, next: null }
+function tierLine(prefix: string, tier: TitrationWeek): string {
+  if (tier.startDate) return `${prefix}: ${tier.doseLabel}`
+  return `${prefix}: Weeks ${tier.weeks} — ${tier.doseLabel}`
 }
 
 export default function PeptidesPage() {
@@ -80,21 +94,22 @@ export default function PeptidesPage() {
     return () => window.removeEventListener('pt-data-updated', onData)
   }, [])
 
+  const activeStack = peptides.filter((peptide) => isPeptideOnActiveStack(peptide))
+  const showRestart = peptides.some((peptide) => peptide.schedulePause)
   const upcomingTitrations = useMemo(
     () =>
-      peptides
+      activeStack
         .map((peptide) => {
-          const step = getNextTitrationStep(peptide, dayInCycle)
+          const step = getNextTitrationStep(peptide, dayInCycle, new Date())
           if (!step) return null
-          const currentTier = getTitrationForDay(peptide, dayInCycle, new Date())
           return {
             peptide,
-            current: currentTier ?? step.current,
+            current: step.current,
             next: step.next,
           }
         })
         .filter((entry): entry is NonNullable<typeof entry> => entry != null),
-    [peptides, dayInCycle]
+    [activeStack, dayInCycle]
   )
 
   const card = 'rounded-3xl border border-white/10 bg-white/[0.04] p-5'
@@ -137,7 +152,10 @@ export default function PeptidesPage() {
             Edit in Profile
           </Link>
         </div>
-        {peptides.length === 0 ? (
+        {showRestart ? (
+          <p className="mb-3 text-xs leading-relaxed text-slate-400">{PROTOCOL_NOTE}</p>
+        ) : null}
+        {activeStack.length === 0 ? (
           <EmptyState
             icon={<Syringe size={20} />}
             title="No active compounds"
@@ -147,7 +165,7 @@ export default function PeptidesPage() {
           />
         ) : (
           <ul className="space-y-2.5">
-            {peptides.map((peptide) => (
+            {activeStack.map((peptide) => (
               <li
                 key={peptide.id}
                 className="flex items-center justify-between gap-2 text-sm"
@@ -270,13 +288,9 @@ export default function PeptidesPage() {
               {upcomingTitrations.map(({ peptide, current, next }) => (
                 <li key={peptide.id} className="text-sm">
                   <div className="font-medium text-white">{peptide.name}</div>
-                  <div className="mt-1 text-slate-400">
-                    Now: Weeks {current.weeks} — {current.doseLabel}
-                  </div>
+                  <div className="mt-1 text-slate-400">{tierLine('Now', current)}</div>
                   {next ? (
-                    <div className="mt-0.5 text-emerald-400">
-                      Next: Weeks {next.weeks} — {next.doseLabel}
-                    </div>
+                    <div className="mt-0.5 text-emerald-400">{tierLine('Next', next)}</div>
                   ) : (
                     <div className="mt-0.5 text-slate-500">
                       Final titration step

@@ -69,8 +69,18 @@ function localYmd(date: Date): string {
 }
 
 export function isPeptideActiveOnDate(peptide: Peptide, date: Date): boolean {
-  if (!peptide.startsOn) return true
-  return localYmd(date) >= peptide.startsOn.slice(0, 10)
+  const key = localYmd(date)
+  if (peptide.startsOn && key < peptide.startsOn.slice(0, 10)) return false
+  if (peptide.endsOn && key > peptide.endsOn.slice(0, 10)) return false
+  const pause = peptide.schedulePause
+  if (pause && key >= pause.from && key <= pause.until) return false
+  return true
+}
+
+/** Ended compounds drop off the active stack. Paused compounds stay. */
+export function isPeptideOnActiveStack(peptide: Peptide, date = new Date()): boolean {
+  if (!peptide.endsOn) return true
+  return localYmd(date) <= peptide.endsOn.slice(0, 10)
 }
 
 export function injectionSlot(peptideId: string): InjectionSlot {
