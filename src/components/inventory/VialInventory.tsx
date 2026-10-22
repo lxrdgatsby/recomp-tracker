@@ -20,6 +20,7 @@ import {
   retireVial,
 } from '../../utils/vialUsage'
 import { formatUnits } from '../../utils/doseMath'
+import { fillForNewVial, newVialCompounds } from '../../lib/newVialDefaults'
 
 const FIELD =
   'mt-1 w-full rounded-2xl border border-white/15 bg-[#0a0a0a] px-3 py-3 text-base text-white'
@@ -68,8 +69,11 @@ export function VialInventory({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [replacingId, setReplacingId] = useState<string | null>(null)
   const [compoundName, setCompoundName] = useState('')
-  const [vialMg, setVialMg] = useState('10')
-  const [bacMl, setBacMl] = useState('2')
+  const [catalogId, setCatalogId] = useState('')
+  const [compoundQuery, setCompoundQuery] = useState('')
+  const [doseHelper, setDoseHelper] = useState<string | null>(null)
+  const [vialMg, setVialMg] = useState('')
+  const [bacMl, setBacMl] = useState('')
   const [isPowder, setIsPowder] = useState(false)
   const [mixedDate, setMixedDate] = useState(todayIso)
   const [notes, setNotes] = useState('')
@@ -107,6 +111,20 @@ export function VialInventory({
     () => peptides.map((p) => p.name).filter(Boolean),
     [peptides]
   )
+  const libraryCompounds = useMemo(() => newVialCompounds(), [])
+  const compoundChoices = useMemo(() => {
+    const query = compoundQuery.trim().toLowerCase()
+    const matched = query
+      ? libraryCompounds.filter(
+          (compound) =>
+            compound.name.toLowerCase().includes(query) ||
+            compound.id.includes(query)
+        )
+      : libraryCompounds
+    if (!catalogId || matched.some((compound) => compound.id === catalogId)) return matched
+    const selected = libraryCompounds.find((compound) => compound.id === catalogId)
+    return selected ? [selected, ...matched] : matched
+  }, [catalogId, compoundQuery, libraryCompounds])
 
   const active = useMemo(() => {
     const live = vials.filter(
@@ -153,8 +171,11 @@ export function VialInventory({
     setReplacingId(null)
     setCreating(false)
     setCompoundName('')
-    setVialMg('10')
-    setBacMl('2')
+    setCatalogId('')
+    setCompoundQuery('')
+    setDoseHelper(null)
+    setVialMg('')
+    setBacMl('')
     setIsPowder(false)
     setMixedDate(todayIso())
     setNotes('')
@@ -169,9 +190,25 @@ export function VialInventory({
     setNotes(v.notes || '')
   }
 
+  const chooseCompound = (id: string) => {
+    setCatalogId(id)
+    if (!id) {
+      setCompoundName('')
+      setVialMg('')
+      setBacMl('')
+      setDoseHelper(null)
+      return
+    }
+    const compound = libraryCompounds.find((entry) => entry.id === id)
+    const fill = fillForNewVial(id)
+    setCompoundName(compound?.name ?? '')
+    setVialMg(fill.vialMg)
+    setBacMl(fill.bacMl)
+    setDoseHelper(fill.helper)
+  }
+
   const openCreate = () => {
     resetForm()
-    setCompoundName(stackNames[0] || 'Retatrutide')
     setCreating(true)
   }
 
@@ -244,7 +281,7 @@ export function VialInventory({
     const created: Vial = {
       id: `vial-${peptide?.id ?? name}-${Date.now()}`,
       compoundName: name,
-      compoundId: peptide?.id,
+      compoundId: catalogId || peptide?.id,
       vialMg: mg,
       bacWaterMl: isPowder ? 0 : ml,
       concentrationMgPerMl: isPowder ? 0 : calcConcentrationMgPerMl(mg, ml),
@@ -276,20 +313,50 @@ export function VialInventory({
 
   const formFields = (mode: 'edit' | 'replace' | 'create') => (
     <div className="mt-3 space-y-3">
-      <label className="block text-xs text-slate-400">
-        Compound
-        <input
-          value={compoundName}
-          onChange={(e) => setCompoundName(e.target.value)}
-          list="vial-compound-names"
-          className={FIELD}
-        />
-        <datalist id="vial-compound-names">
-          {stackNames.map((n) => (
-            <option key={n} value={n} />
-          ))}
-        </datalist>
-      </label>
+      {mode === 'create' ? (
+        <div className="space-y-2">
+          <label className="block text-xs text-slate-400">
+            Search
+            <input
+              value={compoundQuery}
+              onChange={(e) => setCompoundQuery(e.target.value)}
+              placeholder="Search peptides…"
+              className={FIELD}
+            />
+          </label>
+          <label className="block text-xs text-slate-400">
+            Compound
+            <select
+              aria-label="Compound"
+              value={catalogId}
+              onChange={(e) => chooseCompound(e.target.value)}
+              className={FIELD}
+            >
+              <option value="">Select peptide…</option>
+              {compoundChoices.map((compound) => (
+                <option key={compound.id} value={compound.id}>
+                  {compound.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : (
+        <label className="block text-xs text-slate-400">
+          Compound
+          <input
+            value={compoundName}
+            onChange={(e) => setCompoundName(e.target.value)}
+            list="vial-compound-names"
+            className={FIELD}
+          />
+          <datalist id="vial-compound-names">
+            {stackNames.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+        </label>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-xs text-slate-400">
           Vial mg
@@ -333,8 +400,18 @@ export function VialInventory({
           Mixed
         </button>
       </div>
-      {!isPowder && previewConc > 0 && (
-        <p className="text-sm text-emerald-400">Concentration: {previewConc} mg/mL</p>
+      {mode === 'create' ? (
+        <p className="text-sm text-emerald-400">
+          Concentration: {previewConc > 0 ? `${previewConc} mg/mL` : '—'}
+        </p>
+      ) : (
+        !isPowder &&
+        previewConc > 0 && (
+          <p className="text-sm text-emerald-400">Concentration: {previewConc} mg/mL</p>
+        )
+      )}
+      {mode === 'create' && doseHelper && (
+        <p className="text-xs leading-relaxed text-slate-400">{doseHelper}</p>
       )}
       <label className="block text-xs text-slate-400">
         Opened date
