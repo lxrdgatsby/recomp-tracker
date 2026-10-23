@@ -5,11 +5,12 @@ import {
   loadVials,
   saveVials,
 } from '../utils/inventoryStorage'
-import { recalculateVialInventory } from '../utils/vialUsage'
+import { isReplacedVial, recalculateVialInventory } from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { writeLocal } from './protocolStorageScope'
 import { isLxrdgatsbyUser } from './protocolSeed'
 import { removedVialIdSet, withoutRemovedVials } from './removedCompounds'
+import { RESTART_DATE, SUNDAY_VIAL_IDS } from './lxrdRestart'
 
 export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v4'
 
@@ -355,6 +356,16 @@ function persistLocalVials(vials: Vial[]) {
   }
 }
 
+const SUNDAY_VIAL_ID_SET = new Set<string>(SUNDAY_VIAL_IDS)
+
+/** Sunday vials stay. Old template vials (NAD+, Test, GHK, archived) do not. A vial added later stays when it was opened on or after Oct 25. */
+function keepCurrentStackVial(vial: Vial, templateIds: ReadonlySet<string>): boolean {
+  if (SUNDAY_VIAL_ID_SET.has(vial.id)) return true
+  if (templateIds.has(vial.id)) return false
+  if (isReplacedVial(vial) || vial.depleted) return false
+  return (vial.mixedDate || '').slice(0, 10) >= RESTART_DATE
+}
+
 function mergeVialTemplates(
   existing: Vial[],
   templates: Vial[],
@@ -402,13 +413,15 @@ export function applyLxrdgatsbyVialInventorySeed(
   const fromState = withoutRemovedVials(current.vialInventory ?? [], current.removedVialIds)
   const fromStorage = withoutRemovedVials(loadVials(), current.removedVialIds)
   const existing = fromState.length > 0 ? fromState : fromStorage
-  const merged = mergeVialTemplates(existing, buildLxrdgatsbyVials(), removed)
+  const templates = buildLxrdgatsbyVials()
+  const templateIds = new Set(templates.map((vial) => vial.id))
+  const merged = mergeVialTemplates(existing, templates, removed)
   const vials = recalculateVialInventory({
     vials: merged,
     logs: current.injectionLogs ?? [],
     peptides: current.peptides,
     startDate: current.profile.startDate || CYCLE_START_DATE,
-  })
+  }).filter((vial) => keepCurrentStackVial(vial, templateIds))
   persistLocalVials(vials)
   return { ...current, vialInventory: vials }
 }

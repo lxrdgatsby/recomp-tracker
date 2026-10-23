@@ -13,7 +13,30 @@ export const NAD_DOSE_MG = 50
 export const PROTOCOL_NOTE =
   'Paused ~3 weeks. Restarted Oct 25, 2026. TRT resumes December.'
 
-const STOPPED = new Set(['test-cyp', 'retatrutide', 'bpc157', 'ss31', 'ghkcu', 'klow'])
+const STOPPED = new Set(['test-cyp', 'retatrutide', 'bpc157', 'ss31', 'ghkcu', 'klow', 'nad'])
+
+/** The six new vials on the active stack from Sunday Oct 25, 2026. NAD+ is off. */
+export const SUNDAY_STACK_IDS = [
+  'reta-cagri',
+  'tesamorelin',
+  'amino1mq',
+  'motsc',
+  'aod9604',
+  'dsip',
+] as const
+
+/** Only these Mixed vials stay in inventory for that Sunday start. */
+export const SUNDAY_VIAL_IDS = [
+  'vial-reta-cagri',
+  'vial-tesa-b',
+  'vial-amino1mq-b',
+  'vial-mots-b',
+  'vial-aod-c',
+  'vial-dsip-a',
+] as const
+
+export const SUNDAY_STACK_NOTE =
+  'Sunday Oct 25, 2026 stack: Reta + Cagrilintide 1.5 mg (45 units) weekly, Tesamorelin 15 units (1.0 mg) nightly, 5-Amino-1MQ 15 units daily, MOTS-c about 4 units Mon/Wed/Fri, AOD-9604 20 units morning on the Oct 25 vial (10 mg / 2 mL), DSIP 2 units (100 mcg) nightly before bed. NAD+ is off until a new vial is opened.'
 
 const PAUSE = { from: PAUSE_FROM, until: PAUSE_UNTIL }
 
@@ -44,7 +67,7 @@ function closeOpenDatedTiers(tiers: TitrationWeek[]): TitrationWeek[] {
 /** Date windows for the Oct 25 restart. Week tiers before that stay as they were. */
 export function stampRestartPeptide(peptide: Peptide): Peptide {
   if (STOPPED.has(peptide.id)) {
-    return { ...peptide, endsOn: LAST_OLD_STACK_DAY }
+    return { ...peptide, endsOn: LAST_OLD_STACK_DAY, schedulePause: undefined }
   }
 
   const protocol = peptide.protocol
@@ -100,15 +123,7 @@ export function stampRestartPeptide(peptide: Peptide): Peptide {
       restartTier(
         2.5,
         15,
-        '2.5 mg = 15 units, morning fasted. First 3 days (Oct 25–27).',
-        RESTART_DATE,
-        AMINO_LOW_UNTIL
-      ),
-      restartTier(
-        5,
-        30,
-        '5 mg = 30 units, morning fasted.',
-        AMINO_FULL_FROM
+        '2.5 mg = 15 units daily, morning fasted, on the Oct 25 vial (50 mg / 3 mL).'
       )
     )
   } else if (peptide.id === 'motsc') {
@@ -138,14 +153,6 @@ export function stampRestartPeptide(peptide: Peptide): Peptide {
         titration,
       },
     }
-  } else if (peptide.id === 'nad') {
-    titration.push(
-      restartTier(
-        NAD_DOSE_MG,
-        25,
-        '50 mg = 25 units Mon/Wed/Fri on the existing vial until it is gone. Do not open a second NAD+ vial.'
-      )
-    )
   } else {
     return peptide
   }

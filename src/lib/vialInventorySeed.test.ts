@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { buildLxrdgatsbyStack } from './protocolSeed'
+import { buildLxrdgatsbyStack, refreshProtocolDefinition } from './protocolSeed'
 import {
   applyLxrdgatsbyVialInventorySeed,
   buildLxrdgatsbyVials,
@@ -94,9 +94,13 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     )
   })
 
-  it('keeps replacement vials and does not empty A when misses exist', () => {
+  it('persists only the six Sunday vials and leaves historical logs', () => {
     localStorage.clear()
     const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const logs: InjectionLog[] = [
+      { date: '2026-08-23', peptideId: 'ss31' },
+      { date: '2026-09-13', peptideId: 'ss31' },
+    ]
     const next = applyLxrdgatsbyVialInventorySeed(
       {
         profile: {
@@ -107,25 +111,31 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
         },
         peptides,
         weightHistory: [],
-        injectionLogs: [
-          { date: '2026-08-23', peptideId: 'ss31' },
-          { date: '2026-09-13', peptideId: 'ss31' },
-        ],
+        injectionLogs: logs,
         workoutCompletions: [],
+        vialInventory: buildLxrdgatsbyVials(),
       },
       'lxrdgatsby',
       null,
     )
-    const a = next?.vialInventory?.find((v) => v.id === 'vial-ss31-a')
-    const b = next?.vialInventory?.find((v) => v.id === 'vial-ss31-b')
-    expect(a?.remainingMg).toBe(0)
-    expect(a?.replacedAt).toBe('2026-09-13')
-    expect(b?.remainingMg).toBe(0)
-    expect(b?.replacedAt).toBe('2026-10-25')
-    expect(next?.vialInventory?.find((v) => v.id === 'vial-amino1mq-a')?.replacedAt).toBe(
+    expect(next?.vialInventory?.map((vial) => vial.id).sort()).toEqual([
+      'vial-amino1mq-b',
+      'vial-aod-c',
+      'vial-dsip-a',
+      'vial-mots-b',
+      'vial-reta-cagri',
+      'vial-tesa-b',
+    ])
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'nad')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'ss31')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'ghkcu')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'test-cyp')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'bpc157')).toBe(false)
+    expect(next?.vialInventory?.find((vial) => vial.id === 'vial-amino1mq-b')?.remainingMg).toBe(50)
+    expect(next?.vialInventory?.find((vial) => vial.id === 'vial-aod-c')?.mixedDate).toBe(
       '2026-10-25'
     )
-    expect(next?.vialInventory?.find((v) => v.id === 'vial-amino1mq-b')?.remainingMg).toBe(50)
+    expect(next?.injectionLogs).toEqual(logs)
   })
 
   it('decrements Vial A when a missed pre-Sept 13 day is later marked Done', () => {
@@ -222,6 +232,64 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     expect(after.find((v) => v.id === 'vial-amino1mq-b')?.remainingMg).toBe(50)
   })
 
+  it('restores Sunday vials after a protocol refresh and leaves logs', () => {
+    localStorage.clear()
+    rememberRemovedVial('vial-dsip-a')
+    rememberRemovedVial('vial-reta-cagri')
+    rememberRemovedVial('vial-bpc-a')
+    const { peptides, recompPlan } = buildLxrdgatsbyStack('2026-08-23')
+    const logs: InjectionLog[] = [
+      { date: '2026-10-25', peptideId: 'dsip', doseMg: 0.1 },
+      { date: '2026-08-23', peptideId: 'tesamorelin' },
+    ]
+    const stale = {
+      profile: {
+        currentWeight: 156,
+        goalWeight: 145,
+        startDate: '2026-08-23',
+        weeklyLossTarget: 1.6,
+      },
+      peptides,
+      recompPlan: { ...recompPlan, definitionVersion: '2026-10-25-dsip-v6' },
+      weightHistory: [],
+      injectionLogs: logs,
+      workoutCompletions: [],
+      vialInventory: buildLxrdgatsbyVials().filter(
+        (vial) => vial.id !== 'vial-dsip-a' && vial.id !== 'vial-reta-cagri'
+      ),
+      removedVialIds: ['vial-dsip-a', 'vial-reta-cagri', 'vial-bpc-a'],
+    }
+    const refreshed = refreshProtocolDefinition(stale, 'lxrdgatsby')
+    const next = applyLxrdgatsbyVialInventorySeed(refreshed!, 'lxrdgatsby', null)
+    const dsip = next?.vialInventory?.find((vial) => vial.id === 'vial-dsip-a')
+    const fused = next?.vialInventory?.find((vial) => vial.id === 'vial-reta-cagri')
+    expect(dsip?.mixedDate).toBe('2026-10-25')
+    expect(dsip?.bacWaterMl).toBe(2)
+    expect(dsip?.vialMg).toBe(10)
+    expect(dsip?.remainingMg).toBe(9.9)
+    expect(dsip?.depleted).toBe(false)
+    expect(fused?.mixedDate).toBe('2026-10-25')
+    expect(fused?.bacWaterMl).toBe(3)
+    expect(fused?.remainingMg).toBe(10)
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'nad')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-nad-a')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-bpc-a')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'ghkcu')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.compoundId === 'test-cyp')).toBe(false)
+    expect(next?.vialInventory?.map((vial) => vial.id).sort()).toEqual([
+      'vial-amino1mq-b',
+      'vial-aod-c',
+      'vial-dsip-a',
+      'vial-mots-b',
+      'vial-reta-cagri',
+      'vial-tesa-b',
+    ])
+    expect(next?.vialInventory?.find((vial) => vial.id === 'vial-aod-c')?.bacWaterMl).toBe(2)
+    expect(next?.vialInventory?.find((vial) => vial.id === 'vial-tesa-b')?.vialMg).toBe(20)
+    expect(next?.injectionLogs).toEqual(logs)
+    localStorage.clear()
+  })
+
   it('keeps a removed vial out of inventory and leaves logs and other vials', () => {
     localStorage.clear()
     rememberRemovedVial('vial-dsip-a')
@@ -249,8 +317,10 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
       null,
     )
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-dsip-a')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-nad-a')).toBe(false)
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-reta-cagri')).toBe(true)
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-tesa-b')).toBe(true)
+    expect(next?.vialInventory).toHaveLength(5)
     expect(next?.injectionLogs).toEqual(logs)
     expect(next?.peptides).toEqual(peptides)
     localStorage.clear()
@@ -309,6 +379,6 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
         '2026-08-23',
         new Date(2026, 9, 25)
       )
-    ).toBe(11)
+    ).toBe(20)
   })
 })

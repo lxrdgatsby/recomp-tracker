@@ -47,6 +47,18 @@ export function rememberRemovedPeptide(id: string): string[] {
   return writeIds(REMOVED_PEPTIDES_KEY, [...loadRemovedPeptideIds(), id])
 }
 
+export function forgetRemovedIds(
+  which: 'vials' | 'peptides',
+  ids: readonly string[]
+): string[] {
+  const key = which === 'vials' ? REMOVED_VIALS_KEY : REMOVED_PEPTIDES_KEY
+  const drop = new Set<string>(ids)
+  return writeIds(
+    key,
+    readIds(key).filter((id) => !drop.has(id))
+  )
+}
+
 export function removedVialIdSet(fromState?: string[]): Set<string> {
   return new Set([...(fromState ?? []), ...loadRemovedVialIds()])
 }

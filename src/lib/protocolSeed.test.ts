@@ -64,11 +64,13 @@ describe('90-day protocol definition', () => {
     expect(test?.protocol?.startingSyringeUnits).toBe(0)
   })
 
-  it('keeps a removed compound off the active stack and keeps its logs', () => {
+  it('restores the Sunday stack and keeps a removed stopped compound off it', () => {
     const removedKey = 'removedPeptideIds'
     localStorage.removeItem(removedKey)
+    localStorage.removeItem('removedVialIds')
     try {
       rememberRemovedPeptide('dsip')
+      rememberRemovedPeptide('bpc157')
       const start = '2026-08-23'
       const endedOn = yesterdayIso()
       const { peptides, recompPlan } = buildLxrdgatsbyStack(start)
@@ -84,28 +86,68 @@ describe('90-day protocol definition', () => {
           currentWeight: 171.2,
           goalWeight: 160,
         },
-        peptides: peptides.map((peptide) =>
-          peptide.id === 'dsip' ? { ...peptide, endsOn: endedOn } : peptide
-        ),
-        recompPlan: { ...recompPlan, definitionVersion: 'old' },
+        peptides: peptides
+          .filter((peptide) => peptide.id !== 'tesamorelin')
+          .map((peptide) =>
+            peptide.id === 'dsip' || peptide.id === 'reta-cagri'
+              ? { ...peptide, endsOn: endedOn }
+              : peptide
+          ),
+        recompPlan: { ...recompPlan, definitionVersion: '2026-10-25-dsip-v6' },
         injectionLogs: logs,
         weightHistory: [{ date: '2026-08-23', weight: 175 }],
-        removedPeptideIds: ['dsip'],
+        removedPeptideIds: ['dsip', 'reta-cagri', 'bpc157'],
+        removedVialIds: ['vial-dsip-a', 'vial-reta-cagri', 'vial-bpc-a'],
       }
 
       const next = refreshProtocolDefinition(stale, 'lxrdgatsby')
-      const dsip = next?.peptides.find((peptide) => peptide.id === 'dsip')
-      expect(dsip?.endsOn).toBe(endedOn)
-      expect(isPeptideOnActiveStack(dsip!)).toBe(false)
+      const sunday = new Date(2026, 9, 25)
+      const active = (next?.peptides ?? []).filter((peptide) =>
+        isPeptideOnActiveStack(peptide, sunday)
+      )
+      expect(active.map((peptide) => peptide.id).sort()).toEqual([
+        'amino1mq',
+        'aod9604',
+        'dsip',
+        'motsc',
+        'reta-cagri',
+        'tesamorelin',
+      ])
+      expect(isPeptideOnActiveStack(next!.peptides.find((p) => p.id === 'nad')!, sunday)).toBe(
+        false
+      )
+      expect(isPeptideOnActiveStack(next!.peptides.find((p) => p.id === 'test-cyp')!, sunday)).toBe(
+        false
+      )
       expect(
-        getInjectionsForDate(next?.peptides ?? [], new Date(), start).some(
-          (shot) => shot.peptideId === 'dsip'
-        )
+        isPeptideOnActiveStack(next!.peptides.find((p) => p.id === 'retatrutide')!, sunday)
       ).toBe(false)
-      expect(next?.peptides.some((peptide) => peptide.id === 'tesamorelin')).toBe(true)
+      expect(isPeptideOnActiveStack(next!.peptides.find((p) => p.id === 'bpc157')!, sunday)).toBe(
+        false
+      )
+      expect(isPeptideOnActiveStack(next!.peptides.find((p) => p.id === 'ss31')!, sunday)).toBe(
+        false
+      )
+      expect(isPeptideOnActiveStack(next!.peptides.find((p) => p.id === 'klow')!, sunday)).toBe(
+        false
+      )
+      const oct25 = getInjectionsForDate(next?.peptides ?? [], sunday, start)
+      expect(oct25.find((shot) => shot.peptideId === 'dsip')?.syringeUnits).toBe(2)
+      expect(oct25.find((shot) => shot.peptideId === 'reta-cagri')?.syringeUnits).toBe(45)
+      expect(oct25.find((shot) => shot.peptideId === 'tesamorelin')?.syringeUnits).toBe(15)
+      expect(oct25.find((shot) => shot.peptideId === 'aod9604')?.syringeUnits).toBe(20)
+      expect(oct25.find((shot) => shot.peptideId === 'amino1mq')?.syringeUnits).toBe(15)
+      expect(oct25.some((shot) => shot.peptideId === 'test-cyp')).toBe(false)
+      expect(oct25.some((shot) => shot.peptideId === 'retatrutide')).toBe(false)
+      expect(next?.removedPeptideIds).not.toContain('dsip')
+      expect(next?.removedPeptideIds).toContain('bpc157')
+      expect(next?.removedVialIds).not.toContain('vial-dsip-a')
+      expect(next?.removedVialIds).toContain('vial-bpc-a')
       expect(next?.injectionLogs).toEqual(logs)
+      expect(next?.profile.startDate).toBe(start)
     } finally {
       localStorage.removeItem(removedKey)
+      localStorage.removeItem('removedVialIds')
     }
   })
 

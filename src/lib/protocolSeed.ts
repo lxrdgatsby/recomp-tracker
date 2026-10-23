@@ -26,13 +26,19 @@ import type {
 } from '../types'
 import { formatSyringeUnits } from '../utils/recompProtocol'
 import { saveState } from '../utils/storage'
-import { PROTOCOL_NOTE, stampRestartPeptide, withNadHorizon } from './lxrdRestart'
+import {
+  PROTOCOL_NOTE,
+  SUNDAY_STACK_IDS,
+  SUNDAY_VIAL_IDS,
+  stampRestartPeptide,
+  withNadHorizon,
+} from './lxrdRestart'
 import { applyLxrdWeightTargets } from './lxrdWeight'
-import { endPeptideNow, removedPeptideIdSet } from './removedCompounds'
+import { endPeptideNow, forgetRemovedIds, removedPeptideIdSet } from './removedCompounds'
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-dsip-v6'
+export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-sunday-stack-v7'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -340,7 +346,7 @@ export function buildLxrdgatsbyStack(startDate: string): {
       timing: 'Morning, fasted',
       startsOn: AMINO_1MQ_START_DATE,
       notes:
-        'NAD+/NNMT support on top of NAD+ already in the stack — overlap, not a second fat-loss drug. Start 2.5 mg = 15 units Tue–Wed Sept 15–16, then 5 mg = 30 units if sites/energy are fine. Optional later: split 15 u AM + 15 u PM. Do not schedule 50 mg SC.',
+        'NNMT support. Start 2.5 mg = 15 units Tue–Wed Sept 15–16, then 5 mg = 30 units through Oct 3. From Oct 25 the new vial is 2.5 mg = 15 units daily. NAD+ is off until a new vial is opened. Do not schedule 50 mg SC.',
       vialSize: '50mg',
       protocol: protocol({
         vialMg: 50,
@@ -678,16 +684,29 @@ export function refreshProtocolDefinition(
     if (hasLaterPhases) return endedState === current ? null : endedState
   }
 
+  const sundayPeptides = new Set<string>(SUNDAY_STACK_IDS)
+  const sundayVials = new Set<string>(SUNDAY_VIAL_IDS)
+  forgetRemovedIds('peptides', SUNDAY_STACK_IDS)
+  forgetRemovedIds('vials', SUNDAY_VIAL_IDS)
+  const released = {
+    ...endedState,
+    removedPeptideIds: (endedState.removedPeptideIds ?? []).filter(
+      (id) => !sundayPeptides.has(id)
+    ),
+    removedVialIds: (endedState.removedVialIds ?? []).filter((id) => !sundayVials.has(id)),
+  }
+  const removedAfterRelease = removedPeptideIdSet(released.removedPeptideIds)
+
   const startDate =
-    endedState.profile.startDate && /^\d{4}-\d{2}-\d{2}/.test(endedState.profile.startDate)
-      ? endedState.profile.startDate.slice(0, 10)
+    released.profile.startDate && /^\d{4}-\d{2}-\d{2}/.test(released.profile.startDate)
+      ? released.profile.startDate.slice(0, 10)
       : CYCLE_START_DATE
 
   const { peptides: fresh, recompPlan, vials } = buildLxrdgatsbyStack(startDate)
   const freshById = new Map(fresh.map((p) => [p.id, p]))
 
-  const merged: Peptide[] = endedState.peptides.map((old) => {
-    if (removedPeptides.has(old.id)) return old
+  const merged: Peptide[] = released.peptides.map((old) => {
+    if (removedAfterRelease.has(old.id)) return old
     const next = freshById.get(old.id)
     if (!next) return old
     if (!next.protocol) return next
@@ -700,7 +719,7 @@ export function refreshProtocolDefinition(
     }
   })
   for (const p of fresh) {
-    if (removedPeptides.has(p.id)) continue
+    if (removedAfterRelease.has(p.id)) continue
     if (merged.some((m) => m.id === p.id)) continue
     if (p.id === 'amino1mq') {
       const ssIdx = merged.findIndex((m) => m.id === 'ss31')
@@ -721,9 +740,9 @@ export function refreshProtocolDefinition(
 
   const next = applyLxrdWeightTargets(
     withNadHorizon({
-      ...endedState,
+      ...released,
       profile: {
-        ...endedState.profile,
+        ...released.profile,
         startDate,
         startWeight: START_WEIGHT_LB,
         goalWeight: GOAL_WEIGHT_LB,
@@ -732,11 +751,11 @@ export function refreshProtocolDefinition(
       peptides: merged,
       recompPlan: {
         ...recompPlan,
-        generatedAt: endedState.recompPlan?.generatedAt ?? recompPlan.generatedAt,
+        generatedAt: released.recompPlan?.generatedAt ?? recompPlan.generatedAt,
       },
-      injectionLogs: endedState.injectionLogs ?? [],
-      weightHistory: endedState.weightHistory ?? [],
-      workoutCompletions: endedState.workoutCompletions ?? [],
+      injectionLogs: released.injectionLogs ?? [],
+      weightHistory: released.weightHistory ?? [],
+      workoutCompletions: released.workoutCompletions ?? [],
     })
   )
 

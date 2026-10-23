@@ -58,6 +58,7 @@ describe('Oct 25 protocol restart', () => {
     expect(oct25.find((shot) => shot.peptideId === 'aod9604')?.syringeUnits).toBe(20)
     expect(oct25.find((shot) => shot.peptideId === 'tesamorelin')?.syringeUnits).toBe(15)
     expect(oct25.find((shot) => shot.peptideId === 'amino1mq')?.syringeUnits).toBe(15)
+    expect(oct25.find((shot) => shot.peptideId === 'dsip')?.syringeUnits).toBe(2)
     expect(oct25.some((shot) => shot.peptideId === 'retatrutide')).toBe(false)
     expect(oct25.some((shot) => shot.peptideId === 'motsc')).toBe(false)
     expect(oct25.some((shot) => shot.peptideId === 'nad')).toBe(false)
@@ -71,7 +72,8 @@ describe('Oct 25 protocol restart', () => {
     expect(oct26.find((shot) => shot.peptideId === 'tesamorelin')?.syringeUnits).toBe(15)
     expect(oct26.find((shot) => shot.peptideId === 'amino1mq')?.syringeUnits).toBe(15)
     expect(oct26.find((shot) => shot.peptideId === 'motsc')?.syringeUnits).toBe(4)
-    expect(oct26.find((shot) => shot.peptideId === 'nad')?.syringeUnits).toBe(25)
+    expect(oct26.find((shot) => shot.peptideId === 'dsip')?.syringeUnits).toBe(2)
+    expect(oct26.some((shot) => shot.peptideId === 'nad')).toBe(false)
     expect(oct26.some((shot) => shot.peptideId === 'retatrutide')).toBe(false)
     expect(oct26.some((shot) => shot.peptideId === 'reta-cagri')).toBe(false)
     expect(oct26.some((shot) => shot.peptideId === 'test-cyp')).toBe(false)
@@ -80,7 +82,8 @@ describe('Oct 25 protocol restart', () => {
     expect(oct26.some((shot) => shot.peptideId === 'klow')).toBe(false)
 
     const oct28 = getInjectionsForDate(stack().peptides, new Date(2026, 9, 28), '2026-08-23')
-    expect(oct28.find((shot) => shot.peptideId === 'amino1mq')?.syringeUnits).toBe(30)
+    expect(oct28.find((shot) => shot.peptideId === 'amino1mq')?.syringeUnits).toBe(15)
+    expect(oct28.some((shot) => shot.peptideId === 'nad')).toBe(false)
 
     const nov1 = getInjectionsForDate(stack().peptides, new Date(2026, 10, 1), '2026-08-23')
     expect(nov1.find((shot) => shot.peptideId === 'reta-cagri')?.syringeUnits).toBe(45)
@@ -114,6 +117,8 @@ describe('Oct 25 protocol restart', () => {
     expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'ss31')!, pause)).toBe(false)
     expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'bpc157')!, pause)).toBe(false)
     expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'klow')!, pause)).toBe(false)
+    expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'nad')!, pause)).toBe(false)
+    expect(peptides.find((p) => p.id === 'nad')?.endsOn).toBe('2026-10-03')
     expect(reta.endsOn).toBe('2026-10-03')
     expect(aod.endsOn).toBeUndefined()
     expect(stack().recompPlan.summary).toContain(PROTOCOL_NOTE)
@@ -141,7 +146,7 @@ describe('Oct 25 protocol restart', () => {
       peptides,
       injectionLogs: logs,
     })
-    expect(horizon.peptides.find((p) => p.id === 'nad')?.endsOn).toBe('2026-10-28')
+    expect(horizon.peptides.find((p) => p.id === 'nad')?.endsOn).toBe('2026-10-03')
     expect(horizon.injectionLogs).toEqual(logs)
 
     const empty = withNadHorizon({
@@ -223,6 +228,8 @@ describe('Oct 25 protocol restart', () => {
     expect(once?.profile.startDate).toBe('2026-08-23')
     expect(once?.injectionLogs).toEqual(logs)
     expect(once?.peptides.find((p) => p.id === 'retatrutide')?.endsOn).toBe('2026-10-03')
+    expect(once?.peptides.find((p) => p.id === 'nad')?.endsOn).toBe('2026-10-03')
+    expect(once?.peptides.find((p) => p.id === 'nad')?.schedulePause).toBeUndefined()
     expect(once?.peptides.find((p) => p.id === 'reta-cagri')?.schedulePause?.from).toBe(
       '2026-10-04'
     )
@@ -239,15 +246,16 @@ describe('Oct 25 protocol restart', () => {
     expect(morning.body).toBe('AOD 20u + 5-Amino-1MQ 15u + MOTS-c 4u')
     expect(morning.shots.some((shot) => shot.id === 'aod9604')).toBe(true)
 
-    expect(getShotsForSlot('evening', new Date(2026, 9, 26)).body).toBe('NAD+ 25u')
+    expect(getShotsForSlot('evening', new Date(2026, 9, 26)).body).toBe('')
     expect(getShotsForSlot('evening', new Date(2026, 9, 27)).body).toBe('')
     expect(getShotsForSlot('night', new Date(2026, 9, 25)).body).toContain('Tesamorelin 15u')
+    expect(getShotsForSlot('night', new Date(2026, 9, 25)).body).toContain('DSIP 2u')
     const sunday = getShotsForSlot('sunday', new Date(2026, 9, 25))
     expect(sunday.body).toBe('Reta + Cagri 45u')
     expect(sunday.body).not.toBe('Reta 50u')
     expect(sunday.shots.some((shot) => shot.id === 'test-cyp')).toBe(false)
     expect(sunday.shots.some((shot) => shot.id === 'retatrutide')).toBe(false)
-    expect(getShotsForSlot('morning', new Date(2026, 9, 28)).body).toContain('5-Amino-1MQ 30u')
+    expect(getShotsForSlot('morning', new Date(2026, 9, 28)).body).toContain('5-Amino-1MQ 15u')
   })
 
   it('tells the assistant that TRT is off and how much NAD+ is left', () => {
@@ -262,11 +270,27 @@ describe('Oct 25 protocol restart', () => {
     })
     expect(ctx.protocol.compounds.some((c) => c.id === 'test-cyp')).toBe(false)
     expect(ctx.protocol.note).toContain('TRT resumes December')
-    expect(ctx.protocol.note).toContain('100 mg')
+    expect(ctx.protocol.note).toContain('NAD+ are off')
+    expect(ctx.protocol.note).toContain('18 logged doses')
+    expect(ctx.protocol.note).not.toContain('100 mg')
     expect(ctx.protocol.note).toContain('1.5 mg')
     expect(ctx.protocol.note).toContain('45')
     expect(ctx.protocol.note).not.toContain('Nov 21')
     expect(ctx.protocol.compounds.some((c) => c.id === 'retatrutide')).toBe(false)
     expect(ctx.protocol.compounds.find((c) => c.id === 'reta-cagri')?.units).toBe(45)
+    expect(ctx.protocol.compounds.map((c) => c.id).sort()).toEqual([
+      'amino1mq',
+      'aod9604',
+      'dsip',
+      'motsc',
+      'reta-cagri',
+      'tesamorelin',
+    ])
+    expect(ctx.protocol.compounds.some((c) => c.id === 'nad')).toBe(false)
+    expect(ctx.protocol.note).toContain('DSIP 2 units')
+    expect(ctx.protocol.note).toContain('Tesamorelin 15 units')
+    expect(ctx.protocol.compounds.some((c) => c.id === 'ss31')).toBe(false)
+    expect(ctx.protocol.compounds.some((c) => c.id === 'bpc157')).toBe(false)
+    expect(ctx.protocol.compounds.some((c) => c.id === 'klow')).toBe(false)
   })
 })

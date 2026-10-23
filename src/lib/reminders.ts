@@ -1,13 +1,6 @@
 import { STORAGE_KEY } from '../constants/defaults'
 import { readLocal, writeLocal } from './protocolStorageScope'
-import type { InjectionLog } from '../types'
-import {
-  nadActiveUntil,
-  nadRemainingFromLogs,
-  PAUSE_FROM,
-  PAUSE_UNTIL,
-  RESTART_DATE,
-} from './lxrdRestart'
+import { PAUSE_FROM, PAUSE_UNTIL, RESTART_DATE } from './lxrdRestart'
 
 export const REMINDER_SETTINGS_KEY = 'reminderSettings'
 export const REMINDER_LAST_FIRED_KEY = 'reminderLastFired'
@@ -271,23 +264,9 @@ function emptySlot(slot: ReminderSlot, title: string): SlotShots {
   return { slot, title, body: '', shots: [] }
 }
 
-function nadStillScheduled(date: Date): boolean {
-  const iso = toIsoDate(date)
-  try {
-    const raw = readLocal(STORAGE_KEY)
-    const parsed = raw ? (JSON.parse(raw) as { injectionLogs?: InjectionLog[] }) : null
-    const until = nadActiveUntil(nadRemainingFromLogs(parsed?.injectionLogs ?? []).remainingMg)
-    if (!until) return false
-    return iso <= until
-  } catch {
-    return true
-  }
-}
-
 function restartShots(slot: ReminderSlot, date: Date): SlotShots {
-  const iso = toIsoDate(date)
   const mwf = isMwf(date)
-  const amino = iso <= '2026-10-27' ? 15 : 30
+  const amino = 15
   if (slot === 'morning') {
     const shots: ShotForSlot[] = [
       { id: 'aod9604', short: 'AOD', detail: 'AOD 20u' },
@@ -301,13 +280,7 @@ function restartShots(slot: ReminderSlot, date: Date): SlotShots {
     return { slot, title: 'Morning shots', body: names.join(' + '), shots }
   }
   if (slot === 'evening') {
-    if (!mwf || !nadStillScheduled(date)) return emptySlot(slot, 'Evening shots')
-    return {
-      slot,
-      title: 'Evening shots',
-      body: 'NAD+ 25u',
-      shots: [{ id: 'nad', short: 'NAD+', detail: 'NAD+ 25u' }],
-    }
+    return emptySlot(slot, 'Evening shots')
   }
   if (slot === 'night') {
     return {
