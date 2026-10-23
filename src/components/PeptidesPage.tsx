@@ -10,6 +10,11 @@ import { PROTOCOL_NOTE } from '../lib/lxrdRestart'
 import { isPeptideOnActiveStack } from '../utils/peptideSchedule'
 import { displayTierForDate, formatCurrentStackDose } from '../utils/recompProtocol'
 import { loadDoseLogs } from '../utils/inventoryStorage'
+import {
+  loadRemovedPeptideIds,
+  loadRemovedVialIds,
+  mergeRemovedIds,
+} from '../lib/removedCompounds'
 import { EmptyState } from './ui/EmptyState'
 import { VialInventory } from './inventory/VialInventory'
 import { DoseLogger } from './logging/DoseLogger'
@@ -198,6 +203,11 @@ export default function PeptidesPage() {
               ...state,
               vialInventory: next,
               peptides: nextPeptides ?? state.peptides,
+              removedVialIds: mergeRemovedIds(state.removedVialIds, loadRemovedVialIds()),
+              removedPeptideIds: mergeRemovedIds(
+                state.removedPeptideIds,
+                loadRemovedPeptideIds()
+              ),
             })
           }}
         />

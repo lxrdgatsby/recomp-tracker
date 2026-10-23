@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { InjectionLog, Peptide } from '../../types'
 import type { Vial } from '../../types/v2'
 import { ToastProvider } from '../ui/Toast'
+import { getInjectionsForDate, isPeptideOnActiveStack } from '../../utils/peptideSchedule'
 import { describeShelfLife, formatVialDate, todayIso } from '../../utils/vialShelfLife'
 import { VialInventory } from './VialInventory'
 
@@ -79,6 +80,13 @@ const dsipPeptide: Peptide = {
   id: 'dsip',
   name: 'DSIP',
   dose: '100mcg',
+  frequency: 'daily',
+}
+
+const tesaPeptide: Peptide = {
+  id: 'tesamorelin',
+  name: 'Tesamorelin',
+  dose: '1mg',
   frequency: 'daily',
 }
 
@@ -174,27 +182,45 @@ describe('Vial opened date, expiration, and remove', () => {
     render(
       <ToastProvider>
         <VialInventory
-          initialVials={[sampleVial()]}
-          peptides={[dsipPeptide]}
+          initialVials={[
+            sampleVial(),
+            sampleVial({
+              id: 'vial-tesa-b',
+              compoundName: 'Tesamorelin',
+              compoundId: 'tesamorelin',
+              mixedDate: '2026-10-01',
+            }),
+          ]}
+          peptides={[dsipPeptide, tesaPeptide]}
           injectionLogs={logs}
           onInventoryChange={onInventoryChange}
         />
       </ToastProvider>
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
     expect(window.confirm).toHaveBeenCalledWith('Remove this vial from your inventory?')
-    expect(screen.queryByText(/Opened:/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
+    expect(screen.queryByText('DSIP')).not.toBeInTheDocument()
+    expect(screen.getByText('Tesamorelin')).toBeInTheDocument()
     const [nextVials, nextPeptides] = onInventoryChange.mock.calls.at(-1) as [
       Vial[],
       Peptide[] | undefined,
     ]
-    expect(nextVials).toEqual([])
-    expect(nextPeptides?.map((peptide) => peptide.id)).toEqual([])
+    expect(nextVials.map((vial) => vial.id)).toEqual(['vial-tesa-b'])
+    const dsip = nextPeptides?.find((peptide) => peptide.id === 'dsip')
+    const tesa = nextPeptides?.find((peptide) => peptide.id === 'tesamorelin')
+    expect(dsip?.endsOn).toBeTruthy()
+    expect(isPeptideOnActiveStack(dsip!)).toBe(false)
+    expect(
+      getInjectionsForDate(nextPeptides!, new Date(), '2026-08-23').some(
+        (shot) => shot.peptideId === 'dsip'
+      )
+    ).toBe(false)
+    expect(tesa?.endsOn).toBeUndefined()
+    expect(isPeptideOnActiveStack(tesa!)).toBe(true)
     expect(logs).toEqual([{ date: '2026-10-25', peptideId: 'dsip', doseMg: 0.1 }])
   })
 
-  it('keeps the peptide when another current vial of that compound remains', () => {
+  it('removes one vial from the stack and leaves the other vial of that compound', () => {
     const onInventoryChange = vi.fn()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(
@@ -211,7 +237,35 @@ describe('Vial opened date, expiration, and remove', () => {
     )
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
     expect(screen.getAllByText('DSIP')).toHaveLength(1)
-    expect(onInventoryChange.mock.calls.at(-1)?.[1]).toBeUndefined()
+    const [nextVials, nextPeptides] = onInventoryChange.mock.calls.at(-1) as [
+      Vial[],
+      Peptide[],
+    ]
+    expect(nextVials.map((vial) => vial.id)).toEqual(['vial-dsip-a'])
+    expect(isPeptideOnActiveStack(nextPeptides[0])).toBe(false)
+  })
+
+  it('stays gone when a stale inventory list is pushed back', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const vial = sampleVial()
+    const { rerender } = render(
+      <ToastProvider>
+        <VialInventory initialVials={[vial]} peptides={[dsipPeptide]} />
+      </ToastProvider>
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
+
+    rerender(
+      <ToastProvider>
+        <VialInventory initialVials={[vial]} peptides={[dsipPeptide]} />
+      </ToastProvider>
+    )
+    window.dispatchEvent(new CustomEvent('pt-data-updated', { detail: 'vials' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument()
+    })
+    expect(screen.queryByText(/Opened:/)).not.toBeInTheDocument()
   })
 
   it('leaves the vial in place when removal is cancelled', () => {

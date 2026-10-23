@@ -9,6 +9,7 @@ import { recalculateVialInventory } from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { writeLocal } from './protocolStorageScope'
 import { isLxrdgatsbyUser } from './protocolSeed'
+import { removedVialIdSet, withoutRemovedVials } from './removedCompounds'
 
 export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v4'
 
@@ -354,10 +355,17 @@ function persistLocalVials(vials: Vial[]) {
   }
 }
 
-function mergeVialTemplates(existing: Vial[], templates: Vial[]): Vial[] {
-  const byId = new Map(existing.map((v) => [v.id, v]))
+function mergeVialTemplates(
+  existing: Vial[],
+  templates: Vial[],
+  removed: Set<string>
+): Vial[] {
+  const byId = new Map(
+    existing.filter((vial) => !removed.has(vial.id)).map((vial) => [vial.id, vial])
+  )
   const out: Vial[] = []
   for (const t of templates) {
+    if (removed.has(t.id)) continue
     const prev = byId.get(t.id)
     if (prev) {
       out.push({
@@ -390,10 +398,11 @@ export function applyLxrdgatsbyVialInventorySeed(
   if (typeof localStorage === 'undefined') return null
   if (!isLxrdgatsbyUser(username, email)) return null
 
-  const fromState = current.vialInventory ?? []
-  const fromStorage = loadVials()
+  const removed = removedVialIdSet(current.removedVialIds)
+  const fromState = withoutRemovedVials(current.vialInventory ?? [], current.removedVialIds)
+  const fromStorage = withoutRemovedVials(loadVials(), current.removedVialIds)
   const existing = fromState.length > 0 ? fromState : fromStorage
-  const merged = mergeVialTemplates(existing, buildLxrdgatsbyVials())
+  const merged = mergeVialTemplates(existing, buildLxrdgatsbyVials(), removed)
   const vials = recalculateVialInventory({
     vials: merged,
     logs: current.injectionLogs ?? [],

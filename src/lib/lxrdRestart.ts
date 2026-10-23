@@ -1,4 +1,5 @@
 import type { InjectionLog, Peptide, TitrationWeek } from '../types'
+import { removedPeptideIdSet } from './removedCompounds'
 
 /** Last day on the pre-pause stack. Oct 4–24 is the pause. */
 export const LAST_OLD_STACK_DAY = '2026-10-03'
@@ -228,11 +229,16 @@ export function nadActiveUntil(remainingMg: number): string | undefined {
 }
 
 /** Stop NAD+ when the existing vial cannot cover another 50 mg. History before the pause stays. */
-export function withNadHorizon<T extends { peptides: Peptide[]; injectionLogs: InjectionLog[] }>(
-  state: T
-): T {
+export function withNadHorizon<
+  T extends {
+    peptides: Peptide[]
+    injectionLogs: InjectionLog[]
+    removedPeptideIds?: string[]
+  },
+>(state: T): T {
   const nad = state.peptides.find((peptide) => peptide.id === 'nad')
   if (!nad?.schedulePause) return state
+  if (removedPeptideIdSet(state.removedPeptideIds).has('nad')) return state
   const { remainingMg } = nadRemainingFromLogs(state.injectionLogs)
   const until = nadActiveUntil(remainingMg)
   const endsOn = until ?? LAST_OLD_STACK_DAY

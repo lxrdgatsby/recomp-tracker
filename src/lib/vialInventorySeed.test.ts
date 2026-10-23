@@ -15,6 +15,7 @@ import {
   vialIdForDate,
 } from '../utils/vialUsage'
 import { getInjectionsForDate } from '../utils/peptideSchedule'
+import { rememberRemovedVial } from './removedCompounds'
 import type { InjectionLog } from '../types'
 
 describe('lxrdgatsby vial inventory from logged doses', () => {
@@ -219,6 +220,40 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     expect(after.find((v) => v.id === 'vial-reta-a')?.remainingMg).toBe(0)
     expect(after.find((v) => v.id === 'vial-reta-cagri')?.remainingMg).toBe(10)
     expect(after.find((v) => v.id === 'vial-amino1mq-b')?.remainingMg).toBe(50)
+  })
+
+  it('keeps a removed vial out of inventory and leaves logs and other vials', () => {
+    localStorage.clear()
+    rememberRemovedVial('vial-dsip-a')
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const logs: InjectionLog[] = [
+      { date: '2026-10-25', peptideId: 'dsip', doseMg: 0.1 },
+      { date: '2026-10-25', peptideId: 'tesamorelin' },
+    ]
+    const next = applyLxrdgatsbyVialInventorySeed(
+      {
+        profile: {
+          currentWeight: 156,
+          goalWeight: 145,
+          startDate: '2026-08-23',
+          weeklyLossTarget: 1.6,
+        },
+        peptides,
+        weightHistory: [],
+        injectionLogs: logs,
+        workoutCompletions: [],
+        vialInventory: buildLxrdgatsbyVials(),
+        removedVialIds: ['vial-dsip-a'],
+      },
+      'lxrdgatsby',
+      null,
+    )
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-dsip-a')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-reta-cagri')).toBe(true)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-tesa-b')).toBe(true)
+    expect(next?.injectionLogs).toEqual(logs)
+    expect(next?.peptides).toEqual(peptides)
+    localStorage.clear()
   })
 
   it('does not seed DSIP inventory onto another user', () => {

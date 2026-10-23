@@ -4,7 +4,8 @@ import { defaultBacForCatalog, getCatalogEntry, getCatalogEntryByName } from '..
 import { GOAL_PEPTIDE_RECOMMENDATIONS } from '../constants/onboardingGoals'
 import { getReconstitutionCompound } from '../constants/reconstitutionTable'
 import { buildPeptideWithProtocol, formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
-import { getInjectionsForDate } from '../utils/peptideSchedule'
+import { getInjectionsForDate, isPeptideOnActiveStack } from '../utils/peptideSchedule'
+import { rememberRemovedPeptide, yesterdayIso } from './removedCompounds'
 import { u100UnitsFromMg } from '../utils/doseMath'
 import {
   PROTOCOL_DEFINITION_VERSION,
@@ -61,6 +62,51 @@ describe('90-day protocol definition', () => {
     const test = next?.peptides.find((p) => p.id === 'test-cyp')
     expect(test?.dose).toBe('0.75 mL')
     expect(test?.protocol?.startingSyringeUnits).toBe(0)
+  })
+
+  it('keeps a removed compound off the active stack and keeps its logs', () => {
+    const removedKey = 'removedPeptideIds'
+    localStorage.removeItem(removedKey)
+    try {
+      rememberRemovedPeptide('dsip')
+      const start = '2026-08-23'
+      const endedOn = yesterdayIso()
+      const { peptides, recompPlan } = buildLxrdgatsbyStack(start)
+      const logs = [
+        { date: '2026-10-25', peptideId: 'dsip', doseMg: 0.1 },
+        { date: '2026-08-23', peptideId: 'tesamorelin' },
+      ]
+      const stale = {
+        ...DEFAULT_STATE,
+        profile: {
+          ...DEFAULT_STATE.profile,
+          startDate: start,
+          currentWeight: 171.2,
+          goalWeight: 160,
+        },
+        peptides: peptides.map((peptide) =>
+          peptide.id === 'dsip' ? { ...peptide, endsOn: endedOn } : peptide
+        ),
+        recompPlan: { ...recompPlan, definitionVersion: 'old' },
+        injectionLogs: logs,
+        weightHistory: [{ date: '2026-08-23', weight: 175 }],
+        removedPeptideIds: ['dsip'],
+      }
+
+      const next = refreshProtocolDefinition(stale, 'lxrdgatsby')
+      const dsip = next?.peptides.find((peptide) => peptide.id === 'dsip')
+      expect(dsip?.endsOn).toBe(endedOn)
+      expect(isPeptideOnActiveStack(dsip!)).toBe(false)
+      expect(
+        getInjectionsForDate(next?.peptides ?? [], new Date(), start).some(
+          (shot) => shot.peptideId === 'dsip'
+        )
+      ).toBe(false)
+      expect(next?.peptides.some((peptide) => peptide.id === 'tesamorelin')).toBe(true)
+      expect(next?.injectionLogs).toEqual(logs)
+    } finally {
+      localStorage.removeItem(removedKey)
+    }
   })
 
   it('auto-selects Tesamorelin 15 u in week 3 (Sep 12 2026)', () => {

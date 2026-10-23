@@ -28,6 +28,7 @@ import { formatSyringeUnits } from '../utils/recompProtocol'
 import { saveState } from '../utils/storage'
 import { PROTOCOL_NOTE, stampRestartPeptide, withNadHorizon } from './lxrdRestart'
 import { applyLxrdWeightTargets } from './lxrdWeight'
+import { endPeptideNow, removedPeptideIdSet } from './removedCompounds'
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
@@ -660,23 +661,33 @@ export function refreshProtocolDefinition(
   email?: string | null,
 ): TrackerState | null {
   if (!isLxrdgatsbyUser(username, email)) return null
-  if (!stackNeedsDefinitionRefresh(current) && hasStack(current)) {
-    const tesa = current.peptides.find((p) => p.id === 'tesamorelin')
+  const removedPeptides = removedPeptideIdSet(current.removedPeptideIds)
+  const endedPeptides = current.peptides.map((peptide) =>
+    removedPeptides.has(peptide.id) ? endPeptideNow(peptide) : peptide
+  )
+  const endedState =
+    endedPeptides.some((peptide, index) => peptide !== current.peptides[index])
+      ? { ...current, peptides: endedPeptides }
+      : current
+
+  if (!stackNeedsDefinitionRefresh(endedState) && hasStack(endedState)) {
+    const tesa = endedState.peptides.find((p) => p.id === 'tesamorelin')
     const hasLaterPhases = tesa?.protocol?.titration.some((t) =>
       t.weeks.startsWith('5') || t.weeks.startsWith('9')
     )
-    if (hasLaterPhases) return null
+    if (hasLaterPhases) return endedState === current ? null : endedState
   }
 
   const startDate =
-    current.profile.startDate && /^\d{4}-\d{2}-\d{2}/.test(current.profile.startDate)
-      ? current.profile.startDate.slice(0, 10)
+    endedState.profile.startDate && /^\d{4}-\d{2}-\d{2}/.test(endedState.profile.startDate)
+      ? endedState.profile.startDate.slice(0, 10)
       : CYCLE_START_DATE
 
   const { peptides: fresh, recompPlan, vials } = buildLxrdgatsbyStack(startDate)
   const freshById = new Map(fresh.map((p) => [p.id, p]))
 
-  const merged: Peptide[] = current.peptides.map((old) => {
+  const merged: Peptide[] = endedState.peptides.map((old) => {
+    if (removedPeptides.has(old.id)) return old
     const next = freshById.get(old.id)
     if (!next) return old
     if (!next.protocol) return next
@@ -689,6 +700,7 @@ export function refreshProtocolDefinition(
     }
   })
   for (const p of fresh) {
+    if (removedPeptides.has(p.id)) continue
     if (merged.some((m) => m.id === p.id)) continue
     if (p.id === 'amino1mq') {
       const ssIdx = merged.findIndex((m) => m.id === 'ss31')
@@ -709,9 +721,9 @@ export function refreshProtocolDefinition(
 
   const next = applyLxrdWeightTargets(
     withNadHorizon({
-      ...current,
+      ...endedState,
       profile: {
-        ...current.profile,
+        ...endedState.profile,
         startDate,
         startWeight: START_WEIGHT_LB,
         goalWeight: GOAL_WEIGHT_LB,
@@ -720,11 +732,11 @@ export function refreshProtocolDefinition(
       peptides: merged,
       recompPlan: {
         ...recompPlan,
-        generatedAt: current.recompPlan?.generatedAt ?? recompPlan.generatedAt,
+        generatedAt: endedState.recompPlan?.generatedAt ?? recompPlan.generatedAt,
       },
-      injectionLogs: current.injectionLogs ?? [],
-      weightHistory: current.weightHistory ?? [],
-      workoutCompletions: current.workoutCompletions ?? [],
+      injectionLogs: endedState.injectionLogs ?? [],
+      weightHistory: endedState.weightHistory ?? [],
+      workoutCompletions: endedState.workoutCompletions ?? [],
     })
   )
 

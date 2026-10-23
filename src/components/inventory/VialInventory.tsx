@@ -5,6 +5,14 @@ import type { Vial } from '../../types/v2'
 import { EmptyState } from '../ui/EmptyState'
 import { useToast } from '../ui/Toast'
 import { loadVials, saveVials } from '../../utils/inventoryStorage'
+import { removeInventoryVial } from '../../lib/vialInventory'
+import {
+  endPeptideNow,
+  rememberRemovedPeptide,
+  rememberRemovedVial,
+  removedVialIdSet,
+  withoutRemovedVials,
+} from '../../lib/removedCompounds'
 import {
   calcConcentrationMgPerMl,
   formatMg,
@@ -39,26 +47,14 @@ interface VialInventoryProps {
   initialVials?: Vial[]
   injectionLogs?: InjectionLog[]
   onChange?: () => void
-  /** Second argument is the updated peptide stack when Remove drops a compound. */
+  /** Second argument is the peptide list when Remove takes a compound off the stack. */
   onInventoryChange?: (vials: Vial[], peptides?: Peptide[]) => void
-}
-
-function vialMatchesRemoved(vial: Vial, removed: Vial): boolean {
-  const id = (removed.compoundId || '').trim()
-  if (id && (vial.compoundId || '').trim() === id) return true
-  return vial.compoundName.trim().toLowerCase() === removed.compoundName.trim().toLowerCase()
 }
 
 function peptideMatchesVial(peptide: Peptide, vial: Vial): boolean {
   const id = (vial.compoundId || '').trim()
   if (id && peptide.id === id) return true
   return peptide.name.trim().toLowerCase() === vial.compoundName.trim().toLowerCase()
-}
-
-function isCurrentVial(vial: Vial): boolean {
-  if (isReplacedVial(vial) || vial.depleted) return false
-  if (vial.compoundId === 'test-cyp') return true
-  return vial.remainingMg > 0.001
 }
 
 export function VialInventory({
@@ -72,8 +68,8 @@ export function VialInventory({
   onInventoryChange,
 }: VialInventoryProps) {
   const { toast } = useToast()
-  const [vials, setVials] = useState<Vial[]>(
-    () => (initialVials && initialVials.length > 0 ? initialVials : loadVials())
+  const [vials, setVials] = useState<Vial[]>(() =>
+    withoutRemovedVials(initialVials && initialVials.length > 0 ? initialVials : loadVials())
   )
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -100,17 +96,22 @@ export function VialInventory({
   }
 
   useEffect(() => {
-    if (initialVials && initialVials.length > 0) setVials(initialVials)
+    if (!initialVials || initialVials.length === 0) return
+    setVials(withoutRemovedVials(initialVials))
   }, [initialVials])
 
   useEffect(() => {
     const onData = () => {
-      if (initialVials && initialVials.length > 0) setVials(initialVials)
-      else setVials(loadVials())
+      setVials((current) => {
+        const removed = removedVialIdSet()
+        const stored = loadVials().filter((vial) => !removed.has(vial.id))
+        const base = stored.length > 0 ? stored : current
+        return base.filter((vial) => !removed.has(vial.id))
+      })
     }
     window.addEventListener('pt-data-updated', onData)
     return () => window.removeEventListener('pt-data-updated', onData)
-  }, [initialVials])
+  }, [])
 
   const peptideById = useMemo(() => {
     const map = new Map<string, Peptide>()
@@ -325,16 +326,19 @@ export function VialInventory({
     const vial = vials.find((row) => row.id === id)
     if (!vial) return
     if (!confirm('Remove this vial from your inventory?')) return
+    rememberRemovedVial(vial.id)
+    removeInventoryVial(vial.id)
+    let peptideChanged = false
+    const nextPeptides = peptides.map((peptide) => {
+      if (!peptideMatchesVial(peptide, vial)) return peptide
+      rememberRemovedPeptide(peptide.id)
+      const ended = endPeptideNow(peptide)
+      if (ended !== peptide) peptideChanged = true
+      return ended
+    })
     const nextVials = vials.filter((row) => row.id !== id)
-    const stillCurrent = nextVials.some(
-      (row) => vialMatchesRemoved(row, vial) && isCurrentVial(row)
-    )
-    const filtered = stillCurrent
-      ? peptides
-      : peptides.filter((peptide) => !peptideMatchesVial(peptide, vial))
-    const nextPeptides = filtered.length === peptides.length ? undefined : filtered
     if (editingId === id || replacingId === id) resetForm()
-    commit(nextVials, nextPeptides)
+    commit(nextVials, peptideChanged ? nextPeptides : undefined)
     toast(`${vial.compoundName} removed`)
   }
 

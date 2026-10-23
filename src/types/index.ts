@@ -102,6 +102,10 @@ export interface TrackerState {
   protocolProfile?: Record<string, unknown>
   /** Peptides-tab vial inventory. Independent of injection history. */
   vialInventory?: import('./v2').Vial[]
+  /** Vial ids the user removed. The lxrd seed must not put these cards back. */
+  removedVialIds?: string[]
+  /** Peptide ids taken off the active stack by Remove. Definition refresh keeps them ended. */
+  removedPeptideIds?: string[]
 }
 
 export type ViewId =

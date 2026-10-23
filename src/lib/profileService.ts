@@ -98,6 +98,8 @@ function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
       injectionLogs: saved.injectionLogs ?? [],
       workoutCompletions: saved.workoutCompletions ?? [],
       vialInventory: saved.vialInventory ?? [],
+      removedVialIds: saved.removedVialIds,
+      removedPeptideIds: saved.removedPeptideIds,
     }
   }
 
@@ -124,6 +126,8 @@ function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
       injectionLogs: saved?.injectionLogs ?? [],
       workoutCompletions: saved?.workoutCompletions ?? [],
       vialInventory: saved?.vialInventory ?? [],
+      removedVialIds: saved?.removedVialIds,
+      removedPeptideIds: saved?.removedPeptideIds,
     }
   }
 
@@ -136,6 +140,8 @@ function buildTrackerFromProfile(userProfile: UserProfile): TrackerState {
     injectionLogs: saved?.injectionLogs ?? [],
     workoutCompletions: saved?.workoutCompletions ?? [],
     vialInventory: saved?.vialInventory ?? [],
+    removedVialIds: saved?.removedVialIds,
+    removedPeptideIds: saved?.removedPeptideIds,
   }
 }
 
