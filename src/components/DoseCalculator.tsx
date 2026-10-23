@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Calculator } from 'lucide-react'
 import {
   getReconstitutionCompound,
-  KLOW_NOTE,
+  KLOW_80_NOTE,
   RECONSTITUTION_TABLE,
   U100_FORMULA,
 } from '../constants/reconstitutionTable'
@@ -269,7 +269,7 @@ export function DoseCalculator({
 
       {table?.id === 'klow' && (
         <div className="mb-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-100">
-          {KLOW_NOTE}
+          {KLOW_80_NOTE}
         </div>
       )}
 

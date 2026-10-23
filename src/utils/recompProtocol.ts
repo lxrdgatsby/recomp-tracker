@@ -65,6 +65,15 @@ export function normalizeSelection(
     }
   }
 
+  // KLOW library default is 80 mg + 3 mL. A chosen 10 mg vial stays 10 mg.
+  if (raw.catalogId === 'klow') {
+    const entry = getCatalogEntry('klow')
+    if (entry && (!dose || dose === entry.defaultDose)) {
+      dose = entry.defaultDose
+      bacWaterUnits = defaultBacForCatalog(entry, dose)
+    }
+  }
+
   return {
     catalogId: raw.catalogId,
     dose,

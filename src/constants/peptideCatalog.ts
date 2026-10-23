@@ -169,6 +169,18 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
     notes: 'SubQ near injury site when applicable.',
   },
   {
+    id: 'klow',
+    name: 'KLOW',
+    tagline: '80 mg / 3 mL BAC ≈ 26.67 mg/mL · 1 mg ≈ 3.75 units',
+    doseOptions: ['80mg', '10mg'],
+    defaultDose: '80mg',
+    defaultBacWaterUnits: 300,
+    frequency: 'daily',
+    timing: 'Daily',
+    notes:
+      '80 mg vial + 3.0 mL BAC water ≈ 26.67 mg/mL. 1 mg ≈ 3.75 units on U-100. You can override units on the form. Research-use tracking only.',
+  },
+  {
     id: 'tb500',
     name: 'TB-500',
     tagline: 'Systemic repair — often paired with BPC-157',

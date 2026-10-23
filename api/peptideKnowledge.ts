@@ -44,6 +44,14 @@ SELANK + SEMAX (fused):
 - Human data is primarily nasal. Subcutaneous use is community practice with no published human SC trials. Research-use only.
 - Library option only. Do not add it to lxrdgatsby’s personal stack unless his saved plan already includes it.
 
+KLOW:
+- Selectable compound. Library default recon: 80 mg vial + 3.0 mL BAC water ≈ 26.67 mg/mL.
+- units = (desired_mg / (80 / 3)) * 100. 1 mg ≈ 3.75 units on U-100. This app’s half-unit syringe draw schedules that as 4 units. The user can override units on the form.
+- A 10 mg / 3 mL label is a different vial: 0.5 mg = 15 units, 1 mg = 30 units. Do not apply that math when the saved vial is 80 mg.
+- lxrdgatsby’s historical KLOW was the 10 mg / 3 mL vial and is off after Oct 3, 2026. Do not apply that vial or those off-dates to any other user.
+- Bubblesmama (username bubblesmama): KLOW is on the active stack starting October 24, 2026 (Day 1). Vial 80 mg / 3 mL BAC, mixed and active, remaining full (80 mg), opened October 24, 2026. Starting dose 1 mg daily ≈ 3.75 units, scheduled as 4. Do not delete or rewrite historical injection logs.
+- If THIS user’s saved stack has both KLOW and standalone BPC-157, say that some KLOW blends also contain BPC. Do not invent that overlap when only one of them is on the stack.
+
 USER ISOLATION:
 - lxrdgatsby’s saved stack, doses, vials, injection history, check-ins, start date (Aug 23, 2026), pause, Oct 25 2026 restart, and weight targets belong to him only.
 - Never copy that plan onto any other user. A new signup has an empty Active stack and empty Vial Inventory until they finish onboarding.

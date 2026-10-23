@@ -27,6 +27,10 @@ export const KLOW_NOTE =
 export const DSIP_NOTE =
   'Research-use only. Published human data is mostly IV; SC is community practice. 10 mg vial + 2.0 mL BAC = 5 mg/mL. Conservative start 100 mcg = 2 units on U-100 (or 250 mcg = 5 units). 30–60 min before bed. Nightly or 5 nights/week. units = (desired_mcg / 5000) * 100.'
 
+/** Library default. lxrdgatsby’s saved 10 mg vial keeps KLOW_NOTE. */
+export const KLOW_80_NOTE =
+  '80 mg / 3 mL BAC ≈ 26.67 mg/mL. 1 mg ≈ 3.75 units on U-100 (4 units on the half-unit draw). You can override units on the form.'
+
 export const U100_FORMULA = 'units = (desired_mg / (vial_mg / bac_ml)) * 100'
 
 export type DoseUnit = 'mg' | 'mcg' | 'ml'
@@ -172,16 +176,14 @@ export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
   {
     id: 'klow',
     name: 'KLOW',
-    vialMg: 10,
+    vialMg: 80,
     bacMl: 3,
-    concentrationLabel: '3.33 mg/mL',
-    defaultDoseMg: 0.5,
+    concentrationLabel: '26.67 mg/mL',
+    defaultDoseMg: 1,
     defaultDoseMl: null,
     doseUnit: 'mg',
-    keyDraws: [
-      { label: '15 u = 0.5 mg', desiredMg: 0.5, units: 15 },
-      { label: '30 u = 1.0 mg', desiredMg: 1, units: 30 },
-    ],
+    keyDraws: [{ label: '4 u ≈ 1 mg (precise 3.75)', desiredMg: 1, units: 4 }],
+    note: KLOW_80_NOTE,
   },
   {
     id: 'motsc',

@@ -146,12 +146,12 @@ export const PROTOCOL_PEPTIDE_OPTIONS: {
   {
     id: 'klow',
     name: 'KLOW',
-    defaultVialMg: 10,
+    defaultVialMg: 80,
     defaultBacMl: 3,
-    targetDoseMg: 0.5,
+    targetDoseMg: 1,
     frequency: 'daily',
-    timing: 'Evening',
-    notes: '0.5 mg = 15 units. Treated as 10 mg vial, not an 80 mg blend.',
+    timing: 'Daily',
+    notes: '80 mg / 3 mL ≈ 26.67 mg/mL. 1 mg ≈ 3.75 units on U-100.',
   },
   {
     id: 'selank-semax',

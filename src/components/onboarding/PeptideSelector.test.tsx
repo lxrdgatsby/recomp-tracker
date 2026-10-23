@@ -10,6 +10,14 @@ describe('onboarding peptide picker', () => {
     expect(option.textContent).toMatch(/2 weeks/)
   })
 
+  it('lists KLOW with the 80 mg / 3 mL default', () => {
+    render(<PeptideSelector variant="onboarding" selections={[]} onChange={() => undefined} />)
+    const option = screen.getByRole('option', { name: /KLOW/i })
+    expect(option.textContent).toMatch(/80 mg/)
+    expect(option.textContent).toMatch(/3 mL/)
+    expect(option.textContent).toMatch(/3\.75/)
+  })
+
   it('lists Selank + Semax fused with the 3 mL / ~8 unit start', () => {
     render(<PeptideSelector variant="onboarding" selections={[]} onChange={() => undefined} />)
     const option = screen.getByRole('option', { name: /Selank \+ Semax/i })

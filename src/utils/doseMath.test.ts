@@ -71,9 +71,13 @@ describe('dose calculator reconstitution math', () => {
     expect(u100UnitsFromMg(2, 100, 3)).toBe(6)
   })
 
-  it('KLOW 0.5 / 1.0 mg → 15 / 30 units', () => {
+  it('KLOW 0.5 / 1.0 mg on a legacy 10 mg / 3 mL vial → 15 / 30 units', () => {
     expect(u100UnitsFromMg(0.5, 10, 3)).toBe(15)
     expect(u100UnitsFromMg(1.0, 10, 3)).toBe(30)
+  })
+
+  it('KLOW 1 mg on 80 mg / 3 mL rounds to 4 units on the half-unit draw', () => {
+    expect(u100UnitsFromMg(1, 80, 3)).toBe(4)
   })
 
   it('MOTS-c 0.5 / 1.0 mg → 15 / 30 units', () => {

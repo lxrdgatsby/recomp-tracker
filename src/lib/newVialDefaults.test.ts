@@ -21,6 +21,14 @@ describe('new vial compound defaults', () => {
     expect(fill.helper).toMatch(/1\.5 mg/)
   })
 
+  it('fills KLOW as 80 mg / 3 mL with a 1 mg draw', () => {
+    const fill = fillForNewVial('klow')
+    expect(fill.vialMg).toBe('80')
+    expect(fill.bacMl).toBe('3')
+    expect(fill.helper).toMatch(/3\.75/)
+    expect(fill.helper).toMatch(/1 mg/)
+  })
+
   it('fills Selank + Semax as 10 mg / 3 mL', () => {
     const fill = fillForNewVial('selank-semax')
     expect(fill.vialMg).toBe('10')

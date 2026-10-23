@@ -5,6 +5,7 @@ import {
   CYCLE_START_DATE,
   FAT_LOSS_DRIVERS,
   GUIDANCE_CARDS,
+  KLOW_80_NOTE,
   KLOW_NOTE,
   MUSCLE_DRIVERS,
   RESEARCH_DISCLAIMER,
@@ -23,6 +24,7 @@ import {
   getInjectionsForDate,
   groupInjectionsBySlot,
   isInjectionDone,
+  isPeptideOnActiveStack,
 } from '../../utils/peptideSchedule'
 import { getProtocolHeader } from '../../utils/protocolHeader'
 import { getCheckInHistory } from '../../utils/checkInStorage'
@@ -47,6 +49,11 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
   const { userProfile } = useAuth()
   const maggie = isMaggieUser(userProfile?.email)
   const { profile, peptides, recompPlan, injectionLogs } = state
+  const activeKlow = peptides.find(
+    (peptide) => peptide.id === 'klow' && isPeptideOnActiveStack(peptide)
+  )
+  const klowBanner =
+    activeKlow?.protocol?.vialMg === 80 ? KLOW_80_NOTE : KLOW_NOTE
   const today = format(new Date(), 'yyyy-MM-dd')
   const { week, dateLabel } = getProtocolHeader(profile.startDate)
   const daysIn = getDaysIntoCycle(profile.startDate)
@@ -260,7 +267,7 @@ export function PlanView({ state, onToggleInjection }: PlanViewProps) {
 
       {maggie ? null : (
         <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm leading-relaxed text-rose-100">
-          {KLOW_NOTE}
+          {klowBanner}
         </div>
       )}
     </div>

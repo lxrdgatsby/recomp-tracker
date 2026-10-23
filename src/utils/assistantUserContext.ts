@@ -13,6 +13,7 @@ import { getProtocolHeader } from './protocolHeader'
 import { nadRemainingFromLogs, PROTOCOL_NOTE, SUNDAY_STACK_NOTE } from '../lib/lxrdRestart'
 import { isLxrdgatsbyUser } from '../lib/protocolSeed'
 import { isMaggieUser, MAGGIE_ASSISTANT_NOTE } from '../lib/maggiePlan'
+import { BUBBLES_ASSISTANT_NOTE, isBubblesmamaUser } from '../lib/bubblesPlan'
 import { getTitrationForDay, displayTierForDate } from './recompProtocol'
 import { formatUnits } from './doseMath'
 import { planNutritionFocus, inferWeightGoalMode } from '../constants/onboardingGoals'
@@ -258,11 +259,15 @@ export function buildAssistantUserContext(
     userProfile != null &&
     !isLxrdgatsbyUser(userProfile.username, userProfile.email)
   const maggieViewer = userProfile != null && isMaggieUser(userProfile.email)
+  const bubblesViewer =
+    userProfile != null && isBubblesmamaUser(userProfile.username, userProfile.email)
   const restarted =
     !viewerIsSomeoneElse && peptides.some((p) => p.schedulePause)
   const nadLeft = restarted ? nadRemainingFromLogs(trackerState.injectionLogs ?? []) : null
   const protocolNote = maggieViewer
     ? MAGGIE_ASSISTANT_NOTE
+    : bubblesViewer
+      ? BUBBLES_ASSISTANT_NOTE
     : restarted
       ? `${PROTOCOL_NOTE} ${SUNDAY_STACK_NOTE} TRT / Test Cyp stays off until December 2026. Do not schedule a Sunday testosterone dose before then. Reta + Cagrilintide starts at 1.5 mg Reta-equivalent (~45 units) for 2 weeks after Oct 25, 2026 (through Nov 7). Do not auto-step it. Plain Retatrutide, SS-31, BPC-157, KLOW, and NAD+ are off. Do not schedule NAD+ until a new vial is opened. Historical NAD+ logs stay on file (${nadLeft?.doneCount ?? 0} logged doses through Oct 24).`
       : undefined

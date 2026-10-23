@@ -301,6 +301,29 @@ export const PEPTIDE_TITRATION: Record<string, TitrationMap> = {
       },
     ],
   },
+  klow: {
+    beginner: [
+      {
+        weeks: '1-13',
+        doseMg: 1,
+        notes: 'Daily. 80 mg / 3 mL ≈ 26.67 mg/mL. 1 mg ≈ 3.75 units on U-100.',
+      },
+    ],
+    intermediate: [
+      {
+        weeks: '1-13',
+        doseMg: 1,
+        notes: 'Daily. 80 mg / 3 mL. 1 mg ≈ 3.75 units. Do not auto-step.',
+      },
+    ],
+    advanced: [
+      {
+        weeks: '1-13',
+        doseMg: 1,
+        notes: 'Daily. 80 mg / 3 mL. 1 mg ≈ 3.75 units. Do not auto-step.',
+      },
+    ],
+  },
   pinealon: {
     beginner: [
       { weeks: '1-13', doseMg: 0.5, notes: 'Daily AM — run in 10–20 day cycles (500mcg)' },

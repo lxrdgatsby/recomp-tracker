@@ -29,6 +29,7 @@ import {
   MAGGIE_MAIN_GOAL,
   MAGGIE_TRAINING,
 } from '../lib/maggiePlan'
+import { applyBubblesmamaKlow, isBubblesmamaUser } from '../lib/bubblesPlan'
 import { setProtocolStorageScope } from '../lib/protocolStorageScope'
 import { withNadHorizon } from '../lib/lxrdRestart'
 import { applyLxrdgatsbyVialInventorySeed } from '../lib/vialInventorySeed'
@@ -150,6 +151,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           trackerData: next,
         })
       }
+    } else if (isBubblesmamaUser(profile.username, email)) {
+      const source = profileToTrackerState({
+        ...profile,
+        email: profile.email ?? email,
+      })
+      const seeded = applyBubblesmamaKlow(source, profile.username, email)
+      next = seeded ?? source
+      if (seeded) changed = true
     } else if (!profile.onboardingCompleted) {
       const storedPeptides =
         profile.trackerData?.peptides?.length ?? profile.peptideStack.length
