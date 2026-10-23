@@ -1,6 +1,6 @@
 import { AMINO_1MQ_START_DATE, DSIP_START_DATE } from '../constants/reconstitutionTable'
 import { generateId } from '../lib/generateId'
-import { collapseNadLogs, RESTART_DATE } from '../lib/lxrdRestart'
+import { collapseNadLogs, KLOW_80_START, RESTART_DATE } from '../lib/lxrdRestart'
 import type { InjectionLog, Peptide } from '../types'
 import type { Vial } from '../types/v2'
 import { getInjectionsForDate, parseLocalYmd } from './peptideSchedule'
@@ -136,6 +136,23 @@ export function vialIdForDate(
   if (peptideId === 'dsip') {
     if (day < DSIP_START_DATE) return undefined
     return matches.find((v) => v.id === 'vial-dsip-a')?.id ?? latestOnOrBefore(matches, day)
+  }
+  if (peptideId === 'klow') {
+    if (day < KLOW_80_START) {
+      const archived = matches.find((vial) => vial.id === 'vial-klow-a')
+      if (archived) return archived.id
+      return oldestOnOrBefore(
+        matches.filter((vial) => vial.id !== 'vial-klow-b'),
+        day
+      )
+    }
+    return (
+      matches.find((vial) => vial.id === 'vial-klow-b' && !isReplacedVial(vial))?.id ??
+      latestLiveOnOrBefore(
+        matches.filter((vial) => vial.id !== 'vial-klow-a'),
+        day
+      )
+    )
   }
   return latestLiveOnOrBefore(matches, day)
 }

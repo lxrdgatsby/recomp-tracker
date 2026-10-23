@@ -199,7 +199,7 @@ describe('Bubblesmama KLOW stack', () => {
     expect(shots.some((shot) => shot.peptideId === 'ghkcu')).toBe(true)
   })
 
-  it('tells the assistant KLOW starts Oct 24 and leaves lxrd’s 10 mg vial alone', () => {
+  it('tells the assistant KLOW starts Oct 24 and leaves lxrd’s Oct 26 vial alone', () => {
     const plan = applyBubblesmamaKlow(state(), 'bubblesmama')!
     const ctx = buildAssistantUserContext(profile(), plan)
     expect(ctx.protocol.note).toMatch(/October 24, 2026/)
@@ -210,7 +210,12 @@ describe('Bubblesmama KLOW stack', () => {
     expect(String(klow?.currentDoseLabel)).toMatch(/2026-10-24/)
 
     const lxrd = buildLxrdgatsbyStack('2026-08-23')
-    expect(lxrd.peptides.find((item) => item.id === 'klow')?.protocol?.vialMg).toBe(10)
+    const lxrdKlow = lxrd.peptides.find((item) => item.id === 'klow')
+    expect(lxrdKlow?.protocol?.vialMg).toBe(80)
+    expect(lxrdKlow?.protocol?.bacWaterMl).toBe(3)
+    expect(lxrdKlow?.protocol?.startingSyringeUnits).toBe(4)
+    expect(lxrdKlow?.notes).toMatch(/from Oct 26/)
+    expect(ctx.protocol.note).not.toMatch(/from Oct 26/)
     expect(getCatalogEntry('klow')?.defaultDose).toBe('80mg')
     expect(getReconstitutionCompound('klow')?.vialMg).toBe(80)
     expect(getReconstitutionCompound('klow')?.bacMl).toBe(3)

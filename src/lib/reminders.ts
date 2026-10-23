@@ -1,6 +1,6 @@
 import { STORAGE_KEY } from '../constants/defaults'
 import { readLocal, writeLocal } from './protocolStorageScope'
-import { PAUSE_FROM, PAUSE_UNTIL, RESTART_DATE } from './lxrdRestart'
+import { KLOW_80_START, PAUSE_FROM, PAUSE_UNTIL, RESTART_DATE } from './lxrdRestart'
 
 export const REMINDER_SETTINGS_KEY = 'reminderSettings'
 export const REMINDER_LAST_FIRED_KEY = 'reminderLastFired'
@@ -280,7 +280,13 @@ function restartShots(slot: ReminderSlot, date: Date): SlotShots {
     return { slot, title: 'Morning shots', body: names.join(' + '), shots }
   }
   if (slot === 'evening') {
-    return emptySlot(slot, 'Evening shots')
+    if (toIsoDate(date) < KLOW_80_START) return emptySlot(slot, 'Evening shots')
+    return {
+      slot,
+      title: 'Evening shots',
+      body: 'KLOW 4u',
+      shots: [{ id: 'klow', short: 'KLOW', detail: 'KLOW 4u' }],
+    }
   }
   if (slot === 'night') {
     return {

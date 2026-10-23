@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATE } from '../constants/defaults'
+import { KLOW_LXRD_NOTE } from '../constants/reconstitutionTable'
 import { getInjectionsForDate, isPeptideOnActiveStack } from '../utils/peptideSchedule'
 import { formatCurrentStackDose } from '../utils/recompProtocol'
 import { getShotsForSlot } from './reminders'
@@ -47,6 +48,9 @@ describe('Oct 25 protocol restart', () => {
     const aug23 = getInjectionsForDate(stack().peptides, new Date(2026, 7, 23), '2026-08-23')
     expect(aug23.some((shot) => shot.peptideId === 'test-cyp')).toBe(true)
     expect(aug23.find((shot) => shot.peptideId === 'retatrutide')?.syringeUnits).toBe(50)
+    expect(aug23.find((shot) => shot.peptideId === 'klow')?.syringeUnits).toBe(15)
+    const oct3 = getInjectionsForDate(stack().peptides, new Date(2026, 9, 3), '2026-08-23')
+    expect(oct3.find((shot) => shot.peptideId === 'klow')?.syringeUnits).toBe(30)
 
     expect(idsOn(new Date(2026, 9, 4))).not.toContain('test-cyp')
     expect(idsOn(new Date(2026, 9, 21))).toEqual([])
@@ -79,7 +83,18 @@ describe('Oct 25 protocol restart', () => {
     expect(oct26.some((shot) => shot.peptideId === 'test-cyp')).toBe(false)
     expect(oct26.some((shot) => shot.peptideId === 'ss31')).toBe(false)
     expect(oct26.some((shot) => shot.peptideId === 'bpc157')).toBe(false)
-    expect(oct26.some((shot) => shot.peptideId === 'klow')).toBe(false)
+    const klowShot = oct26.find((shot) => shot.peptideId === 'klow')
+    expect(klowShot?.syringeUnits).toBe(4)
+    expect(klowShot?.cardLine).toContain('4 units')
+    const klow = stack().peptides.find((peptide) => peptide.id === 'klow')
+    expect(klow?.endsOn).toBeUndefined()
+    expect(klow?.protocol?.vialMg).toBe(80)
+    expect(klow?.protocol?.bacWaterMl).toBe(3)
+    expect(klow?.protocol?.startingDoseMg).toBe(1)
+    expect(klow?.protocol?.startingSyringeUnits).toBe(4)
+    expect(klow?.protocol?.concentrationLabel).toBe('26.67 mg/mL')
+    expect(klow?.notes).toBe(KLOW_LXRD_NOTE)
+    expect(klow?.schedulePause).toEqual({ from: '2026-10-04', until: '2026-10-25' })
 
     const oct28 = getInjectionsForDate(stack().peptides, new Date(2026, 9, 28), '2026-08-23')
     expect(oct28.find((shot) => shot.peptideId === 'amino1mq')?.syringeUnits).toBe(15)
@@ -116,7 +131,10 @@ describe('Oct 25 protocol restart', () => {
     expect(isPeptideOnActiveStack(fused, pause)).toBe(true)
     expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'ss31')!, pause)).toBe(false)
     expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'bpc157')!, pause)).toBe(false)
-    expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'klow')!, pause)).toBe(false)
+    const klow = peptides.find((p) => p.id === 'klow')!
+    expect(isPeptideOnActiveStack(klow, pause)).toBe(true)
+    expect(formatCurrentStackDose(klow, '2026-08-23', pause)).toContain('4 u')
+    expect(formatCurrentStackDose(klow, '2026-08-23', pause)).toContain('1 mg')
     expect(isPeptideOnActiveStack(peptides.find((p) => p.id === 'nad')!, pause)).toBe(false)
     expect(peptides.find((p) => p.id === 'nad')?.endsOn).toBe('2026-10-03')
     expect(reta.endsOn).toBe('2026-10-03')
@@ -198,6 +216,17 @@ describe('Oct 25 protocol restart', () => {
     expect(vials.find((v) => v.id === 'vial-ghk-a')?.replacedAt).toBeUndefined()
     expect(vials.find((v) => v.id === 'vial-bpc-a')?.replacedAt).toBe('2026-10-25')
     expect(vials.find((v) => v.id === 'vial-klow-a')?.replacedAt).toBe('2026-10-25')
+    expect(vials.find((v) => v.id === 'vial-klow-a')?.remainingMg).toBe(0)
+    const klowB = vials.find((v) => v.id === 'vial-klow-b')
+    expect(klowB?.vialMg).toBe(80)
+    expect(klowB?.bacWaterMl).toBe(3)
+    expect(klowB?.remainingMg).toBe(80)
+    expect(klowB?.mixedDate).toBe('2026-10-26')
+    expect(klowB?.depleted).toBe(false)
+    expect(klowB?.isPowder).toBe(false)
+    expect(vialIdForDate(vials, 'klow', '2026-08-23')).toBe('vial-klow-a')
+    expect(vialIdForDate(vials, 'klow', '2026-10-25')).toBe('vial-klow-a')
+    expect(vialIdForDate(vials, 'klow', '2026-10-26')).toBe('vial-klow-b')
     expect(vials.find((v) => v.id === 'vial-ss31-b')?.replacedAt).toBe('2026-10-25')
     expect(vials.find((v) => v.id === 'vial-reta-b')?.remainingMg).toBe(0)
     expect(vials.find((v) => v.id === 'vial-aod-b')?.remainingMg).toBe(0)
@@ -246,8 +275,9 @@ describe('Oct 25 protocol restart', () => {
     expect(morning.body).toBe('AOD 20u + 5-Amino-1MQ 15u + MOTS-c 4u')
     expect(morning.shots.some((shot) => shot.id === 'aod9604')).toBe(true)
 
-    expect(getShotsForSlot('evening', new Date(2026, 9, 26)).body).toBe('')
-    expect(getShotsForSlot('evening', new Date(2026, 9, 27)).body).toBe('')
+    expect(getShotsForSlot('evening', new Date(2026, 9, 25)).body).toBe('')
+    expect(getShotsForSlot('evening', new Date(2026, 9, 26)).body).toBe('KLOW 4u')
+    expect(getShotsForSlot('evening', new Date(2026, 9, 27)).body).toBe('KLOW 4u')
     expect(getShotsForSlot('night', new Date(2026, 9, 25)).body).toContain('Tesamorelin 15u')
     expect(getShotsForSlot('night', new Date(2026, 9, 25)).body).toContain('DSIP 2u')
     const sunday = getShotsForSlot('sunday', new Date(2026, 9, 25))
@@ -282,6 +312,7 @@ describe('Oct 25 protocol restart', () => {
       'amino1mq',
       'aod9604',
       'dsip',
+      'klow',
       'motsc',
       'reta-cagri',
       'tesamorelin',
@@ -291,6 +322,11 @@ describe('Oct 25 protocol restart', () => {
     expect(ctx.protocol.note).toContain('Tesamorelin 15 units')
     expect(ctx.protocol.compounds.some((c) => c.id === 'ss31')).toBe(false)
     expect(ctx.protocol.compounds.some((c) => c.id === 'bpc157')).toBe(false)
-    expect(ctx.protocol.compounds.some((c) => c.id === 'klow')).toBe(false)
+    const klow = ctx.protocol.compounds.find((c) => c.id === 'klow')
+    expect(klow?.reconstitution.vialMg).toBe(80)
+    expect(klow?.reconstitution.bacMl).toBe(3)
+    expect(klow?.units).toBe(4)
+    expect(ctx.protocol.note).toContain(KLOW_LXRD_NOTE)
+    expect(ctx.protocol.note).not.toContain('treats the vial as 10 mg')
   })
 })

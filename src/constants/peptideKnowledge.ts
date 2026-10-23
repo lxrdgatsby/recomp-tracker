@@ -36,7 +36,7 @@ RETA + CAGRILINTIDE (fused):
 - Blend vial: 10 mg Retatrutide + 10 mg Cagrilintide reconstituted with 3 mL BAC. Dose the Reta portion. Concentration ≈ 3.33 mg/mL. units = (desired_reta_mg / (10 / 3)) * 100.
 - 1.5 mg Reta-equivalent ≈ 45 units. 2.5 mg ≈ 75 units. 4 mg ≈ 120 units.
 - Default start: 1.5 mg weekly (~45 units) and hold 2 weeks before any step. Do not auto-step on week 1. Do not suggest 4 mg (~120 units) during those first 2 weeks.
-- lxrdgatsby from Oct 25, 2026: 1.5 mg / ~45 units weekly for the first 2 weeks (through Nov 7, 2026). Do not auto-step. Plain Retatrutide, SS-31, BPC-157, and KLOW are off after Oct 3, 2026. This blend does not replace historical plain Retatrutide doses from Aug 23 through Oct 3.
+- lxrdgatsby from Oct 25, 2026: 1.5 mg / ~45 units weekly for the first 2 weeks (through Nov 7, 2026). Do not auto-step. Plain Retatrutide, SS-31, and BPC-157 are off after Oct 3, 2026. KLOW’s old 10 mg vial is archived; a new 80 mg / 3 mL vial starts Oct 26, 2026 at 1 mg ≈ 4 units daily. This blend does not replace historical plain Retatrutide doses from Aug 23 through Oct 3.
 - For lxrdgatsby only: TRT / Test Cyp stays off until December 2026. Do not schedule Sunday testosterone before then.
 
 SELANK + SEMAX (fused):
@@ -51,7 +51,7 @@ KLOW:
 - Selectable compound. Library default recon: 80 mg vial + 3.0 mL BAC water ≈ 26.67 mg/mL.
 - units = (desired_mg / (80 / 3)) * 100. 1 mg ≈ 3.75 units on U-100. This app’s half-unit syringe draw schedules that as 4 units. The user can override units on the form.
 - A 10 mg / 3 mL label is a different vial: 0.5 mg = 15 units, 1 mg = 30 units. Do not apply that math when the saved vial is 80 mg.
-- lxrdgatsby’s historical KLOW was the 10 mg / 3 mL vial and is off after Oct 3, 2026. Do not apply that vial or those off-dates to any other user.
+- lxrdgatsby: the old 10 mg / 3 mL vial is archived. Historical logs stay. A new 80 mg / 3 mL vial opens October 26, 2026, mixed and active, remaining full (80 mg). Starting dose 1 mg ≈ 4 units daily from that date. Do not schedule KLOW on Oct 25. Do not apply his dates or that vial to any other user.
 - Bubblesmama (username bubblesmama): KLOW is on the active stack starting October 24, 2026 (Day 1). Vial 80 mg / 3 mL BAC, mixed and active, remaining full (80 mg), opened October 24, 2026. Starting dose 1 mg daily ≈ 3.75 units, scheduled as 4. Do not delete or rewrite historical injection logs.
 - If THIS user’s saved stack has both KLOW and standalone BPC-157, say that some KLOW blends also contain BPC. Do not invent that overlap when only one of them is on the stack.
 
@@ -59,7 +59,7 @@ USER ISOLATION:
 - lxrdgatsby’s saved stack, doses, vials, injection history, check-ins, start date (Aug 23, 2026), pause, Oct 25 2026 restart, and weight targets belong to him only.
 - Never copy that plan onto any other user. A new signup has an empty Active stack and empty Vial Inventory until they finish onboarding.
 - After onboarding, coach only from the peptides, goals, and doses in THIS user’s context JSON.
-- Dates and holds written for lxrdgatsby (Sept 15 amino, Sept 20 plain Reta step, Oct 25 restart, TRT off until December, fused 1.5 mg through Nov 7) apply only when the user context names lxrdgatsby or itsgatsby@protonmail.com.
+- Dates and holds written for lxrdgatsby (Sept 15 amino, Sept 20 plain Reta step, Oct 25 restart, Oct 26 KLOW 80 mg / 3 mL at 1 mg ≈ 4 units, TRT off until December, fused 1.5 mg through Nov 7) apply only when the user context names lxrdgatsby or itsgatsby@protonmail.com.
 
 DSIP (DELTA SLEEP-INDUCING PEPTIDE):
 - Aliases: DSIP, Delta Sleep-Inducing Peptide.

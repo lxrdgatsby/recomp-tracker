@@ -11,7 +11,7 @@ import {
   GOAL_WEIGHT_LB,
   GUIDANCE_CARDS,
   HONEST_OUTCOME_COPY,
-  KLOW_NOTE,
+  KLOW_LXRD_NOTE,
   MUSCLE_DRIVERS,
   RESEARCH_DISCLAIMER,
   START_WEIGHT_LB,
@@ -39,7 +39,7 @@ import { endPeptideNow, forgetRemovedIds, removedPeptideIdSet } from './removedC
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-sunday-stack-v7'
+export const PROTOCOL_DEFINITION_VERSION = '2026-10-26-klow-80'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -72,6 +72,7 @@ export const PHASE_NOTES = {
     'Tesamorelin 2.0 mg = 30 units only if fasting glucose is good and IGF-1 is not already high; else stay 21 units.',
     'Everything else: hold week 5–8 doses, including 5-Amino-1MQ at 30 u',
     'DSIP: starts Sun Oct 25. 100 mcg = 2 units nightly, 30–60 min before bed. 10 mg / 2 mL.',
+    KLOW_LXRD_NOTE,
   ],
 }
 
@@ -440,14 +441,14 @@ export function buildLxrdgatsbyStack(startDate: string): {
       dose: '0.5mg',
       frequency: 'daily',
       timing: 'Evening / post-training',
-      notes: KLOW_NOTE,
+      notes: KLOW_LXRD_NOTE,
       vialSize: '10mg',
       protocol: protocol({
         vialMg: 10,
         bacWaterUnits: 300,
         startingDoseMg: 0.5,
         startingSyringeUnits: 15,
-        extraSteps: [KLOW_NOTE],
+        extraSteps: [KLOW_LXRD_NOTE],
         titration: [
           tier('1-4', 0.5, 15, '0.5 mg = 15 units, evening'),
           tier('5-12', 1, 30, '1 mg = 30 units if no site issues'),
@@ -534,7 +535,7 @@ export function buildLxrdgatsbyStack(startDate: string): {
     checkInCadence:
       'Weigh-in every 7 days. Labs at baseline, week 4–6, and week 10–12.',
     reconstitutionReminder:
-      'U-100: 100 units = 1 mL. Confirm Test mg/mL and whether KLOW is 10 mg or 80 mg before locking units.',
+      'U-100: 100 units = 1 mL. KLOW from Oct 26 is 80 mg / 3 mL BAC. 1 mg ≈ 4 units.',
   }
 
   const vials = stack.map((p) => ({

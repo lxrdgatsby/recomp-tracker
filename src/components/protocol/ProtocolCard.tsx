@@ -1,5 +1,6 @@
 import { differenceInCalendarDays, parseISO } from 'date-fns'
-import { KLOW_80_NOTE, KLOW_NOTE, RESEARCH_DISCLAIMER } from '../../constants/reconstitutionTable'
+import { RESEARCH_DISCLAIMER } from '../../constants/reconstitutionTable'
+import { klowPlanBanner } from '../../lib/klowPlanNote'
 import { PROTOCOL_NOTE } from '../../lib/lxrdRestart'
 import { PHASE_NOTES } from '../../lib/protocolSeed'
 import type { TrackerState } from '../../types'
@@ -23,9 +24,8 @@ export function ProtocolCard({
   const onStack = state.peptides.filter((p) => isPeptideOnActiveStack(p, today))
   const showRestart = state.peptides.some((p) => p.schedulePause)
   const showTest = onStack.some((p) => p.id === 'test-cyp')
-  const activeKlow = onStack.find((p) => p.id === 'klow')
-  const showKlow = Boolean(activeKlow)
-  const klowNote = activeKlow?.protocol?.vialMg === 80 ? KLOW_80_NOTE : KLOW_NOTE
+  const klowNote = klowPlanBanner(state.peptides)
+  const showKlow = Boolean(klowNote)
 
   return (
     <section className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5">

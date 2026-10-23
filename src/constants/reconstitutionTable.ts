@@ -21,13 +21,18 @@ export const HONEST_OUTCOME_COPY =
 export const FAT_LOSS_DRIVERS = 'Retatrutide + food + steps'
 export const MUSCLE_DRIVERS = 'Test + Tesamorelin + progressive overload + protein'
 
-export const KLOW_NOTE =
-  'Classic KLOW is often an 80 mg blend. This plan treats the vial as 10 mg. If the label is 80 mg, units are wrong. Standalone BPC-157 is already in the stack — if KLOW also contains BPC, user is stacking BPC twice. Keep standalone BPC at 500 mcg and KLOW conservative.'
+/** lxrdgatsby’s 90-day plan. Other users keep KLOW_80_NOTE. */
+export const KLOW_LXRD_NOTE =
+  'KLOW: 80 mg vial + 3 mL BAC. Starting dose 1 mg ≈ 4 units daily from Oct 26. Research-use tracking only.'
+
+/** Shown only when standalone BPC-157 is also on the active stack. */
+export const KLOW_BPC_CAUTION =
+  'Some KLOW blends contain BPC. Standalone BPC-157 is also on this stack — keep both doses conservative.'
 
 export const DSIP_NOTE =
   'Research-use only. Published human data is mostly IV; SC is community practice. 10 mg vial + 2.0 mL BAC = 5 mg/mL. Conservative start 100 mcg = 2 units on U-100 (or 250 mcg = 5 units). 30–60 min before bed. Nightly or 5 nights/week. units = (desired_mcg / 5000) * 100.'
 
-/** Library default. lxrdgatsby’s saved 10 mg vial keeps KLOW_NOTE. */
+/** Library default for the calculator and for stacks other than lxrdgatsby’s Oct 26 plan. */
 export const KLOW_80_NOTE =
   '80 mg / 3 mL BAC ≈ 26.67 mg/mL. 1 mg ≈ 3.75 units on U-100 (4 units on the half-unit draw). You can override units on the form.'
 

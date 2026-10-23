@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_STATE } from '../constants/defaults'
 import { defaultBacForCatalog, getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
 import { GOAL_PEPTIDE_RECOMMENDATIONS } from '../constants/onboardingGoals'
-import { getReconstitutionCompound } from '../constants/reconstitutionTable'
+import { getReconstitutionCompound, KLOW_BPC_CAUTION, KLOW_LXRD_NOTE } from '../constants/reconstitutionTable'
+import { klowPlanBanner } from './klowPlanNote'
 import { buildPeptideWithProtocol, formatCurrentStackDose, getTitrationForDay } from '../utils/recompProtocol'
 import { getInjectionsForDate, isPeptideOnActiveStack } from '../utils/peptideSchedule'
 import { rememberRemovedPeptide, yesterdayIso } from './removedCompounds'
@@ -14,7 +15,7 @@ import {
 } from './protocolSeed'
 
 describe('90-day protocol definition', () => {
-  it('keeps a user-revived KLOW 80 mg protocol and does not touch logs', () => {
+  it('sets KLOW to the Oct 26 80 mg protocol and does not touch logs', () => {
     const start = '2026-08-23'
     const { peptides, recompPlan } = buildLxrdgatsbyStack(start)
     const logs = [{ date: '2026-09-01', peptideId: 'klow', doseMg: 0.5 }]
@@ -22,15 +23,15 @@ describe('90-day protocol definition', () => {
       peptide.id === 'klow'
         ? {
             ...peptide,
-            endsOn: undefined,
+            endsOn: '2026-10-03',
             startsOn: '2026-10-23',
             protocol: peptide.protocol
               ? {
                   ...peptide.protocol,
-                  vialMg: 80,
+                  vialMg: 10,
                   bacWaterMl: 3,
-                  startingDoseMg: 1,
-                  startingSyringeUnits: 4,
+                  startingDoseMg: 0.5,
+                  startingSyringeUnits: 15,
                 }
               : peptide.protocol,
           }
@@ -48,13 +49,27 @@ describe('90-day protocol definition', () => {
     )
     const klow = next?.peptides.find((peptide) => peptide.id === 'klow')
     expect(klow?.endsOn).toBeUndefined()
-    expect(klow?.startsOn).toBe('2026-10-23')
+    expect(klow?.startsOn).toBeUndefined()
     expect(klow?.protocol?.vialMg).toBe(80)
+    expect(klow?.protocol?.bacWaterMl).toBe(3)
+    expect(klow?.protocol?.startingDoseMg).toBe(1)
     expect(klow?.protocol?.startingSyringeUnits).toBe(4)
+    expect(klow?.notes).toBe(KLOW_LXRD_NOTE)
     expect(isPeptideOnActiveStack(klow!)).toBe(true)
     expect(isPeptideOnActiveStack(next!.peptides.find((peptide) => peptide.id === 'bpc157')!)).toBe(
       false
     )
+    const oct25 = getInjectionsForDate(next?.peptides ?? [], new Date(2026, 9, 25), start)
+    const oct26 = getInjectionsForDate(next?.peptides ?? [], new Date(2026, 9, 26), start)
+    expect(oct25.some((shot) => shot.peptideId === 'klow')).toBe(false)
+    expect(oct26.find((shot) => shot.peptideId === 'klow')?.syringeUnits).toBe(4)
+    expect(klowPlanBanner(next?.peptides ?? [])).toBe(KLOW_LXRD_NOTE)
+    expect(klowPlanBanner(next?.peptides ?? [])).not.toMatch(/treats the vial as 10 mg/)
+    const withBpc = (next?.peptides ?? []).map((peptide) =>
+      peptide.id === 'bpc157' ? { ...peptide, endsOn: undefined } : peptide
+    )
+    expect(klowPlanBanner(withBpc)).toBe(`${KLOW_LXRD_NOTE} ${KLOW_BPC_CAUTION}`)
+    expect(klowPlanBanner(withBpc)).not.toMatch(/10 mg/)
     expect(next?.injectionLogs).toEqual(logs)
     expect(refreshProtocolDefinition(next!, 'someone-else')).toBeNull()
   })
@@ -154,6 +169,7 @@ describe('90-day protocol definition', () => {
         'amino1mq',
         'aod9604',
         'dsip',
+        'klow',
         'motsc',
         'reta-cagri',
         'tesamorelin',
@@ -174,7 +190,7 @@ describe('90-day protocol definition', () => {
         false
       )
       expect(isPeptideOnActiveStack(next!.peptides.find((p) => p.id === 'klow')!, sunday)).toBe(
-        false
+        true
       )
       const oct25 = getInjectionsForDate(next?.peptides ?? [], sunday, start)
       expect(oct25.find((shot) => shot.peptideId === 'dsip')?.syringeUnits).toBe(2)
@@ -184,6 +200,9 @@ describe('90-day protocol definition', () => {
       expect(oct25.find((shot) => shot.peptideId === 'amino1mq')?.syringeUnits).toBe(15)
       expect(oct25.some((shot) => shot.peptideId === 'test-cyp')).toBe(false)
       expect(oct25.some((shot) => shot.peptideId === 'retatrutide')).toBe(false)
+      expect(oct25.some((shot) => shot.peptideId === 'klow')).toBe(false)
+      const oct26 = getInjectionsForDate(next?.peptides ?? [], new Date(2026, 9, 26), start)
+      expect(oct26.find((shot) => shot.peptideId === 'klow')?.syringeUnits).toBe(4)
       expect(next?.removedPeptideIds).not.toContain('dsip')
       expect(next?.removedPeptideIds).toContain('bpc157')
       expect(next?.removedVialIds).not.toContain('vial-dsip-a')

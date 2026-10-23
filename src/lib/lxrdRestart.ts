@@ -1,3 +1,4 @@
+import { KLOW_LXRD_NOTE } from '../constants/reconstitutionTable'
 import type { InjectionLog, Peptide, TitrationWeek } from '../types'
 import { removedPeptideIdSet } from './removedCompounds'
 
@@ -6,6 +7,8 @@ export const LAST_OLD_STACK_DAY = '2026-10-03'
 export const PAUSE_FROM = '2026-10-04'
 export const PAUSE_UNTIL = '2026-10-24'
 export const RESTART_DATE = '2026-10-25'
+/** KLOW’s new 80 mg vial. The Oct 25 stack does not move. */
+export const KLOW_80_START = '2026-10-26'
 export const AMINO_LOW_UNTIL = '2026-10-27'
 export const AMINO_FULL_FROM = '2026-10-28'
 export const NAD_VIAL_MG = 1000
@@ -13,9 +16,9 @@ export const NAD_DOSE_MG = 50
 export const PROTOCOL_NOTE =
   'Paused ~3 weeks. Restarted Oct 25, 2026. TRT resumes December.'
 
-const STOPPED = new Set(['test-cyp', 'retatrutide', 'bpc157', 'ss31', 'ghkcu', 'klow', 'nad'])
+const STOPPED = new Set(['test-cyp', 'retatrutide', 'bpc157', 'ss31', 'ghkcu', 'nad'])
 
-/** The six new vials on the active stack from Sunday Oct 25, 2026. NAD+ is off. */
+/** Oct 25 vials, plus KLOW from Oct 26. NAD+ is off. */
 export const SUNDAY_STACK_IDS = [
   'reta-cagri',
   'tesamorelin',
@@ -23,9 +26,10 @@ export const SUNDAY_STACK_IDS = [
   'motsc',
   'aod9604',
   'dsip',
+  'klow',
 ] as const
 
-/** Only these Mixed vials stay in inventory for that Sunday start. */
+/** These Mixed vials stay in inventory. KLOW opens Oct 26; the rest open Oct 25. */
 export const SUNDAY_VIAL_IDS = [
   'vial-reta-cagri',
   'vial-tesa-b',
@@ -33,10 +37,11 @@ export const SUNDAY_VIAL_IDS = [
   'vial-mots-b',
   'vial-aod-c',
   'vial-dsip-a',
+  'vial-klow-b',
 ] as const
 
 export const SUNDAY_STACK_NOTE =
-  'Sunday Oct 25, 2026 stack: Reta + Cagrilintide 1.5 mg (45 units) weekly, Tesamorelin 15 units (1.0 mg) nightly, 5-Amino-1MQ 15 units daily, MOTS-c about 4 units Mon/Wed/Fri, AOD-9604 20 units morning on the Oct 25 vial (10 mg / 2 mL), DSIP 2 units (100 mcg) nightly before bed. NAD+ is off until a new vial is opened.'
+  'Sunday Oct 25, 2026 stack: Reta + Cagrilintide 1.5 mg (45 units) weekly, Tesamorelin 15 units (1.0 mg) nightly, 5-Amino-1MQ 15 units daily, MOTS-c about 4 units Mon/Wed/Fri, AOD-9604 20 units morning on the Oct 25 vial (10 mg / 2 mL), DSIP 2 units (100 mcg) nightly before bed. NAD+ is off until a new vial is opened. KLOW starts Oct 26 on a new 80 mg / 3 mL vial at 1 mg ≈ 4 units daily. The old 10 mg KLOW vial stays archived.'
 
 const PAUSE = { from: PAUSE_FROM, until: PAUSE_UNTIL }
 
@@ -126,6 +131,41 @@ export function stampRestartPeptide(peptide: Peptide): Peptide {
         '2.5 mg = 15 units daily, morning fasted, on the Oct 25 vial (50 mg / 3 mL).'
       )
     )
+  } else if (peptide.id === 'klow') {
+    titration.push(
+      restartTier(
+        1,
+        4,
+        '1 mg ≈ 4 units daily on the Oct 26 vial (80 mg / 3 mL). Research-use tracking only.',
+        KLOW_80_START
+      )
+    )
+    return {
+      ...peptide,
+      dose: '1mg',
+      vialSize: '80mg',
+      endsOn: undefined,
+      schedulePause: { from: PAUSE_FROM, until: RESTART_DATE },
+      notes: KLOW_LXRD_NOTE,
+      protocol: {
+        ...protocol,
+        vialMg: 80,
+        bacWaterUnits: 300,
+        bacWaterMl: 3,
+        concentrationMgPerMl: 80 / 3,
+        concentrationLabel: '26.67 mg/mL',
+        startingDoseMg: 1,
+        startingDoseLabel: '4 units on U-100',
+        startingSyringeUnits: 4,
+        reconstituted: true,
+        calculationSummary: '80 mg / 3 mL ≈ 26.67 mg/mL → 1 mg ≈ 4 units',
+        reconstitutionSteps: [
+          'Product 80mg reconstituted with 3mL (300 units BAC) on U-100.',
+          KLOW_LXRD_NOTE,
+        ],
+        titration,
+      },
+    }
   } else if (peptide.id === 'motsc') {
     titration.push(
       restartTier(

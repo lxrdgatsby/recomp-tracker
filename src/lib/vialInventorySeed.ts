@@ -9,8 +9,8 @@ import { recalculateVialInventory, vialIsClosed } from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { writeLocal } from './protocolStorageScope'
 import { isLxrdgatsbyUser } from './protocolSeed'
-import { removedVialIdSet, withoutRemovedVials } from './removedCompounds'
-import { SUNDAY_VIAL_IDS } from './lxrdRestart'
+import { rememberRemovedVial, removedVialIdSet, withoutRemovedVials } from './removedCompounds'
+import { KLOW_80_START, SUNDAY_VIAL_IDS } from './lxrdRestart'
 
 export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v4'
 
@@ -260,6 +260,17 @@ export function buildLxrdgatsbyVials(): Vial[] {
       notes: 'Vial A · archived Oct 25. KLOW stopped. 10 mg / 3 mL.',
     }),
     activeVial({
+      id: 'vial-klow-b',
+      peptideId: 'klow',
+      name: 'KLOW',
+      vialMg: 80,
+      bacMl: 3,
+      conc: 80 / 3,
+      opened: KLOW_80_START,
+      remainingMg: 80,
+      notes: 'Vial B · mixed Oct 26 · 80 mg / 3 mL · 1 mg ≈ 4 u · full',
+    }),
+    activeVial({
       id: 'vial-mots-a',
       peptideId: 'motsc',
       name: 'MOTS-c',
@@ -418,19 +429,32 @@ export function applyLxrdgatsbyVialInventorySeed(
     ...removedVialIdSet(current.removedVialIds),
     ...LXRD_PERMANENT_VIAL_IDS,
   ])
-  const removedVialIds = [...removed]
-  const fromState = withoutRemovedVials(current.vialInventory ?? [], removedVialIds)
-  const fromStorage = withoutRemovedVials(loadVials(), removedVialIds)
+  const fromState = withoutRemovedVials(current.vialInventory ?? [], [...removed])
+  const fromStorage = withoutRemovedVials(loadVials(), [...removed])
   const existing = fromState.length > 0 ? fromState : fromStorage
   const templates = buildLxrdgatsbyVials()
   const templateIds = new Set(templates.map((vial) => vial.id))
   const merged = mergeVialTemplates(existing, templates, removed)
-  const vials = recalculateVialInventory({
+  const kept = recalculateVialInventory({
     vials: merged,
     logs: current.injectionLogs ?? [],
     peptides: current.peptides,
     startDate: current.profile.startDate || CYCLE_START_DATE,
   }).filter((vial) => keepCurrentStackVial(vial, templateIds))
+  const droppedKlow: string[] = []
+  const vials = kept.filter((vial) => {
+    const compound = (vial.compoundId || '').trim().toLowerCase()
+    const name = vial.compoundName.trim().toLowerCase()
+    const isKlow = compound === 'klow' || name === 'klow'
+    if (!isKlow || vial.id === 'vial-klow-b') return true
+    droppedKlow.push(vial.id)
+    return false
+  })
+  for (const id of droppedKlow) {
+    removed.add(id)
+    rememberRemovedVial(id)
+  }
+  const removedVialIds = [...removed]
   persistLocalVials(vials)
   return { ...current, vialInventory: vials, removedVialIds }
 }

@@ -94,7 +94,7 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     )
   })
 
-  it('persists only the six Sunday vials and leaves historical logs', () => {
+  it('persists the Oct 25 vials plus the Oct 26 KLOW vial and leaves historical logs', () => {
     localStorage.clear()
     const { peptides } = buildLxrdgatsbyStack('2026-08-23')
     const logs: InjectionLog[] = [
@@ -122,6 +122,7 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
       'vial-amino1mq-b',
       'vial-aod-c',
       'vial-dsip-a',
+      'vial-klow-b',
       'vial-mots-b',
       'vial-reta-cagri',
       'vial-tesa-b',
@@ -280,6 +281,7 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
       'vial-amino1mq-b',
       'vial-aod-c',
       'vial-dsip-a',
+      'vial-klow-b',
       'vial-mots-b',
       'vial-reta-cagri',
       'vial-tesa-b',
@@ -320,13 +322,13 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-nad-a')).toBe(false)
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-reta-cagri')).toBe(true)
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-tesa-b')).toBe(true)
-    expect(next?.vialInventory).toHaveLength(5)
+    expect(next?.vialInventory).toHaveLength(6)
     expect(next?.injectionLogs).toEqual(logs)
     expect(next?.peptides).toEqual(peptides)
     localStorage.clear()
   })
 
-  it('keeps a new KLOW vial and leaves the archived one and historical logs alone', () => {
+  it('keeps only the Oct 26 KLOW vial and leaves the archived one and historical logs alone', () => {
     localStorage.clear()
     const { peptides } = buildLxrdgatsbyStack('2026-08-23')
     const logs: InjectionLog[] = [
@@ -364,22 +366,27 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
       null,
     )
     const klow = next?.vialInventory?.filter((vial) => vial.compoundId === 'klow')
-    expect(klow?.map((vial) => vial.id)).toEqual(['new-klow'])
+    expect(klow?.map((vial) => vial.id)).toEqual(['vial-klow-b'])
     expect(klow?.[0]?.vialMg).toBe(80)
     expect(klow?.[0]?.bacWaterMl).toBe(3)
     expect(klow?.[0]?.remainingMg).toBe(80)
     expect(klow?.[0]?.isPowder).toBe(false)
     expect(klow?.[0]?.depleted).toBe(false)
-    expect(klow?.[0]?.mixedDate).toBe('2026-10-23')
+    expect(klow?.[0]?.mixedDate).toBe('2026-10-26')
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-klow-a')).toBe(false)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'new-klow')).toBe(false)
     expect(next?.removedVialIds).toContain('vial-klow-a')
+    expect(next?.removedVialIds).toContain('new-klow')
     expect(next?.injectionLogs).toEqual(logs)
     expect(next?.vialInventory?.some((vial) => vial.id === 'vial-reta-cagri')).toBe(true)
     expect(vialIdForDate(klow ?? [], 'klow', '2026-08-23')).toBeUndefined()
+    expect(vialIdForDate(klow ?? [], 'klow', '2026-10-25')).toBeUndefined()
+    expect(vialIdForDate(klow ?? [], 'klow', '2026-10-26')).toBe('vial-klow-b')
 
     const again = applyLxrdgatsbyVialInventorySeed(next!, 'lxrdgatsby', null)
     expect(again?.vialInventory?.some((vial) => vial.id === 'vial-klow-a')).toBe(false)
-    expect(again?.vialInventory?.find((vial) => vial.id === 'new-klow')?.remainingMg).toBe(80)
+    expect(again?.vialInventory?.some((vial) => vial.id === 'new-klow')).toBe(false)
+    expect(again?.vialInventory?.find((vial) => vial.id === 'vial-klow-b')?.remainingMg).toBe(80)
     expect(again?.injectionLogs).toEqual(logs)
 
     const other = {
