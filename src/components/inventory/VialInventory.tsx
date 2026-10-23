@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, FlaskConical, Package, Pencil, Plus } from 'lucide-react'
+import { AlertTriangle, Check, FlaskConical, Package, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { InjectionLog, Peptide } from '../../types'
 import type { Vial } from '../../types/v2'
@@ -21,6 +21,12 @@ import {
 } from '../../utils/vialUsage'
 import { formatUnits } from '../../utils/doseMath'
 import { fillForNewVial, newVialCompounds } from '../../lib/newVialDefaults'
+import {
+  describeShelfLife,
+  formatVialDate,
+  todayIso,
+  withShelfLife,
+} from '../../utils/vialShelfLife'
 
 const FIELD =
   'mt-1 w-full rounded-2xl border border-white/15 bg-[#0a0a0a] px-3 py-3 text-base text-white'
@@ -33,22 +39,26 @@ interface VialInventoryProps {
   initialVials?: Vial[]
   injectionLogs?: InjectionLog[]
   onChange?: () => void
-  onInventoryChange?: (vials: Vial[]) => void
+  /** Second argument is the updated peptide stack when Remove drops a compound. */
+  onInventoryChange?: (vials: Vial[], peptides?: Peptide[]) => void
 }
 
-function formatOpened(iso?: string): string {
-  if (!iso) return '—'
-  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
-  return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+function vialMatchesRemoved(vial: Vial, removed: Vial): boolean {
+  const id = (removed.compoundId || '').trim()
+  if (id && (vial.compoundId || '').trim() === id) return true
+  return vial.compoundName.trim().toLowerCase() === removed.compoundName.trim().toLowerCase()
 }
 
-function todayIso(): string {
-  const n = new Date()
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+function peptideMatchesVial(peptide: Peptide, vial: Vial): boolean {
+  const id = (vial.compoundId || '').trim()
+  if (id && peptide.id === id) return true
+  return peptide.name.trim().toLowerCase() === vial.compoundName.trim().toLowerCase()
+}
+
+function isCurrentVial(vial: Vial): boolean {
+  if (isReplacedVial(vial) || vial.depleted) return false
+  if (vial.compoundId === 'test-cyp') return true
+  return vial.remainingMg > 0.001
 }
 
 export function VialInventory({
@@ -81,10 +91,11 @@ export function VialInventory({
   const planStart = startDate || todayIso()
   const today = todayIso()
 
-  const commit = (next: Vial[]) => {
-    saveVials(next)
-    setVials(next)
-    onInventoryChange?.(next)
+  const commit = (next: Vial[], nextPeptides?: Peptide[]) => {
+    const stamped = next.map((vial) => withShelfLife(vial))
+    saveVials(stamped)
+    setVials(stamped)
+    onInventoryChange?.(stamped, nextPeptides)
     onChange?.()
   }
 
@@ -186,7 +197,8 @@ export function VialInventory({
     setVialMg(v.vialMg > 0 ? String(v.vialMg) : '10')
     setBacMl(v.bacWaterMl > 0 ? String(v.bacWaterMl) : '2')
     setIsPowder(!mixed)
-    setMixedDate((v.mixedDate || todayIso()).slice(0, 10))
+    const opened = (v.mixedDate || '').slice(0, 10)
+    setMixedDate(mixed ? opened || todayIso() : opened)
     setNotes(v.notes || '')
   }
 
@@ -241,7 +253,7 @@ export function VialInventory({
         vialMg: mg,
         bacWaterMl: isPowder ? 0 : ml,
         isPowder,
-        mixedDate,
+        mixedDate: isPowder ? '' : mixedDate.trim() || todayIso(),
         notes: notes.trim() || undefined,
       },
       injectionLogs,
@@ -278,20 +290,21 @@ export function VialInventory({
     const peptide = peptides.find(
       (p) => p.name.toLowerCase() === name.toLowerCase() || p.id === name
     )
-    const created: Vial = {
+    const opened = isPowder ? '' : mixedDate.trim() || todayIso()
+    const created: Vial = withShelfLife({
       id: `vial-${peptide?.id ?? name}-${Date.now()}`,
       compoundName: name,
       compoundId: catalogId || peptide?.id,
       vialMg: mg,
       bacWaterMl: isPowder ? 0 : ml,
       concentrationMgPerMl: isPowder ? 0 : calcConcentrationMgPerMl(mg, ml),
-      mixedDate,
+      mixedDate: opened,
       isPowder,
       remainingMg: mg,
       notes: notes.trim() || undefined,
       createdAt: new Date().toISOString(),
       depleted: false,
-    }
+    })
     commit([created, ...vials])
     toast(`${name} vial added`)
     resetForm()
@@ -306,6 +319,23 @@ export function VialInventory({
       const retired = next.find((v) => v.id === vial.id) ?? vial
       openReplacement(retired)
     }
+  }
+
+  const handleRemove = (id: string) => {
+    const vial = vials.find((row) => row.id === id)
+    if (!vial) return
+    if (!confirm('Remove this vial from your inventory?')) return
+    const nextVials = vials.filter((row) => row.id !== id)
+    const stillCurrent = nextVials.some(
+      (row) => vialMatchesRemoved(row, vial) && isCurrentVial(row)
+    )
+    const filtered = stillCurrent
+      ? peptides
+      : peptides.filter((peptide) => !peptideMatchesVial(peptide, vial))
+    const nextPeptides = filtered.length === peptides.length ? undefined : filtered
+    if (editingId === id || replacingId === id) resetForm()
+    commit(nextVials, nextPeptides)
+    toast(`${vial.compoundName} removed`)
   }
 
   const doseHintFor = (name: string) =>
@@ -392,7 +422,10 @@ export function VialInventory({
         </button>
         <button
           type="button"
-          onClick={() => setIsPowder(false)}
+          onClick={() => {
+            setIsPowder(false)
+            setMixedDate((value) => value || todayIso())
+          }}
           className={`min-h-11 rounded-2xl text-sm font-medium ${
             !isPowder ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-400'
           }`}
@@ -417,11 +450,31 @@ export function VialInventory({
         Opened date
         <input
           type="date"
+          aria-label="Opened date"
           value={mixedDate}
           onChange={(e) => setMixedDate(e.target.value)}
           className={FIELD}
         />
       </label>
+      <p className="text-xs text-slate-400">
+        {(() => {
+          const preview = describeShelfLife(
+            { mixedDate: isPowder ? '' : mixedDate, isPowder },
+            today
+          )
+          if (!preview.expiresLabel || !preview.statusLabel) return 'Expires: —'
+          return `Expires: ${preview.expiresLabel} · ${preview.statusLabel}`
+        })()}
+      </p>
+      {mode === 'edit' && editingId && (
+        <button
+          type="button"
+          onClick={() => handleRemove(editingId)}
+          className="inline-flex min-h-10 items-center gap-1 rounded-xl bg-red-500/10 px-3 text-xs text-red-300"
+        >
+          <Trash2 size={12} /> Remove
+        </button>
+      )}
       <input
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
@@ -480,6 +533,7 @@ export function VialInventory({
         : 'bg-emerald-500/15 text-emerald-400'
     const editing = editingId === vial.id
     const replacing = replacingId === vial.id
+    const shelf = describeShelfLife(vial, today)
 
     return (
       <div
@@ -521,13 +575,18 @@ export function VialInventory({
             {!editing && !replacing && (
               <>
                 <div className="mt-0.5 text-xs text-slate-400">
-                  Opened {formatOpened(vial.mixedDate)}
+                  Opened: {shelf.openedLabel}
                   {replaced && vial.replacedAt
-                    ? ` · Replaced ${formatOpened(vial.replacedAt)}`
+                    ? ` · Replaced ${formatVialDate(vial.replacedAt)}`
                     : empty && vial.finishedAt
-                      ? ` · Empty ${formatOpened(vial.finishedAt)}`
+                      ? ` · Empty ${formatVialDate(vial.finishedAt)}`
                       : ''}
                 </div>
+                {shelf.expiresLabel && shelf.statusLabel && (
+                  <div className={`mt-0.5 text-xs ${shelf.expired ? 'text-red-300' : 'text-slate-400'}`}>
+                    Expires: {shelf.expiresLabel} · {shelf.statusLabel}
+                  </div>
+                )}
                 <div className="mt-0.5 text-xs text-slate-400">
                   {peptideId === 'test-cyp'
                     ? 'Multi-use oil vial · 0.75 mL weekly'
@@ -607,6 +666,13 @@ export function VialInventory({
                 <Check size={12} /> Finished
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => handleRemove(vial.id)}
+              className="inline-flex min-h-10 items-center gap-1 rounded-xl bg-red-500/10 px-3 text-xs text-red-300"
+            >
+              <Trash2 size={12} /> Remove
+            </button>
           </div>
         )}
       </div>

@@ -18,7 +18,9 @@ export type Vial = {
   vialMg: number // total peptide in the vial
   bacWaterMl: number
   concentrationMgPerMl: number // calculated
-  mixedDate: string // ISO date
+  mixedDate: string // ISO date the vial was reconstituted. Empty while still powder.
+  /** Opened date + 28 days. Empty until the vial is mixed. */
+  expiresOn?: string
   isPowder: boolean
   remainingMg: number
   notes?: string

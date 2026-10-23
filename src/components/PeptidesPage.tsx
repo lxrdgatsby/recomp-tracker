@@ -193,8 +193,12 @@ export default function PeptidesPage() {
             peptides.map((p) => [p.name, p.protocol?.startingDoseMg ?? 0.5])
           )}
           onChange={() => setLogTick((n) => n + 1)}
-          onInventoryChange={(next) => {
-            void persistState({ ...state, vialInventory: next })
+          onInventoryChange={(next, nextPeptides) => {
+            void persistState({
+              ...state,
+              vialInventory: next,
+              peptides: nextPeptides ?? state.peptides,
+            })
           }}
         />
       </div>

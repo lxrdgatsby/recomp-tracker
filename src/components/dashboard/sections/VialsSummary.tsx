@@ -1,6 +1,13 @@
 import { AlertTriangle, ChevronRight, FlaskConical } from 'lucide-react'
 import type { Vial } from '../../../types/v2'
 import { formatMg } from '../../../utils/vialMath'
+import { describeShelfLife, todayIso } from '../../../utils/vialShelfLife'
+
+function shelfSuffix(vial: Vial): string {
+  const shelf = describeShelfLife(vial, todayIso())
+  if (!shelf.expiresLabel || !shelf.statusLabel) return ''
+  return `, opened ${shelf.openedLabel}, expires ${shelf.expiresLabel} (${shelf.statusLabel})`
+}
 
 const LOW_MG_THRESHOLD = 1 // remaining ≤ 1mg considered low for small peptides; also % of vial
 
@@ -18,6 +25,7 @@ interface VialsSummaryProps {
 export function VialsSummary({ vials, onOpenInventory }: VialsSummaryProps) {
   const low = vials.filter(isLow)
   const lowest = [...vials].sort((a, b) => a.remainingMg - b.remainingMg)[0]
+  const lowestShelf = lowest ? shelfSuffix(lowest).replace(/^, /, ' · ') : ''
 
   return (
     <section className="mb-5">
@@ -52,7 +60,7 @@ export function VialsSummary({ vials, onOpenInventory }: VialsSummaryProps) {
             <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
             <div className="text-xs text-amber-100/90">
               <span className="font-medium text-amber-300">Running low: </span>
-              {low.map((v) => `${v.compoundName} (${formatMg(v.remainingMg)})`).join(', ')}
+              {low.map((v) => `${v.compoundName} (${formatMg(v.remainingMg)}${shelfSuffix(v)})`).join(', ')}
             </div>
           </div>
         ) : lowest ? (
@@ -60,6 +68,7 @@ export function VialsSummary({ vials, onOpenInventory }: VialsSummaryProps) {
             Lowest stock:{' '}
             <span className="text-white">
               {lowest.compoundName} · {formatMg(lowest.remainingMg)}
+              {lowestShelf}
             </span>
           </p>
         ) : null}

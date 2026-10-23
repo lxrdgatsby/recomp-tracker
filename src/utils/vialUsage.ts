@@ -6,6 +6,7 @@ import type { Vial } from '../types/v2'
 import { getInjectionsForDate, parseLocalYmd } from './peptideSchedule'
 import { displayTierForDate } from './recompProtocol'
 import { calcConcentrationMgPerMl } from './vialMath'
+import { withShelfLife } from './vialShelfLife'
 
 function roundMg(n: number): number {
   return Math.round(n * 1000) / 1000
@@ -350,7 +351,7 @@ export function addReplacementVial(
     createdAt: new Date().toISOString(),
     depleted: false,
   }
-  return [next, ...archived.filter((v) => v.id !== next.id)]
+  return [withShelfLife(next), ...archived.filter((v) => v.id !== next.id)]
 }
 
 export function applyVialEdits(
@@ -370,8 +371,12 @@ export function applyVialEdits(
         next.bacWaterMl
       )
     }
-    if (next.isPowder) next.concentrationMgPerMl = 0
-    return next
+    if (next.isPowder) {
+      next.concentrationMgPerMl = 0
+      next.mixedDate = ''
+      next.expiresOn = undefined
+    }
+    return withShelfLife(next)
   })
   return recalculateVialInventory({
     vials: patched,

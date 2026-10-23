@@ -6,6 +6,7 @@ import { InjectionSiteMap } from '../peptides/InjectionSiteMap'
 import { useToast } from '../ui/Toast'
 import { addDoseLog, getActiveVials } from '../../utils/inventoryStorage'
 import { doseMgToUnits, formatMg } from '../../utils/vialMath'
+import { describeShelfLife, todayIso } from '../../utils/vialShelfLife'
 
 const SITES = [
   'Abdomen Left',
@@ -227,6 +228,11 @@ export function DoseLogger({
                   {v.isPowder
                     ? ' (powder)'
                     : ` · ${v.concentrationMgPerMl} mg/mL`}
+                  {(() => {
+                    const shelf = describeShelfLife(v, todayIso())
+                    if (!shelf.expiresLabel || !shelf.statusLabel) return ' · Opened: —'
+                    return ` · Opened: ${shelf.openedLabel} · Expires: ${shelf.expiresLabel} · ${shelf.statusLabel}`
+                  })()}
                 </option>
               ))}
             </select>
