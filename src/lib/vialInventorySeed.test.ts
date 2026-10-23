@@ -326,6 +326,81 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     localStorage.clear()
   })
 
+  it('keeps a new KLOW vial and leaves the archived one and historical logs alone', () => {
+    localStorage.clear()
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const logs: InjectionLog[] = [
+      { date: '2026-08-23', peptideId: 'klow', doseMg: 0.5 },
+      { date: '2026-10-25', peptideId: 'tesamorelin', doseMg: 1 },
+    ]
+    const fresh = {
+      id: 'new-klow',
+      compoundName: 'KLOW',
+      compoundId: 'klow',
+      vialMg: 80,
+      bacWaterMl: 3,
+      concentrationMgPerMl: 80 / 3,
+      mixedDate: '2026-10-23',
+      isPowder: false,
+      remainingMg: 80,
+      depleted: false,
+      createdAt: '2026-10-23T15:00:00.000Z',
+    }
+    const next = applyLxrdgatsbyVialInventorySeed(
+      {
+        profile: {
+          currentWeight: 156,
+          goalWeight: 145,
+          startDate: '2026-08-23',
+          weeklyLossTarget: 1.6,
+        },
+        peptides,
+        weightHistory: [],
+        injectionLogs: logs,
+        workoutCompletions: [],
+        vialInventory: [...buildLxrdgatsbyVials(), fresh],
+      },
+      'lxrdgatsby',
+      null,
+    )
+    const klow = next?.vialInventory?.filter((vial) => vial.compoundId === 'klow')
+    expect(klow?.map((vial) => vial.id)).toEqual(['new-klow'])
+    expect(klow?.[0]?.vialMg).toBe(80)
+    expect(klow?.[0]?.bacWaterMl).toBe(3)
+    expect(klow?.[0]?.remainingMg).toBe(80)
+    expect(klow?.[0]?.isPowder).toBe(false)
+    expect(klow?.[0]?.depleted).toBe(false)
+    expect(klow?.[0]?.mixedDate).toBe('2026-10-23')
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-klow-a')).toBe(false)
+    expect(next?.removedVialIds).toContain('vial-klow-a')
+    expect(next?.injectionLogs).toEqual(logs)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-reta-cagri')).toBe(true)
+    expect(vialIdForDate(klow ?? [], 'klow', '2026-08-23')).toBeUndefined()
+
+    const again = applyLxrdgatsbyVialInventorySeed(next!, 'lxrdgatsby', null)
+    expect(again?.vialInventory?.some((vial) => vial.id === 'vial-klow-a')).toBe(false)
+    expect(again?.vialInventory?.find((vial) => vial.id === 'new-klow')?.remainingMg).toBe(80)
+    expect(again?.injectionLogs).toEqual(logs)
+
+    const other = {
+      profile: {
+        currentWeight: 160,
+        goalWeight: 145,
+        startDate: '2026-10-24',
+        weeklyLossTarget: 1,
+      },
+      peptides: [{ id: 'ghkcu', name: 'GHK-Cu', dose: '1mg', frequency: 'daily' as const }],
+      weightHistory: [],
+      injectionLogs: [{ date: '2026-10-01', peptideId: 'ghkcu' }],
+      workoutCompletions: [],
+      vialInventory: [fresh],
+    }
+    expect(applyLxrdgatsbyVialInventorySeed(other, 'bubblesmama', 'bubblesmama@example.com')).toBeNull()
+    expect(other.vialInventory).toEqual([fresh])
+    expect(other.injectionLogs).toEqual([{ date: '2026-10-01', peptideId: 'ghkcu' }])
+    localStorage.clear()
+  })
+
   it('does not seed DSIP inventory onto another user', () => {
     const next = applyLxrdgatsbyVialInventorySeed(
       {

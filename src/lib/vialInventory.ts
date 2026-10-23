@@ -8,6 +8,8 @@ import {
 } from '../constants/peptideCatalog'
 import type { BacWaterUnits, Peptide, PeptideFrequency, TrackerState } from '../types'
 import type { FamiliarityLevel } from '../types/auth'
+import type { Vial } from '../types/v2'
+import { isPeptideOnActiveStack } from '../utils/peptideSchedule'
 import {
   buildCalculationSummary,
   buildPeptideWithProtocol,
@@ -328,6 +330,47 @@ export function buildPeptideForNewVial(opts: {
           }
         : undefined,
   }
+}
+
+/** Put this compound on the active stack from the new vial. Leave an already-active protocol alone. */
+export function stackPeptideForNewVial(
+  peptides: Peptide[],
+  vial: Pick<Vial, 'compoundId' | 'compoundName' | 'vialMg' | 'bacWaterMl' | 'mixedDate' | 'isPowder'>,
+  familiarity: FamiliarityLevel = 'beginner'
+): Peptide[] {
+  const name = vial.compoundName.trim()
+  if (!name || vial.isPowder) return peptides
+  const built = buildPeptideForNewVial({
+    id: (vial.compoundId || '').trim() || slugPeptideId(name),
+    name,
+    vialMg: vial.vialMg,
+    bacWaterMl: vial.bacWaterMl,
+    targetDoseMg: 0,
+    frequency: 'daily',
+    timing: 'Daily',
+    notes: '',
+    familiarity,
+  })
+  const opened = (vial.mixedDate || '').slice(0, 10)
+  const match = peptides.find(
+    (peptide) =>
+      peptide.id === built.id || peptide.name.trim().toLowerCase() === name.toLowerCase()
+  )
+  if (match && isPeptideOnActiveStack(match)) return peptides
+  const revived: Peptide = {
+    ...built,
+    id: match?.id || built.id,
+    frequency: match?.frequency || built.frequency,
+    timing: match?.timing || built.timing,
+    startsOn: opened || match?.startsOn,
+    endsOn: undefined,
+    schedulePause: undefined,
+    protocol: built.protocol
+      ? { ...built.protocol, reconstituted: true }
+      : undefined,
+  }
+  if (!match) return [...peptides, revived]
+  return peptides.map((peptide) => (peptide.id === match.id ? revived : peptide))
 }
 
 function readJson<T>(key: string, fallback: T): T {

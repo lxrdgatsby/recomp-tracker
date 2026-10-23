@@ -5,12 +5,12 @@ import {
   loadVials,
   saveVials,
 } from '../utils/inventoryStorage'
-import { isReplacedVial, recalculateVialInventory } from '../utils/vialUsage'
+import { recalculateVialInventory, vialIsClosed } from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { writeLocal } from './protocolStorageScope'
 import { isLxrdgatsbyUser } from './protocolSeed'
 import { removedVialIdSet, withoutRemovedVials } from './removedCompounds'
-import { RESTART_DATE, SUNDAY_VIAL_IDS } from './lxrdRestart'
+import { SUNDAY_VIAL_IDS } from './lxrdRestart'
 
 export const VIAL_SEED_FLAG = 'vialInventorySeeded_lxrdgatsby_v4'
 
@@ -358,12 +358,16 @@ function persistLocalVials(vials: Vial[]) {
 
 const SUNDAY_VIAL_ID_SET = new Set<string>(SUNDAY_VIAL_IDS)
 
-/** Sunday vials stay. Old template vials (NAD+, Test, GHK, archived) do not. A vial added later stays when it was opened on or after Oct 25. */
+/** Archived KLOW from the pre-Oct 25 stack. Never merged back by login or + Add. */
+export const LXRD_PERMANENT_VIAL_IDS = ['vial-klow-a'] as const
+
+/** Sunday vials stay. Archived template vials stay out. A live vial the user added stays. */
 function keepCurrentStackVial(vial: Vial, templateIds: ReadonlySet<string>): boolean {
+  if ((LXRD_PERMANENT_VIAL_IDS as readonly string[]).includes(vial.id)) return false
   if (SUNDAY_VIAL_ID_SET.has(vial.id)) return true
   if (templateIds.has(vial.id)) return false
-  if (isReplacedVial(vial) || vial.depleted) return false
-  return (vial.mixedDate || '').slice(0, 10) >= RESTART_DATE
+  if (vialIsClosed(vial)) return false
+  return true
 }
 
 function mergeVialTemplates(
@@ -377,6 +381,7 @@ function mergeVialTemplates(
   const out: Vial[] = []
   for (const t of templates) {
     if (removed.has(t.id)) continue
+    if (!SUNDAY_VIAL_ID_SET.has(t.id) && vialIsClosed(t)) continue
     const prev = byId.get(t.id)
     if (prev) {
       out.push({
@@ -409,9 +414,13 @@ export function applyLxrdgatsbyVialInventorySeed(
   if (typeof localStorage === 'undefined') return null
   if (!isLxrdgatsbyUser(username, email)) return null
 
-  const removed = removedVialIdSet(current.removedVialIds)
-  const fromState = withoutRemovedVials(current.vialInventory ?? [], current.removedVialIds)
-  const fromStorage = withoutRemovedVials(loadVials(), current.removedVialIds)
+  const removed = new Set([
+    ...removedVialIdSet(current.removedVialIds),
+    ...LXRD_PERMANENT_VIAL_IDS,
+  ])
+  const removedVialIds = [...removed]
+  const fromState = withoutRemovedVials(current.vialInventory ?? [], removedVialIds)
+  const fromStorage = withoutRemovedVials(loadVials(), removedVialIds)
   const existing = fromState.length > 0 ? fromState : fromStorage
   const templates = buildLxrdgatsbyVials()
   const templateIds = new Set(templates.map((vial) => vial.id))
@@ -423,5 +432,5 @@ export function applyLxrdgatsbyVialInventorySeed(
     startDate: current.profile.startDate || CYCLE_START_DATE,
   }).filter((vial) => keepCurrentStackVial(vial, templateIds))
   persistLocalVials(vials)
-  return { ...current, vialInventory: vials }
+  return { ...current, vialInventory: vials, removedVialIds }
 }

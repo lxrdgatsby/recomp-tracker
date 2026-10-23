@@ -6,7 +6,7 @@ import type { Vial } from '../types/v2'
 import { getInjectionsForDate, parseLocalYmd } from './peptideSchedule'
 import { displayTierForDate } from './recompProtocol'
 import { calcConcentrationMgPerMl } from './vialMath'
-import { withShelfLife } from './vialShelfLife'
+import { describeShelfLife, todayIso, withShelfLife } from './vialShelfLife'
 
 function roundMg(n: number): number {
   return Math.round(n * 1000) / 1000
@@ -22,6 +22,14 @@ export function vialsForPeptide(vials: Vial[], peptideId: string): Vial[] {
 
 export function isReplacedVial(vial: Vial): boolean {
   return Boolean(vial.replacedAt) || vial.id === 'vial-ss31-a' || vial.id === 'vial-aod-a'
+}
+
+/** Removed, finished, replaced, empty, or past its shelf life. A new vial must not revive these. */
+export function vialIsClosed(vial: Vial, today = todayIso()): boolean {
+  if (peptideIdOf(vial) === 'test-cyp') return false
+  if (isReplacedVial(vial) || vial.depleted || Boolean(vial.finishedAt)) return true
+  if (vial.remainingMg <= 0.001) return true
+  return describeShelfLife(vial, today).expired
 }
 
 export function getActiveVialForPeptide(vials: Vial[], peptideId: string): Vial | undefined {
@@ -136,26 +144,23 @@ function openedIso(vial: Vial): string {
   return (vial.mixedDate || vial.createdAt || '').slice(0, 10)
 }
 
-function oldestOnOrBefore(vials: Vial[], date: string): string | undefined {
-  const eligible = vials.filter((v) => {
-    const opened = openedIso(v)
+function openedOnOrBefore(vials: Vial[], date: string): Vial[] {
+  return vials.filter((vial) => {
+    const opened = openedIso(vial)
     return !opened || opened <= date
   })
-  const sorted = [...(eligible.length ? eligible : vials)].sort((a, b) =>
-    openedIso(a).localeCompare(openedIso(b))
-  )
-  return sorted[0]?.id
+}
+
+function oldestOnOrBefore(vials: Vial[], date: string): string | undefined {
+  const eligible = openedOnOrBefore(vials, date)
+  if (eligible.length === 0) return undefined
+  return [...eligible].sort((a, b) => openedIso(a).localeCompare(openedIso(b)))[0]?.id
 }
 
 function latestOnOrBefore(vials: Vial[], date: string): string | undefined {
-  const eligible = vials.filter((v) => {
-    const opened = openedIso(v)
-    return !opened || opened <= date
-  })
-  const sorted = [...(eligible.length ? eligible : vials)].sort((a, b) =>
-    openedIso(b).localeCompare(openedIso(a))
-  )
-  return sorted[0]?.id
+  const eligible = openedOnOrBefore(vials, date)
+  if (eligible.length === 0) return undefined
+  return [...eligible].sort((a, b) => openedIso(b).localeCompare(openedIso(a)))[0]?.id
 }
 
 function latestLiveOnOrBefore(vials: Vial[], date: string): string | undefined {

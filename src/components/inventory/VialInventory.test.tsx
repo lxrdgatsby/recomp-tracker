@@ -91,6 +91,86 @@ const tesaPeptide: Peptide = {
 }
 
 describe('Vial opened date, expiration, and remove', () => {
+  it('adds a fresh KLOW 80 mg vial and does not bring the archived vial back', () => {
+    const archived = {
+      id: 'vial-klow-a',
+      compoundName: 'KLOW',
+      compoundId: 'klow',
+      vialMg: 10,
+      bacWaterMl: 3,
+      concentrationMgPerMl: 3.33,
+      mixedDate: '2026-08-23',
+      isPowder: false,
+      remainingMg: 0,
+      depleted: true,
+      replacedAt: '2026-10-03',
+      finishedAt: '2026-10-03',
+      notes: 'Vial A · archived Oct 25. KLOW stopped. 10 mg / 3 mL.',
+      createdAt: '2026-08-23T12:00:00.000Z',
+    }
+    const klow: Peptide = {
+      id: 'klow',
+      name: 'KLOW',
+      dose: '0.5mg',
+      frequency: 'daily',
+      endsOn: '2026-10-03',
+      protocol: {
+        vialMg: 10,
+        bacWaterUnits: 300,
+        bacWaterMl: 3,
+        concentrationMgPerMl: 3.33,
+        concentrationLabel: '3.33 mg/mL',
+        startingDoseMg: 0.5,
+        startingDoseLabel: '0.5 mg',
+        startingSyringeUnits: 15,
+        reconstituted: true,
+        calculationSummary: 'old',
+        reconstitutionSteps: [],
+        titration: [],
+      },
+    }
+    const onInventoryChange = vi.fn()
+    render(
+      <ToastProvider>
+        <VialInventory
+          initialVials={[archived]}
+          peptides={[klow]}
+          onInventoryChange={onInventoryChange}
+        />
+      </ToastProvider>
+    )
+    expect(screen.getByText(/KLOW stopped/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.change(screen.getByLabelText('Compound'), { target: { value: 'klow' } })
+    expect(screen.getByLabelText('Vial mg')).toHaveValue(80)
+    expect(screen.getByLabelText('BAC mL')).toHaveValue(3)
+    fireEvent.click(screen.getByRole('button', { name: 'Save vial' }))
+
+    expect(screen.queryByText(/KLOW stopped/)).not.toBeInTheDocument()
+    expect(screen.getByText(/80 mg vial/)).toBeInTheDocument()
+    expect(screen.getByText(/3 mL BAC/)).toBeInTheDocument()
+    expect(screen.getAllByText('KLOW')).toHaveLength(1)
+
+    const [vials, peptides] = onInventoryChange.mock.calls.at(-1) as [Vial[], Peptide[]]
+    expect(vials).toHaveLength(1)
+    expect(vials[0]?.id).not.toBe('vial-klow-a')
+    expect(vials[0]?.vialMg).toBe(80)
+    expect(vials[0]?.bacWaterMl).toBe(3)
+    expect(vials[0]?.remainingMg).toBe(80)
+    expect(vials[0]?.isPowder).toBe(false)
+    expect(vials[0]?.depleted).toBe(false)
+    expect(vials[0]?.mixedDate).toBe(todayIso())
+    expect(vials[0]?.notes).toBeUndefined()
+    const revived = peptides.find((peptide) => peptide.id === 'klow')
+    expect(revived?.endsOn).toBeUndefined()
+    expect(revived?.startsOn).toBe(todayIso())
+    expect(revived?.protocol?.vialMg).toBe(80)
+    expect(revived?.protocol?.bacWaterMl).toBe(3)
+    expect(revived?.protocol?.startingDoseMg).toBe(1)
+    expect(isPeptideOnActiveStack(revived!)).toBe(true)
+  })
+
   beforeEach(() => {
     localStorage.clear()
   })

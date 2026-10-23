@@ -14,6 +14,51 @@ import {
 } from './protocolSeed'
 
 describe('90-day protocol definition', () => {
+  it('keeps a user-revived KLOW 80 mg protocol and does not touch logs', () => {
+    const start = '2026-08-23'
+    const { peptides, recompPlan } = buildLxrdgatsbyStack(start)
+    const logs = [{ date: '2026-09-01', peptideId: 'klow', doseMg: 0.5 }]
+    const revived = peptides.map((peptide) =>
+      peptide.id === 'klow'
+        ? {
+            ...peptide,
+            endsOn: undefined,
+            startsOn: '2026-10-23',
+            protocol: peptide.protocol
+              ? {
+                  ...peptide.protocol,
+                  vialMg: 80,
+                  bacWaterMl: 3,
+                  startingDoseMg: 1,
+                  startingSyringeUnits: 4,
+                }
+              : peptide.protocol,
+          }
+        : peptide
+    )
+    const next = refreshProtocolDefinition(
+      {
+        ...DEFAULT_STATE,
+        profile: { ...DEFAULT_STATE.profile, startDate: start },
+        peptides: revived,
+        recompPlan: { ...recompPlan, definitionVersion: 'stale' },
+        injectionLogs: logs,
+      },
+      'lxrdgatsby'
+    )
+    const klow = next?.peptides.find((peptide) => peptide.id === 'klow')
+    expect(klow?.endsOn).toBeUndefined()
+    expect(klow?.startsOn).toBe('2026-10-23')
+    expect(klow?.protocol?.vialMg).toBe(80)
+    expect(klow?.protocol?.startingSyringeUnits).toBe(4)
+    expect(isPeptideOnActiveStack(klow!)).toBe(true)
+    expect(isPeptideOnActiveStack(next!.peptides.find((peptide) => peptide.id === 'bpc157')!)).toBe(
+      false
+    )
+    expect(next?.injectionLogs).toEqual(logs)
+    expect(refreshProtocolDefinition(next!, 'someone-else')).toBeNull()
+  })
+
   it('keeps start date and logs when refreshing definitions', () => {
     const start = '2026-08-23'
     const { peptides, recompPlan } = buildLxrdgatsbyStack(start)

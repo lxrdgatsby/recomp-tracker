@@ -5,7 +5,8 @@ import type { Vial } from '../../types/v2'
 import { EmptyState } from '../ui/EmptyState'
 import { useToast } from '../ui/Toast'
 import { loadVials, saveVials } from '../../utils/inventoryStorage'
-import { removeInventoryVial } from '../../lib/vialInventory'
+import { removeInventoryVial, stackPeptideForNewVial } from '../../lib/vialInventory'
+import { generateId } from '../../lib/generateId'
 import {
   endPeptideNow,
   rememberRemovedPeptide,
@@ -26,6 +27,7 @@ import {
   peptideIdOf,
   remainingDosesForVial,
   retireVial,
+  vialIsClosed,
 } from '../../utils/vialUsage'
 import { formatUnits } from '../../utils/doseMath'
 import { fillForNewVial, newVialCompounds } from '../../lib/newVialDefaults'
@@ -283,19 +285,25 @@ export function VialInventory({
     resetForm()
   }
 
+  const sameCompound = (vial: Vial, compoundId: string | undefined, name: string) => {
+    if (compoundId && vial.compoundId === compoundId) return true
+    return vial.compoundName.trim().toLowerCase() === name.toLowerCase()
+  }
+
   const handleSaveCreate = () => {
     const name = compoundName.trim()
     const mg = parseFloat(vialMg)
     const ml = parseFloat(bacMl) || 0
     if (!name || !mg || mg <= 0) return
     const peptide = peptides.find(
-      (p) => p.name.toLowerCase() === name.toLowerCase() || p.id === name
+      (p) => p.name.toLowerCase() === name.toLowerCase() || p.id === catalogId
     )
     const opened = isPowder ? '' : mixedDate.trim() || todayIso()
+    const compoundId = catalogId || peptide?.id
     const created: Vial = withShelfLife({
-      id: `vial-${peptide?.id ?? name}-${Date.now()}`,
+      id: generateId(),
       compoundName: name,
-      compoundId: catalogId || peptide?.id,
+      compoundId,
       vialMg: mg,
       bacWaterMl: isPowder ? 0 : ml,
       concentrationMgPerMl: isPowder ? 0 : calcConcentrationMgPerMl(mg, ml),
@@ -306,7 +314,21 @@ export function VialInventory({
       createdAt: new Date().toISOString(),
       depleted: false,
     })
-    commit([created, ...vials])
+    const removed = removedVialIdSet()
+    const closed = vials.filter(
+      (vial) =>
+        sameCompound(vial, compoundId, name) &&
+        (removed.has(vial.id) || vialIsClosed(vial, today))
+    )
+    for (const vial of closed) rememberRemovedVial(vial.id)
+    const kept = vials.filter(
+      (vial) => !closed.some((row) => row.id === vial.id) && !removedVialIdSet().has(vial.id)
+    )
+    const nextPeptides = isPowder ? peptides : stackPeptideForNewVial(peptides, created)
+    commit(
+      [created, ...kept],
+      nextPeptides === peptides ? undefined : nextPeptides
+    )
     toast(`${name} vial added`)
     resetForm()
   }

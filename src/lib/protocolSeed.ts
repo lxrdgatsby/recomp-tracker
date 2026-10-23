@@ -24,6 +24,7 @@ import type {
   TitrationWeek,
   TrackerState,
 } from '../types'
+import { isPeptideOnActiveStack } from '../utils/peptideSchedule'
 import { formatSyringeUnits } from '../utils/recompProtocol'
 import { saveState } from '../utils/storage'
 import {
@@ -709,6 +710,9 @@ export function refreshProtocolDefinition(
     if (removedAfterRelease.has(old.id)) return old
     const next = freshById.get(old.id)
     if (!next) return old
+    if (next.endsOn && isPeptideOnActiveStack(old) && !isPeptideOnActiveStack(next)) {
+      return old
+    }
     if (!next.protocol) return next
     return {
       ...next,
