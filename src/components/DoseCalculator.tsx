@@ -110,9 +110,11 @@ export function DoseCalculator({
     const unit = compound.doseUnit === 'mcg' ? 'mcg' : 'mg'
     setDoseUnit(unit)
     if (compound.defaultDoseMg != null) {
-      const shown =
+      const raw =
         unit === 'mcg' ? compound.defaultDoseMg * 1000 : compound.defaultDoseMg
-      setDoseInput(String(shown))
+      const display =
+        Math.abs(raw - Math.round(raw)) < 1e-6 ? Math.round(raw) : Number(raw.toFixed(4))
+      setDoseInput(String(display))
     }
   }, [selectedId])
 

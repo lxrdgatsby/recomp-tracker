@@ -253,6 +253,99 @@ describe('90-day protocol definition', () => {
     expect(built?.notes).toMatch(/2 weeks/)
   })
 
+  it('adds DSIP app-wide and on the lxrdgatsby stack from Sun Oct 25', () => {
+    expect(getCatalogEntry('dsip')?.name).toBe('DSIP')
+    expect(getCatalogEntry('dsip')?.defaultDose).toBe('10mg')
+    expect(getCatalogEntryByName('Delta Sleep-Inducing Peptide')?.id).toBe('dsip')
+    expect(getCatalogEntryByName('DSIP')?.id).toBe('dsip')
+    const table = getReconstitutionCompound('dsip')
+    expect(table?.vialMg).toBe(10)
+    expect(table?.bacMl).toBe(2)
+    expect(table?.defaultDoseMg).toBe(0.1)
+    expect(table?.keyDraws.map((d) => d.units)).toEqual([2, 5, 10])
+    expect(u100UnitsFromMg(0.1, 10, 2)).toBe(2)
+    expect(u100UnitsFromMg(0.25, 10, 2)).toBe(5)
+    expect(u100UnitsFromMg(0.5, 10, 2)).toBe(10)
+    expect((100 / 5000) * 100).toBe(2)
+    expect((250 / 5000) * 100).toBe(5)
+    expect((500 / 5000) * 100).toBe(10)
+
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const dsip = peptides.find((p) => p.id === 'dsip')
+    expect(dsip?.startsOn).toBe('2026-10-25')
+    expect(dsip?.protocol?.vialMg).toBe(10)
+    expect(dsip?.protocol?.bacWaterMl).toBe(2)
+    expect(dsip?.protocol?.concentrationMgPerMl).toBe(5)
+    expect(dsip?.protocol?.startingSyringeUnits).toBe(2)
+    expect(new Date(2026, 9, 25).getDay()).toBe(0)
+
+    const start = '2026-08-23'
+    const oct24 = getInjectionsForDate(peptides, new Date(2026, 9, 24), start)
+    expect(oct24.some((s) => s.peptideId === 'dsip')).toBe(false)
+
+    const oct25 = getInjectionsForDate(peptides, new Date(2026, 9, 25), start)
+    expect(oct25.some((s) => s.peptideId === 'test-cyp')).toBe(false)
+    expect(oct25.some((s) => s.peptideId === 'retatrutide')).toBe(false)
+    expect(oct25.some((s) => s.peptideId === 'bpc157')).toBe(false)
+    expect(oct25.find((s) => s.peptideId === 'reta-cagri')?.syringeUnits).toBe(45)
+    expect(oct25.find((s) => s.peptideId === 'tesamorelin')).toBeTruthy()
+    const sunday = oct25.find((s) => s.peptideId === 'dsip')
+    expect(sunday?.syringeUnits).toBe(2)
+    expect(sunday?.slot).toBe('night')
+    expect(sunday?.cardLine).toBe(
+      'DSIP · 2 units (100 mcg) on U-100 · 30–60 min before bed'
+    )
+
+    const oct26 = getInjectionsForDate(peptides, new Date(2026, 9, 26), start)
+    expect(oct26.find((s) => s.peptideId === 'dsip')?.syringeUnits).toBe(2)
+    expect(oct26.find((s) => s.peptideId === 'tesamorelin')).toBeTruthy()
+    expect(oct26.some((s) => s.peptideId === 'bpc157')).toBe(false)
+  })
+
+  it('merges DSIP into an existing stack without wiping logs or other peptides', () => {
+    const start = '2026-08-23'
+    const { peptides, recompPlan } = buildLxrdgatsbyStack(start)
+    const withoutDsip = peptides.filter((p) => p.id !== 'dsip')
+    const logs = [
+      { date: '2026-08-23', peptideId: 'tesamorelin' },
+      { date: '2026-09-15', peptideId: 'amino1mq' },
+      { date: '2026-10-20', peptideId: 'bpc157' },
+    ]
+    const stale = {
+      ...DEFAULT_STATE,
+      profile: {
+        ...DEFAULT_STATE.profile,
+        startDate: start,
+        currentWeight: 168,
+        goalWeight: 160,
+      },
+      peptides: withoutDsip,
+      recompPlan: { ...recompPlan, definitionVersion: 'old' },
+      injectionLogs: logs,
+      weightHistory: [{ date: '2026-10-20', weight: 168 }],
+    }
+
+    const next = refreshProtocolDefinition(stale, 'lxrdgatsby')
+    expect(next?.profile.startDate).toBe(start)
+    expect(next?.profile.startWeight).toBe(165)
+    expect(next?.profile.goalWeight).toBe(145)
+    expect(next?.profile.currentWeight).toBe(156)
+    expect(next?.injectionLogs).toEqual(logs)
+    expect(next?.weightHistory).toEqual([
+      { date: '2026-10-20', weight: 168 },
+      { date: '2026-10-21', weight: 156 },
+    ])
+    expect(next?.peptides.filter((p) => p.id !== 'dsip').map((p) => p.id)).toEqual(
+      withoutDsip.map((p) => p.id)
+    )
+    const dsip = next?.peptides.find((p) => p.id === 'dsip')
+    expect(dsip?.startsOn).toBe('2026-10-25')
+    expect(dsip?.protocol?.startingSyringeUnits).toBe(2)
+    expect(next?.peptides.find((p) => p.id === 'retatrutide')?.protocol?.titration[0]?.syringeUnits).toBe(50)
+    expect(next?.peptides.find((p) => p.id === 'reta-cagri')?.startsOn).toBe('2026-10-25')
+  })
+
+
   it('does not rewrite another user’s plan', () => {
     const start = '2026-08-23'
     const { peptides, recompPlan } = buildLxrdgatsbyStack(start)

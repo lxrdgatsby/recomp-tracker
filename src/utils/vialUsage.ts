@@ -1,4 +1,4 @@
-import { AMINO_1MQ_START_DATE } from '../constants/reconstitutionTable'
+import { AMINO_1MQ_START_DATE, DSIP_START_DATE } from '../constants/reconstitutionTable'
 import { generateId } from '../lib/generateId'
 import { collapseNadLogs, RESTART_DATE } from '../lib/lxrdRestart'
 import type { InjectionLog, Peptide } from '../types'
@@ -124,6 +124,10 @@ export function vialIdForDate(
       latestLiveOnOrBefore(matches, day)
     )
   }
+  if (peptideId === 'dsip') {
+    if (day < DSIP_START_DATE) return undefined
+    return matches.find((v) => v.id === 'vial-dsip-a')?.id ?? latestOnOrBefore(matches, day)
+  }
   return latestLiveOnOrBefore(matches, day)
 }
 
@@ -206,6 +210,7 @@ export function recalculateVialInventory(opts: {
     const date = (log.date || '').slice(0, 10)
     if (!date || !log.peptideId) continue
     if (log.peptideId === 'amino1mq' && date < AMINO_1MQ_START_DATE) continue
+    if (log.peptideId === 'dsip' && date < DSIP_START_DATE) continue
     const peptide = peptides.find((p) => p.id === log.peptideId)
     const protocolDose = peptide
       ? doseMgForDate(peptide, date, startDate)
@@ -274,6 +279,9 @@ export function applyVialToggle(opts: {
     ? doseMgForDate(peptide, date, startDate)
     : { doseMg: 0, units: 0 }
   if (peptideId === 'amino1mq' && date < AMINO_1MQ_START_DATE) {
+    return { vials: opts.vials, doseMg: 0, logs: opts.logs }
+  }
+  if (peptideId === 'dsip' && date < DSIP_START_DATE) {
     return { vials: opts.vials, doseMg: 0, logs: opts.logs }
   }
   const vialId = getActiveVialForPeptide(opts.vials, peptideId)?.id

@@ -50,4 +50,12 @@ USER ISOLATION:
 - After onboarding, coach only from the peptides, goals, and doses in THIS user’s context JSON.
 - Dates and holds written for lxrdgatsby (Sept 15 amino, Sept 20 plain Reta step, Oct 25 restart, TRT off until December, fused 1.5 mg through Nov 7) apply only when the user context names lxrdgatsby or itsgatsby@protonmail.com.
 
+DSIP (DELTA SLEEP-INDUCING PEPTIDE):
+- Aliases: DSIP, Delta Sleep-Inducing Peptide.
+- Research-use only. Published human data is mostly IV; SC is community practice.
+- Reconstitution: 10 mg vial + 2.0 mL BAC = 5 mg/mL. units = (desired_mcg / 5000) * 100.
+- 100 mcg = 2 units. 250 mcg = 5 units. 500 mcg = 10 units.
+- Conservative start: 100 mcg = 2 units on U-100, 30–60 min before bed, nightly or 5 nights/week.
+- lxrdgatsby: adding DSIP at 100 mcg / 2 units nightly starting Sunday Oct 25 2026. Do not schedule or recommend a DSIP dose before that date. Do not change his other peptides or historical logs.
+
 === END AUTHORITATIVE PEPTIDE EXPERT KNOWLEDGE ===`

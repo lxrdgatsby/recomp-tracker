@@ -49,10 +49,16 @@ const SLOT_BY_ID: Record<string, InjectionSlot> = {
   klow: 'evening',
   nad: 'evening',
   tesamorelin: 'night',
+  dsip: 'night',
   'test-cyp': 'weekly',
   retatrutide: 'weekly',
   'reta-cagri': 'weekly',
   'selank-semax': 'morning',
+}
+
+const NIGHT_ORDER: Record<string, number> = {
+  tesamorelin: 0,
+  dsip: 1,
 }
 
 const MORNING_ORDER: Record<string, number> = {
@@ -102,6 +108,10 @@ export function formatInjectionCardLine(opts: {
     return `${opts.name} · ${opts.dose} · ${opts.timing}`
   }
   if (opts.syringeUnits != null && opts.syringeUnits > 0) {
+    if (opts.peptideId === 'dsip') {
+      const mcg = Math.round(opts.syringeUnits * 50)
+      return `${opts.name} · ${formatUnits(opts.syringeUnits)} units (${mcg} mcg) on U-100 · ${opts.timing}`
+    }
     return `${opts.name} · ${formatUnits(opts.syringeUnits)} units on U-100 · ${opts.timing}`
   }
   return `${opts.name} · ${opts.dose} · ${opts.timing}`
@@ -116,8 +126,13 @@ export function groupInjectionsBySlot(
     items: injections
       .filter((inj) => inj.slot === slot)
       .sort((a, b) => {
-        if (slot !== 'morning') return 0
-        return (MORNING_ORDER[a.peptideId] ?? 50) - (MORNING_ORDER[b.peptideId] ?? 50)
+        if (slot === 'morning') {
+          return (MORNING_ORDER[a.peptideId] ?? 50) - (MORNING_ORDER[b.peptideId] ?? 50)
+        }
+        if (slot === 'night') {
+          return (NIGHT_ORDER[a.peptideId] ?? 50) - (NIGHT_ORDER[b.peptideId] ?? 50)
+        }
+        return 0
       }),
   })).filter((group) => group.items.length > 0)
 }
@@ -175,6 +190,9 @@ export function getInjectionsForDate(
       if (slotDiff !== 0) return slotDiff
       if (a.slot === 'morning') {
         return (MORNING_ORDER[a.peptideId] ?? 50) - (MORNING_ORDER[b.peptideId] ?? 50)
+      }
+      if (a.slot === 'night') {
+        return (NIGHT_ORDER[a.peptideId] ?? 50) - (NIGHT_ORDER[b.peptideId] ?? 50)
       }
       return 0
     })

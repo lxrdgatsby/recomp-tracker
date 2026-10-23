@@ -108,7 +108,13 @@ function nextTitrationNote(
   if (peptide.startsOn && scheduleDate) {
     const todayIso = format(scheduleDate, 'yyyy-MM-dd')
     if (todayIso < peptide.startsOn) {
-      return `Starts ${peptide.startsOn}: 15 units for 2 days, then 30 units daily`
+      if (peptide.id === 'dsip') {
+        return `Starts ${peptide.startsOn}: 100 mcg = 2 units nightly, 30–60 min before bed`
+      }
+      if (peptide.id === 'amino1mq') {
+        return `Starts ${peptide.startsOn}: 15 units for 2 days, then 30 units daily`
+      }
+      return `Starts ${peptide.startsOn}`
     }
   }
   const current = scheduleDate
@@ -215,7 +221,9 @@ function compoundFromPeptide(
     name: peptide.name,
     currentDoseMg: doseMg,
     currentDoseLabel: notStarted
-      ? `Starts ${peptide.startsOn}`
+      ? peptide.id === 'dsip'
+        ? `Starts ${peptide.startsOn}: 100 mcg = 2 units nightly before bed`
+        : `Starts ${peptide.startsOn}`
       : isVolume
         ? peptide.dose
         : typeof units === 'number'
@@ -223,7 +231,7 @@ function compoundFromPeptide(
           : peptide.dose,
     units,
     timing: peptide.timing || NOT_PROVIDED,
-    frequency: frequencyLabel(peptide.frequency),
+    frequency: peptide.id === 'dsip' ? 'nightly' : frequencyLabel(peptide.frequency),
     reconstitution: {
       vialMg:
         proto && proto.vialMg > 0 ? proto.vialMg : NOT_PROVIDED,
@@ -353,6 +361,9 @@ export function getAssistantQuickPrompts(peptides: Peptide[]): string[] {
   if (ids.has('selank-semax')) {
     chips.push('What is my Selank + Semax starting dose?')
   }
+  if (ids.has('dsip')) {
+    chips.push('How do I dose DSIP?')
+  }
   chips.push('Why is my weight stalling?')
   if (ids.has('tesamorelin')) {
     chips.push('Explain Tesamorelin timing')
@@ -366,5 +377,5 @@ export function getAssistantQuickPrompts(peptides: Peptide[]): string[] {
   if (chips.length < 5) {
     chips.push('How do I reconstitute a peptide vial?')
   }
-  return chips.slice(0, 7)
+  return chips.slice(0, 8)
 }

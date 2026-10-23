@@ -1,4 +1,4 @@
-import { CYCLE_START_DATE } from '../constants/reconstitutionTable'
+import { CYCLE_START_DATE, DSIP_NOTE, DSIP_START_DATE } from '../constants/reconstitutionTable'
 import type { TrackerState } from '../types'
 import type { Vial } from '../types/v2'
 import {
@@ -292,6 +292,17 @@ export function buildLxrdgatsbyVials(): Vial[] {
       opened,
       remainingMg: 1000,
       notes: 'Vial A · 1000 mg / 5 mL · 50 mg M/W/F',
+    }),
+    activeVial({
+      id: 'vial-dsip-a',
+      peptideId: 'dsip',
+      name: 'DSIP',
+      vialMg: 10,
+      bacMl: 2,
+      conc: 5,
+      opened: DSIP_START_DATE,
+      remainingMg: 10,
+      notes: `Mixed Oct 25. 10 mg / 2 mL = 5 mg/mL. 100 mcg = 2 units nightly before bed. ${DSIP_NOTE}`,
     }),
     activeVial({
       id: 'vial-test-a',

@@ -275,6 +275,32 @@ export const PEPTIDE_TITRATION: Record<string, TitrationMap> = {
       },
     ],
   },
+  dsip: {
+    beginner: [
+      {
+        weeks: '1-13',
+        doseMg: 0.1,
+        notes:
+          '100 mcg = 2 units, 30–60 min before bed. Nightly or 5 nights/week. Research-use only; published human data is mostly IV; SC is community practice.',
+      },
+    ],
+    intermediate: [
+      {
+        weeks: '1-13',
+        doseMg: 0.1,
+        notes:
+          '100 mcg = 2 units, 30–60 min before bed. Optional 250 mcg = 5 units if tolerated. Nightly or 5 nights/week.',
+      },
+    ],
+    advanced: [
+      {
+        weeks: '1-13',
+        doseMg: 0.1,
+        notes:
+          '100 mcg = 2 units, 30–60 min before bed. Optional 250 mcg = 5 units or 500 mcg = 10 units. Nightly or 5 nights/week.',
+      },
+    ],
+  },
   pinealon: {
     beginner: [
       { weeks: '1-13', doseMg: 0.5, notes: 'Daily AM — run in 10–20 day cycles (500mcg)' },

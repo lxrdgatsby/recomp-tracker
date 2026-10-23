@@ -128,6 +128,11 @@ export function PeptideSelector({
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-white">{entry.name}</p>
                     <p className="text-xs text-slate-500">{entry.tagline}</p>
+                    {entry.id === 'dsip' && (
+                      <p className="mt-1 text-xs leading-relaxed text-amber-200/90">
+                        {entry.notes}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"

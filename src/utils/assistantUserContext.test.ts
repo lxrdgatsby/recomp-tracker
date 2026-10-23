@@ -85,5 +85,6 @@ describe('assistant user context', () => {
     expect(chips[0]).toBe('What do I inject today?')
     expect(chips.some((c) => /Reta|Tesamorelin/i.test(c))).toBe(true)
     expect(chips.some((c) => /5-Amino/i.test(c))).toBe(true)
+    expect(chips.some((c) => /DSIP/i.test(c))).toBe(true)
   })
 })

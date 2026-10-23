@@ -174,6 +174,17 @@ export const PROTOCOL_PEPTIDE_OPTIONS: {
     timing: 'Evening · Mon/Wed/Fri',
     notes: '50 mg = 25 units M/W/F.',
   },
+  {
+    id: 'dsip',
+    name: 'DSIP',
+    defaultVialMg: 10,
+    defaultBacMl: 2,
+    targetDoseMg: 0.1,
+    frequency: 'daily',
+    timing: '30–60 min before bed',
+    notes:
+      '10 mg / 2 mL = 5 mg/mL. Start 100 mcg = 2 units nightly before bed. Research-use only. Published human data is mostly IV; SC is community practice.',
+  },
 ]
 
 const NAME_ALIASES: Record<string, string> = {
@@ -190,6 +201,7 @@ const NAME_ALIASES: Record<string, string> = {
   'selank-semax': 'Selank + Semax',
   'tesamorelin': 'Tesamorelin',
   'amino1mq': '5-Amino-1MQ',
+  'dsip': 'DSIP',
 }
 
 export function displayPeptideName(peptide: { id?: string; name: string }): string {

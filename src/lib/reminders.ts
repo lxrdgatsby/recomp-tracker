@@ -313,8 +313,11 @@ function restartShots(slot: ReminderSlot, date: Date): SlotShots {
     return {
       slot,
       title: 'Nightly shot',
-      body: 'Tesamorelin 15u — take 2–3h after last food',
-      shots: [{ id: 'tesamorelin', short: 'Tesamorelin', detail: 'Tesamorelin 15u' }],
+      body: 'Tesamorelin 15u — take 2–3h after last food + DSIP 2u (100 mcg)',
+      shots: [
+        { id: 'tesamorelin', short: 'Tesamorelin', detail: 'Tesamorelin 15u' },
+        { id: 'dsip', short: 'DSIP', detail: 'DSIP 2u (100 mcg)' },
+      ],
     }
   }
   return {
@@ -383,17 +386,19 @@ export function getShotsForSlot(slot: ReminderSlot, date: Date): SlotShots {
   }
 
   if (slot === 'night') {
+    const shots: ShotForSlot[] = [
+      {
+        id: 'tesamorelin',
+        short: 'Tesamorelin',
+        detail: `Tesamorelin ${u.tesa}u`,
+      },
+    ]
+    const body = `Tesamorelin ${u.tesa}u — take 2–3h after last food`
     return {
       slot,
       title: 'Nightly shot',
-      body: `Tesamorelin ${u.tesa}u — take 2–3h after last food`,
-      shots: [
-        {
-          id: 'tesamorelin',
-          short: 'Tesamorelin',
-          detail: `Tesamorelin ${u.tesa}u`,
-        },
-      ],
+      body,
+      shots,
     }
   }
 

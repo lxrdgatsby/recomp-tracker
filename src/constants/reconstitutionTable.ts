@@ -3,6 +3,7 @@
 export const CYCLE_START_DATE = '2026-08-23'
 export const AMINO_1MQ_START_DATE = '2026-09-15'
 export const AMINO_1MQ_FULL_DOSE_DATE = '2026-09-17'
+export const DSIP_START_DATE = '2026-10-25'
 export const START_WEIGHT_LB = 165
 export const GOAL_WEIGHT_LB = 145
 /** Latest known weigh-in. A newer log replaces this. */
@@ -22,6 +23,9 @@ export const MUSCLE_DRIVERS = 'Test + Tesamorelin + progressive overload + prote
 
 export const KLOW_NOTE =
   'Classic KLOW is often an 80 mg blend. This plan treats the vial as 10 mg. If the label is 80 mg, units are wrong. Standalone BPC-157 is already in the stack — if KLOW also contains BPC, user is stacking BPC twice. Keep standalone BPC at 500 mcg and KLOW conservative.'
+
+export const DSIP_NOTE =
+  'Research-use only. Published human data is mostly IV; SC is community practice. 10 mg vial + 2.0 mL BAC = 5 mg/mL. Conservative start 100 mcg = 2 units on U-100 (or 250 mcg = 5 units). 30–60 min before bed. Nightly or 5 nights/week. units = (desired_mcg / 5000) * 100.'
 
 export const U100_FORMULA = 'units = (desired_mg / (vial_mg / bac_ml)) * 100'
 
@@ -219,6 +223,22 @@ export const RECONSTITUTION_TABLE: ReconstitutionCompound[] = [
     ],
     note:
       'Human data is primarily nasal. No published human SC trials. Research-use only. Start 250 mcg of each (~7.5–8 u) once daily and hold 1–2 weeks.',
+  },
+  {
+    id: 'dsip',
+    name: 'DSIP',
+    vialMg: 10,
+    bacMl: 2,
+    concentrationLabel: '5 mg/mL',
+    defaultDoseMg: 0.1,
+    defaultDoseMl: null,
+    doseUnit: 'mcg',
+    keyDraws: [
+      { label: '2 u = 100 mcg', desiredMg: 0.1, units: 2 },
+      { label: '5 u = 250 mcg', desiredMg: 0.25, units: 5 },
+      { label: '10 u = 500 mcg', desiredMg: 0.5, units: 10 },
+    ],
+    note: DSIP_NOTE,
   },
   {
     id: 'test-cyp',

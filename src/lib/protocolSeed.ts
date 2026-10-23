@@ -5,6 +5,8 @@ import {
   AMINO_1MQ_START_DATE,
   CURRENT_WEIGHT_LB,
   CYCLE_START_DATE,
+  DSIP_NOTE,
+  DSIP_START_DATE,
   FAT_LOSS_DRIVERS,
   GOAL_WEIGHT_LB,
   GUIDANCE_CARDS,
@@ -29,7 +31,7 @@ import { applyLxrdWeightTargets } from './lxrdWeight'
 
 export const SEED_USER = 'lxrdgatsby'
 export const SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-export const PROTOCOL_DEFINITION_VERSION = '2026-10-21-weight-targets'
+export const PROTOCOL_DEFINITION_VERSION = '2026-10-25-dsip-v6'
 export const SAFETY_COPY = RESEARCH_DISCLAIMER
 
 export const PHASE_NOTES = {
@@ -61,6 +63,7 @@ export const PHASE_NOTES = {
     'Reta stay 4 mg (80 u) unless weight stall AND GI easy, then 5 mg = 100 units. Do not jump to 8–12 mg this cycle.',
     'Tesamorelin 2.0 mg = 30 units only if fasting glucose is good and IGF-1 is not already high; else stay 21 units.',
     'Everything else: hold week 5–8 doses, including 5-Amino-1MQ at 30 u',
+    'DSIP: starts Sun Oct 25. 100 mcg = 2 units nightly, 30–60 min before bed. 10 mg / 2 mL.',
   ],
 }
 
@@ -464,6 +467,37 @@ export function buildLxrdgatsbyStack(startDate: string): {
             50,
             '100 mg M/W/F = 50 units if burn is tolerable'
           ),
+        ],
+      }),
+    },
+    {
+      id: 'dsip',
+      name: 'DSIP',
+      dose: '100mcg',
+      frequency: 'daily',
+      timing: '30–60 min before bed',
+      startsOn: DSIP_START_DATE,
+      notes: DSIP_NOTE,
+      vialSize: '10mg',
+      protocol: protocol({
+        vialMg: 10,
+        bacWaterUnits: 200,
+        startingDoseMg: 0.1,
+        startingSyringeUnits: 2,
+        extraSteps: [
+          '10 mg / 2 mL = 5 mg/mL. units = (desired_mcg / 5000) * 100. 100 mcg = 2 units, 250 mcg = 5 units, 500 mcg = 10 units.',
+          'Research-use only. Published human data is mostly IV; SC is community practice.',
+        ],
+        titration: [
+          {
+            weeks: '10-13',
+            startDate: DSIP_START_DATE,
+            doseMg: 0.1,
+            doseLabel: uLabel(2),
+            syringeUnits: 2,
+            notes:
+              '100 mcg = 2 units, 30–60 min before bed. Nightly from Sun Oct 25.',
+          },
         ],
       }),
     },

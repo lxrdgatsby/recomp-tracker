@@ -262,12 +262,13 @@ export const PEPTIDE_CATALOG: PeptideCatalogEntry[] = [
   {
     id: 'dsip',
     name: 'DSIP',
-    tagline: 'Sleep peptide — viral in biohacking circles',
-    doseOptions: ['100mcg', '250mcg', '500mcg'],
-    defaultDose: '250mcg',
+    tagline: 'Delta Sleep-Inducing Peptide — 10 mg / 2 mL, 100 mcg before bed',
+    doseOptions: ['5mg', '10mg', '15mg', '20mg', '30mg', '50mg', '100mg', '1000mg'],
+    defaultDose: '10mg',
     frequency: 'daily',
     timing: '30–60 min before bed',
-    notes: 'Delta sleep-inducing peptide. Track sleep quality.',
+    notes:
+      'Delta Sleep-Inducing Peptide. Research-use only. Published human data is mostly IV; SC is community practice. 10 mg vial + 2.0 mL BAC = 5 mg/mL. Conservative start 100 mcg = 2 units on U-100 (or 250 mcg = 5 units). 30–60 min before bed. Nightly or 5 nights/week.',
   },
   {
     id: 'semax',
@@ -329,6 +330,10 @@ export function getCatalogEntry(catalogId: string): PeptideCatalogEntry | undefi
 }
 
 const CATALOG_NAME_ALIASES: Record<string, string> = {
+  'delta sleep-inducing peptide': 'dsip',
+  'delta sleep inducing peptide': 'dsip',
+  'delta-sleep-inducing-peptide': 'dsip',
+  deltasleepinducingpeptide: 'dsip',
   '5-amino-1mq': 'amino1mq',
   '5-amino': 'amino1mq',
   '5 amino 1mq': 'amino1mq',

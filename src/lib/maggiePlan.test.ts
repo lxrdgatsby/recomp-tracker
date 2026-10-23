@@ -219,7 +219,7 @@ describe('maggie conservative retatrutide plan', () => {
     expect(applyMaggiePlan(other, 'itsgatsby@protonmail.com', { today: TODAY })).toBeNull()
     expect(other.peptides.map((p) => p.id)).toEqual(['bpc157', 'tesamorelin'])
     expect(applyLxrdgatsbyProtocolSeed(other, null, EMAIL)).toBeNull()
-    expect(PROTOCOL_DEFINITION_VERSION).toBe('2026-10-21-weight-targets')
+    expect(PROTOCOL_DEFINITION_VERSION).toBe('2026-10-25-dsip-v6')
 
     const row = RECONSTITUTION_TABLE.find((c) => c.id === 'retatrutide')
     expect(row?.vialMg).toBe(10)

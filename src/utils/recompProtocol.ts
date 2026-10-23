@@ -4,7 +4,7 @@ import {
   recommendedBacWaterForVial,
   type PeptideSelection,
 } from '../constants/peptideCatalog'
-import { CYCLE_START_DATE } from '../constants/reconstitutionTable'
+import { CYCLE_START_DATE, DSIP_START_DATE } from '../constants/reconstitutionTable'
 import { getCatalogEntry, getCatalogEntryByName } from '../constants/peptideCatalog'
 import { getTitrationPhases } from '../constants/peptideTitration'
 import type { FamiliarityLevel } from '../types/auth'
@@ -51,6 +51,17 @@ export function normalizeSelection(
     if (entry && (!dose || dose === entry.defaultDose)) {
       dose = entry.defaultDose
       bacWaterUnits = defaultBacForCatalog(entry, dose)
+    }
+  }
+
+  // DSIP source of truth: 10 mg vial + 2 mL BAC. Old mcg "doses" were not vial sizes.
+  if (raw.catalogId === 'dsip') {
+    const doseText = (dose || '').trim().toLowerCase()
+    if (!doseText || doseText.endsWith('mcg')) {
+      dose = '10mg'
+      bacWaterUnits = 200
+    } else if (doseText === '10mg' && raw.bacWaterUnits == null) {
+      bacWaterUnits = 200
     }
   }
 
@@ -443,6 +454,9 @@ export function formatCurrentStackDose(
 
   if (peptide.id === 'amino1mq' && todayIso < '2026-09-15') {
     return '2.5 mg · 15 u · starts Tue Sept 15'
+  }
+  if (peptide.id === 'dsip' && todayIso < DSIP_START_DATE) {
+    return '100 mcg · 2 u · starts Sun Oct 25'
   }
   if (mg == null) return peptide.dose
   const amount = mg < 1 ? `${Math.round(mg * 1000)} mcg` : `${mg} mg`

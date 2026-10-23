@@ -170,7 +170,7 @@ describe('new signup does not inherit lxrdgatsby’s plan', () => {
     )
     expect(seeded?.peptides.some((p) => p.id === 'reta-cagri')).toBe(true)
     expect(seeded?.peptides.some((p) => p.id === 'selank-semax')).toBe(false)
-    expect(PROTOCOL_DEFINITION_VERSION).toBe('2026-10-21-weight-targets')
+    expect(PROTOCOL_DEFINITION_VERSION).toBe('2026-10-25-dsip-v6')
   })
 
   it('builds onboarding from the peptides they select', () => {

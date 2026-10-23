@@ -105,6 +105,16 @@ describe('reminders', () => {
     expect(w2.body).toBe('Tesamorelin 15u — take 2–3h after last food')
   })
 
+  it('adds DSIP 2u to the night reminder from Sun Oct 25', () => {
+    const oct24 = getShotsForSlot('night', new Date(2026, 9, 24))
+    expect(oct24.shots.some((s) => s.id === 'dsip')).toBe(false)
+
+    const oct25 = getShotsForSlot('night', new Date(2026, 9, 25))
+    expect(oct25.shots.find((s) => s.id === 'dsip')?.detail).toBe('DSIP 2u (100 mcg)')
+    expect(oct25.body).toContain('DSIP 2u (100 mcg)')
+    expect(oct25.shots[0]?.id).toBe('tesamorelin')
+  })
+
   it('builds sunday weekly shots', () => {
     const sun = getShotsForSlot('sunday', new Date(2026, 7, 23))
     expect(sun.title).toBe('Weekly shots')

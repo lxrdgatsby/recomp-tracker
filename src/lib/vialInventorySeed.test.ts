@@ -187,6 +187,67 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     expect(isReplacedVial(next.find((v) => v.id === 'vial-aod-a')!)).toBe(true)
   })
 
+  it('adds a full mixed DSIP vial opened Oct 25 and ignores earlier logs', () => {
+    const vials = buildLxrdgatsbyVials()
+    const dsip = vials.find((v) => v.id === 'vial-dsip-a')!
+    expect(dsip.vialMg).toBe(10)
+    expect(dsip.bacWaterMl).toBe(2)
+    expect(dsip.concentrationMgPerMl).toBe(5)
+    expect(dsip.remainingMg).toBe(10)
+    expect(dsip.mixedDate).toBe('2026-10-25')
+    expect(dsip.isPowder).toBe(false)
+    expect(dsip.depleted).toBe(false)
+
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const before = recalculateVialInventory({
+      vials,
+      logs: [{ date: '2026-10-24', peptideId: 'dsip', doseMg: 0.1 }],
+      peptides,
+      startDate: '2026-08-23',
+    })
+    expect(before.find((v) => v.id === 'vial-dsip-a')?.remainingMg).toBe(10)
+    expect(vialIdForDate(vials, 'dsip', '2026-10-24')).toBeUndefined()
+    expect(vialIdForDate(vials, 'dsip', '2026-10-25')).toBe('vial-dsip-a')
+
+    const after = recalculateVialInventory({
+      vials,
+      logs: [{ date: '2026-10-25', peptideId: 'dsip' }],
+      peptides,
+      startDate: '2026-08-23',
+    })
+    expect(after.find((v) => v.id === 'vial-dsip-a')?.remainingMg).toBe(9.9)
+    expect(after.find((v) => v.id === 'vial-reta-a')?.remainingMg).toBe(0)
+    expect(after.find((v) => v.id === 'vial-reta-cagri')?.remainingMg).toBe(10)
+    expect(after.find((v) => v.id === 'vial-amino1mq-b')?.remainingMg).toBe(50)
+  })
+
+  it('does not seed DSIP inventory onto another user', () => {
+    const next = applyLxrdgatsbyVialInventorySeed(
+      {
+        profile: {
+          currentWeight: 180,
+          goalWeight: 170,
+          startDate: '2026-10-01',
+          weeklyLossTarget: 1,
+        },
+        peptides: [
+          {
+            id: 'bpc157',
+            name: 'BPC-157',
+            dose: '500mcg',
+            frequency: 'daily',
+          },
+        ],
+        weightHistory: [{ date: '2026-10-01', weight: 180 }],
+        injectionLogs: [{ date: '2026-10-02', peptideId: 'bpc157' }],
+        workoutCompletions: [],
+      },
+      'other-user',
+      'other@example.com',
+    )
+    expect(next).toBeNull()
+  })
+
   it('does not pull 5-Amino-1MQ before Sept 15', () => {
     const vials = buildLxrdgatsbyVials()
     const { peptides } = buildLxrdgatsbyStack('2026-08-23')

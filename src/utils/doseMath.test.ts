@@ -37,6 +37,15 @@ describe('dose calculator reconstitution math', () => {
     expect(u100UnitsFromMg(0.5, 10, 2)).toBe(10)
   })
 
+  it('DSIP 100 / 250 / 500 mcg on 10 mg / 2 mL → 2 / 5 / 10 units', () => {
+    expect(u100UnitsFromMg(0.1, 10, 2)).toBe(2)
+    expect(u100UnitsFromMg(0.25, 10, 2)).toBe(5)
+    expect(u100UnitsFromMg(0.5, 10, 2)).toBe(10)
+    expect((100 / 5000) * 100).toBe(2)
+    expect((250 / 5000) * 100).toBe(5)
+    expect((500 / 5000) * 100).toBe(10)
+  })
+
   it('AOD 0.5 / 1.0 mg on old 3 mL vial → 15 / 30 units', () => {
     expect(u100UnitsFromMg(0.5, 10, 3)).toBe(15)
     expect(u100UnitsFromMg(1.0, 10, 3)).toBe(30)
