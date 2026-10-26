@@ -40,8 +40,6 @@ export const PROTOCOL_LOCAL_KEYS = [
   'vialInventorySeeded_lxrdgatsby_v4',
 ] as const
 
-const LXRD_SEED_FLAG = 'protocolSeeded_lxrdgatsby'
-
 export function usesLegacyProtocolStorage(): boolean {
   return legacy || !activeUserId
 }
@@ -52,8 +50,38 @@ export function setProtocolStorageScope(
 ): void {
   activeUserId = userId
   legacy = useLegacyKeys || !userId
-  if (!legacy && userId && typeof localStorage !== 'undefined') {
-    adoptUnownedLegacyCache(userId)
+}
+
+/** Plan, stack, vial, and dose keys. Never the unscoped lxrdgatsby cache. */
+const SCOPED_PLAN_KEYS = [
+  'recomp-tracker-v1',
+  'activeStack',
+  'vials',
+  'pt-v2-vials',
+  'pt-v2-dose-logs',
+  'scheduledDoses',
+  'onboardingData',
+  'ninetyDayPlan',
+  'doseCalculator',
+  'protocolStartDate',
+  'protocolDefinitionVersion',
+  'checkIns',
+  'checkInHistory',
+  'lastCheckIn',
+] as const
+
+/**
+ * Drop a not-yet-onboarded account's scoped plan cache.
+ * Unscoped keys stay, so lxrdgatsby's on-device history is not touched.
+ */
+export function clearScopedPlanCache(userId: string): void {
+  if (!userId || typeof localStorage === 'undefined') return
+  try {
+    for (const key of SCOPED_PLAN_KEYS) {
+      localStorage.removeItem(`${key}::${userId}`)
+    }
+  } catch {
+    /* ignore quota */
   }
 }
 
@@ -81,26 +109,4 @@ export function writeLocal(key: string, value: string): void {
 
 export function removeLocal(key: string): void {
   localStorage.removeItem(scopedStorageKey(key))
-}
-
-/**
- * A browser that has never stored lxrdgatsby’s plan can keep its one local
- * cache by copying it into the signed-in user’s namespace once.
- * If his seed flag is present, leave those keys alone.
- */
-function adoptUnownedLegacyCache(userId: string): void {
-  try {
-    if (localStorage.getItem(LXRD_SEED_FLAG) === 'true') return
-    const marker = `protocolScopeAdopted::${userId}`
-    if (localStorage.getItem(marker) === 'true') return
-    for (const key of PROTOCOL_LOCAL_KEYS) {
-      const scoped = `${key}::${userId}`
-      if (localStorage.getItem(scoped) != null) continue
-      const raw = localStorage.getItem(key)
-      if (raw != null) localStorage.setItem(scoped, raw)
-    }
-    localStorage.setItem(marker, 'true')
-  } catch {
-    /* ignore quota */
-  }
 }

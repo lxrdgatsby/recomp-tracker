@@ -35,6 +35,7 @@ describe('Today’s doses', () => {
     expect(screen.queryByRole('button', { name: /^Log$/ })).not.toBeInTheDocument()
     expect(screen.getByText('20 units on U-100')).toBeInTheDocument()
     expect(screen.getByText('Morning, fasted')).toBeInTheDocument()
+    expect(screen.getByText('Doses left: 18')).toBeInTheDocument()
     expect(screen.getByText('Total 20 / 18 doses left')).toBeInTheDocument()
     expect(screen.getByText('Expires: Nov 22, 2026')).toBeInTheDocument()
   })
@@ -48,6 +49,7 @@ describe('Today’s doses', () => {
     expect(onMarkDone).toHaveBeenCalledTimes(1)
     expect(onMarkDone).toHaveBeenCalledWith('aod9604')
     expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
+    expect(screen.getByText('Doses left: 17')).toBeInTheDocument()
     expect(screen.getByText('Total 20 / 17 doses left')).toBeInTheDocument()
     expect(screen.queryByText('Total 20 / 18 doses left')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Mark Done' })).not.toBeInTheDocument()
@@ -70,6 +72,7 @@ describe('Today’s doses', () => {
       onMarkDone
     )
 
+    expect(screen.getByText('Doses left: 0')).toBeInTheDocument()
     expect(screen.getByText('Total 10 / 0 doses left')).toBeInTheDocument()
     expect(screen.getByText('Vial empty')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Mark Done' })).toBeDisabled()

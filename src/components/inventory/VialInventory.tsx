@@ -141,16 +141,31 @@ export function VialInventory({
     return selected ? [selected, ...matched] : matched
   }, [catalogId, compoundQuery, libraryCompounds])
 
+  const expiredOpen = useMemo(
+    () =>
+      vials.filter(
+        (v) =>
+          v.compoundId !== 'test-cyp' &&
+          !isReplacedVial(v) &&
+          v.remainingMg > 0.001 &&
+          !v.depleted &&
+          describeShelfLife(v, today).expired
+      ),
+    [vials, today]
+  )
+
   const active = useMemo(() => {
+    const expiredIds = new Set(expiredOpen.map((vial) => vial.id))
     const live = vials.filter(
       (v) =>
-        v.compoundId === 'test-cyp' ||
-        (!isReplacedVial(v) && v.remainingMg > 0.001)
+        !expiredIds.has(v.id) &&
+        (v.compoundId === 'test-cyp' ||
+          (!isReplacedVial(v) && v.remainingMg > 0.001))
     )
     return [...live].sort((a, b) =>
       (b.mixedDate || '').localeCompare(a.mixedDate || '')
     )
-  }, [vials])
+  }, [vials, expiredOpen])
 
   const finished = useMemo(
     () =>
@@ -348,7 +363,7 @@ export function VialInventory({
   const handleRemove = (id: string) => {
     const vial = vials.find((row) => row.id === id)
     if (!vial) return
-    if (!confirm('Remove this vial from your inventory?')) return
+    if (!confirm('Remove this vial from your inventory and active stack?')) return
     rememberRemovedVial(vial.id)
     removeInventoryVial(vial.id)
     let peptideChanged = false
@@ -552,21 +567,24 @@ export function VialInventory({
     const left = stock.remaining
     const stockLabel = formatVialDoseStock(stock.total, stock.remaining)
     const low = !empty && !replaced && peptideId !== 'test-cyp' && left != null && left <= 3
+    const editing = editingId === vial.id
+    const replacing = replacingId === vial.id
+    const shelf = describeShelfLife(vial, today)
+    const expired = !vial.isPowder && shelf.expired
     const status = replaced
       ? 'Replaced'
       : empty
         ? 'Empty'
-        : vial.isPowder
-          ? 'Powder'
-          : 'Mixed'
-    const statusClass = empty
+        : expired
+          ? 'Expired'
+          : vial.isPowder
+            ? 'Powder'
+            : 'Mixed'
+    const statusClass = empty || expired
       ? 'bg-red-500/15 text-red-300'
       : vial.isPowder
         ? 'bg-amber-500/15 text-amber-300'
         : 'bg-emerald-500/15 text-emerald-400'
-    const editing = editingId === vial.id
-    const replacing = replacingId === vial.id
-    const shelf = describeShelfLife(vial, today)
 
     return (
       <div
@@ -758,6 +776,14 @@ export function VialInventory({
           />
         )}
         {active.map(renderCard)}
+        {expiredOpen.length > 0 && (
+          <>
+            <h3 className="pt-2 text-xs font-medium tracking-wide text-slate-500 uppercase">
+              Archived
+            </h3>
+            {expiredOpen.map(renderCard)}
+          </>
+        )}
         {finishedNeedsReplacement.length > 0 && (
           <>
             <h3 className="pt-2 text-xs font-medium tracking-wide text-slate-500 uppercase">

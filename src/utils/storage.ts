@@ -3,23 +3,35 @@ import { readLocal, writeLocal } from '../lib/protocolStorageScope'
 import { runVialSizeMigrationV2 } from '../lib/vialInventory'
 import type { TrackerState } from '../types'
 
+function emptyPlan(): TrackerState {
+  return {
+    ...DEFAULT_STATE,
+    peptides: [],
+    weightHistory: [],
+    injectionLogs: [],
+    workoutCompletions: [],
+    vialInventory: [],
+  }
+}
+
 export function loadState(): TrackerState {
   try {
     const raw = readLocal(STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_STATE, peptides: [...DEFAULT_STATE.peptides] }
+    if (!raw) return emptyPlan()
     const parsed = JSON.parse(raw) as TrackerState
     const loaded = {
       ...DEFAULT_STATE,
       ...parsed,
       profile: { ...DEFAULT_STATE.profile, ...parsed.profile },
-      peptides: parsed.peptides?.length ? parsed.peptides : DEFAULT_STATE.peptides,
+      peptides: Array.isArray(parsed.peptides) ? parsed.peptides : [],
       weightHistory: parsed.weightHistory ?? [],
       injectionLogs: parsed.injectionLogs ?? [],
       workoutCompletions: parsed.workoutCompletions ?? [],
+      vialInventory: parsed.vialInventory ?? [],
     }
     return runVialSizeMigrationV2(loaded) ?? loaded
   } catch {
-    return { ...DEFAULT_STATE, peptides: [...DEFAULT_STATE.peptides] }
+    return emptyPlan()
   }
 }
 

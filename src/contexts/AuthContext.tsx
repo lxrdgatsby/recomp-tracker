@@ -30,7 +30,7 @@ import {
   MAGGIE_TRAINING,
 } from '../lib/maggiePlan'
 import { applyBubblesmamaKlow, isBubblesmamaUser } from '../lib/bubblesPlan'
-import { setProtocolStorageScope } from '../lib/protocolStorageScope'
+import { clearScopedPlanCache, setProtocolStorageScope } from '../lib/protocolStorageScope'
 import { withNadHorizon } from '../lib/lxrdRestart'
 import { applyLxrdgatsbyVialInventorySeed } from '../lib/vialInventorySeed'
 import { runVialSizeMigrationV2 } from '../lib/vialInventory'
@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void touchLastActive(userId, email)
     if (!profile) {
       setProtocolStorageScope(userId, false)
+      clearScopedPlanCache(userId)
       setUserProfile(null)
       setTrackerState(blankTrackerState())
       return
@@ -160,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       next = seeded ?? source
       if (seeded) changed = true
     } else if (!profile.onboardingCompleted) {
+      clearScopedPlanCache(userId)
       const storedPeptides =
         profile.trackerData?.peptides?.length ?? profile.peptideStack.length
       const storedLogs = profile.trackerData?.injectionLogs?.length ?? 0

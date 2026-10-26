@@ -386,7 +386,9 @@ describe('Vial opened date, expiration, and remove', () => {
       </ToastProvider>
     )
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0])
-    expect(window.confirm).toHaveBeenCalledWith('Remove this vial from your inventory?')
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Remove this vial from your inventory and active stack?'
+    )
     expect(screen.queryByText('DSIP')).not.toBeInTheDocument()
     expect(screen.getByText('Tesamorelin')).toBeInTheDocument()
     const [nextVials, nextPeptides] = onInventoryChange.mock.calls.at(-1) as [
@@ -470,5 +472,48 @@ describe('Vial opened date, expiration, and remove', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     expect(screen.getByText('DSIP')).toBeInTheDocument()
     expect(onInventoryChange).not.toHaveBeenCalled()
+  })
+
+  it('keeps an expired vial archived and does not restore it when a new one is added', () => {
+    const logs: InjectionLog[] = [
+      { date: '2026-01-02', peptideId: 'dsip', doseMg: 0.1 },
+    ]
+    const expired = sampleVial({
+      id: 'vial-dsip-old',
+      mixedDate: '2026-01-01',
+      remainingMg: 8,
+      notes: 'Opened in January',
+    })
+    const onInventoryChange = vi.fn()
+    render(
+      <ToastProvider>
+        <VialInventory
+          initialVials={[expired]}
+          peptides={[dsipPeptide]}
+          injectionLogs={logs}
+          onInventoryChange={onInventoryChange}
+        />
+      </ToastProvider>
+    )
+
+    const archived = screen.getByRole('heading', { name: 'Archived' }).parentElement
+    expect(archived).toHaveTextContent('Expired')
+    expect(archived).toHaveTextContent('Opened: Jan 1, 2026')
+    expect(archived).toHaveTextContent('Expires:')
+    expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument()
+    expect(screen.queryByText('Mixed')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.change(screen.getByLabelText('Compound'), { target: { value: 'dsip' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save vial' }))
+
+    const [vials] = onInventoryChange.mock.calls.at(-1) as [Vial[], Peptide[]?]
+    expect(vials.map((vial) => vial.id)).not.toContain('vial-dsip-old')
+    expect(vials.some((vial) => vial.id !== 'vial-dsip-old' && vial.compoundId === 'dsip')).toBe(
+      true
+    )
+    expect(screen.queryByText('Opened in January')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Archived' })).not.toBeInTheDocument()
+    expect(logs).toEqual([{ date: '2026-01-02', peptideId: 'dsip', doseMg: 0.1 }])
   })
 })

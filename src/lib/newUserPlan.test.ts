@@ -18,10 +18,12 @@ import {
 } from './protocolSeed'
 import { trackerForSignedInUser } from './profileService'
 import {
+  clearScopedPlanCache,
   readLocal,
   resetProtocolStorageScope,
   setProtocolStorageScope,
 } from './protocolStorageScope'
+import { loadState } from '../utils/storage'
 import { applyLxrdgatsbyVialInventorySeed } from './vialInventorySeed'
 
 function profile(overrides: Partial<UserProfile> = {}): UserProfile {
@@ -205,17 +207,58 @@ describe('new signup does not inherit lxrdgatsby’s plan', () => {
   it('does not copy his on-device cache into a new user’s keys', () => {
     localStorage.setItem('protocolSeeded_lxrdgatsby', 'true')
     localStorage.setItem('activeStack', JSON.stringify([{ id: 'reta-cagri' }]))
+    localStorage.setItem('vials', JSON.stringify([{ id: 'vial-aod-c' }]))
+    localStorage.setItem('pt-v2-dose-logs', JSON.stringify([{ id: 'log-1' }]))
     localStorage.setItem('checkIns', JSON.stringify([{ date: '2026-10-21', weight: 156 }]))
 
     setProtocolStorageScope('new-user-id', false)
     expect(localStorage.getItem('activeStack::new-user-id')).toBeNull()
+    expect(localStorage.getItem('vials::new-user-id')).toBeNull()
+    expect(localStorage.getItem('pt-v2-dose-logs::new-user-id')).toBeNull()
     expect(localStorage.getItem('checkIns::new-user-id')).toBeNull()
     expect(readLocal('activeStack')).toBeNull()
+    expect(localStorage.getItem('activeStack')).toContain('reta-cagri')
+    expect(localStorage.getItem('vials')).toContain('vial-aod-c')
+    expect(localStorage.getItem('pt-v2-dose-logs')).toContain('log-1')
 
     clearAllLocalData('new-user-id')
     expect(localStorage.getItem('activeStack')).toContain('reta-cagri')
     expect(localStorage.getItem('checkIns')).toContain('2026-10-21')
     expect(localStorage.getItem('protocolSeeded_lxrdgatsby')).toBe('true')
+  })
+
+  it('does not adopt a plan when the seed flag is absent', () => {
+    localStorage.setItem('activeStack', JSON.stringify([{ id: 'reta-cagri' }]))
+    localStorage.setItem('vials', JSON.stringify([{ id: 'vial-klow-b' }]))
+    localStorage.setItem(
+      'recomp-tracker-v1',
+      JSON.stringify({ peptides: [{ id: 'aod9604' }], injectionLogs: [{ date: '2026-08-23' }] })
+    )
+
+    setProtocolStorageScope('signup-id', false)
+    expect(localStorage.getItem('activeStack::signup-id')).toBeNull()
+    expect(localStorage.getItem('vials::signup-id')).toBeNull()
+    expect(localStorage.getItem('recomp-tracker-v1::signup-id')).toBeNull()
+    expect(localStorage.getItem('activeStack')).toContain('reta-cagri')
+    expect(localStorage.getItem('vials')).toContain('vial-klow-b')
+    expect(loadState().peptides).toEqual([])
+    expect(loadState().injectionLogs).toEqual([])
+  })
+
+  it('clears a new account cache without touching the legacy plan or logs', () => {
+    localStorage.setItem('vials', JSON.stringify([{ id: 'vial-aod-c' }]))
+    localStorage.setItem('pt-v2-dose-logs', JSON.stringify([{ id: 'legacy-log' }]))
+    localStorage.setItem('vials::signup-id', JSON.stringify([{ id: 'copied-vial' }]))
+    localStorage.setItem('pt-v2-dose-logs::signup-id', JSON.stringify([{ id: 'copied-log' }]))
+    localStorage.setItem('activeStack::signup-id', JSON.stringify([{ id: 'reta-cagri' }]))
+
+    clearScopedPlanCache('signup-id')
+
+    expect(localStorage.getItem('vials::signup-id')).toBeNull()
+    expect(localStorage.getItem('pt-v2-dose-logs::signup-id')).toBeNull()
+    expect(localStorage.getItem('activeStack::signup-id')).toBeNull()
+    expect(localStorage.getItem('vials')).toContain('vial-aod-c')
+    expect(localStorage.getItem('pt-v2-dose-logs')).toContain('legacy-log')
   })
 
   it('keeps his pause note off other users and teaches Selank + Semax', () => {
