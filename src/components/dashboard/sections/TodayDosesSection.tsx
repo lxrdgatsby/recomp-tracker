@@ -1,6 +1,8 @@
 import { Check, Syringe } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { Peptide } from '../../../types'
 import { getCurrentInjectionDose } from '../../../utils/recompProtocol'
+import type { TodayDoseVialMeta } from '../../../utils/todayDose'
 
 export type TodayDoseItem = {
   peptideId: string
@@ -15,19 +17,43 @@ interface TodayDosesSectionProps {
   injections: TodayDoseItem[]
   peptides: Peptide[]
   startDate: string
-  onLog: (compoundName: string, doseMg?: number) => void
-  onQuickDone: (peptideId: string) => void
+  vialMeta?: Record<string, TodayDoseVialMeta>
+  onMarkDone: (peptideId: string) => void | boolean | Promise<void | boolean>
   onLogUnscheduled: () => void
+}
+
+const EMPTY_META: TodayDoseVialMeta = {
+  dosesLeft: null,
+  expiresLabel: '—',
+  empty: false,
 }
 
 export function TodayDosesSection({
   injections,
   peptides,
   startDate,
-  onLog,
-  onQuickDone,
+  vialMeta = {},
+  onMarkDone,
   onLogUnscheduled,
 }: TodayDosesSectionProps) {
+  const [pendingId, setPendingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!pendingId) return
+    const row = injections.find((item) => item.peptideId === pendingId)
+    if (row?.done || row?.loggedTaken) setPendingId(null)
+  }, [injections, pendingId])
+
+  const mark = (peptideId: string) => {
+    if (pendingId) return
+    setPendingId(peptideId)
+    void Promise.resolve(onMarkDone(peptideId))
+      .then((ok) => {
+        if (ok === false) setPendingId(null)
+      })
+      .catch(() => setPendingId(null))
+  }
+
   return (
     <section className="mb-6">
       <div className="mb-3 flex items-center justify-between gap-2 px-0.5">
@@ -35,8 +61,12 @@ export function TodayDosesSection({
           Today&apos;s doses
         </h2>
         <span className="text-[11px] text-slate-600">
-          {injections.filter((i) => i.done || i.loggedTaken).length}/
-          {injections.length || 0} done
+          {
+            injections.filter(
+              (i) => i.done || i.loggedTaken || i.peptideId === pendingId
+            ).length
+          }
+          /{injections.length || 0} done
         </span>
       </div>
 
@@ -66,7 +96,15 @@ export function TodayDosesSection({
             const doseInfo = peptide
               ? getCurrentInjectionDose(peptide, startDate)
               : null
-            const complete = inj.done || inj.loggedTaken
+            const meta = vialMeta[inj.peptideId] ?? EMPTY_META
+            const pending = pendingId === inj.peptideId
+            const complete = inj.done || inj.loggedTaken || pending
+            const dosesLeft =
+              pending && !inj.done && !inj.loggedTaken && meta.dosesLeft != null
+                ? Math.max(0, meta.dosesLeft - 1)
+                : meta.dosesLeft
+            const dosesLeftLabel = dosesLeft == null ? '—' : String(dosesLeft)
+            const blocked = meta.empty && !complete
 
             return (
               <div
@@ -106,41 +144,38 @@ export function TodayDosesSection({
                     </div>
                     <p className="mt-0.5 text-sm text-emerald-400">
                       {doseInfo?.doseLabel ?? inj.dose}
-                      {doseInfo?.syringeUnits != null && (
-                        <span className="text-slate-500">
-                          {' '}
-                          · {doseInfo.syringeUnits}u
-                        </span>
-                      )}
                     </p>
                     {inj.timing && (
                       <p className="mt-0.5 text-[11px] text-slate-500">
                         {inj.timing}
                       </p>
                     )}
+                    <p className="mt-1 text-[11px] text-slate-300">
+                      Doses left: {dosesLeftLabel}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-400">
+                      Expires: {meta.expiresLabel}
+                    </p>
+                    {dosesLeft === 0 && (
+                      <p className="mt-0.5 text-[11px] text-slate-500">Vial empty</p>
+                    )}
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onLog(inj.peptideName, doseInfo?.doseMg)}
-                    className="min-h-12 rounded-2xl bg-emerald-500 text-sm font-semibold text-black active:bg-emerald-400"
-                  >
-                    Log
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onQuickDone(inj.peptideId)}
-                    className={`min-h-12 rounded-2xl text-sm font-medium ${
-                      complete
-                        ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                        : 'border border-white/15 bg-white/5 text-white'
-                    }`}
-                  >
-                    {complete ? 'Undo' : 'Mark done'}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={complete || blocked}
+                  onClick={() => mark(inj.peptideId)}
+                  className={`mt-3 min-h-12 w-full rounded-2xl text-sm font-semibold disabled:cursor-not-allowed ${
+                    complete
+                      ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 disabled:opacity-100'
+                      : blocked
+                        ? 'bg-white/5 text-slate-500'
+                        : 'bg-emerald-500 text-black active:bg-emerald-400'
+                  }`}
+                >
+                  {complete ? 'Done' : 'Mark Done'}
+                </button>
               </div>
             )
           })}

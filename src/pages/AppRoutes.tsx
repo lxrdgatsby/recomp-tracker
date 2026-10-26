@@ -13,13 +13,13 @@ import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { useAppContext } from './AppLayout'
 
 export function DashboardRoute() {
-  const { state, toggleInjection } = useAppContext()
+  const { state, markDoseDone } = useAppContext()
   const { userProfile } = useAuth()
   return (
     <DashboardView
       state={state}
       username={userProfile?.username}
-      onToggleInjection={toggleInjection}
+      onMarkDoseDone={markDoseDone}
     />
   )
 }

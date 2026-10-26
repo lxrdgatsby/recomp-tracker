@@ -203,7 +203,10 @@ function isWeeklyInjectionDay(date: Date, start: Date): boolean {
 }
 
 export function isInjectionDone(logs: InjectionLog[], date: string, peptideId: string): boolean {
-  return logs.some((l) => l.date === date && l.peptideId === peptideId)
+  const day = date.slice(0, 10)
+  return logs.some(
+    (l) => l.peptideId === peptideId && l.date.slice(0, 10) === day
+  )
 }
 
 export function getScheduleDates(startDate: string, count: number): string[] {

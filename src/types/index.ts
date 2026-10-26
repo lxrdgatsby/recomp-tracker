@@ -83,6 +83,9 @@ export interface InjectionLog {
   doseMg?: number
   units?: number
   vialId?: string
+  /** Local clock time the dose was marked taken, e.g. "7:05 AM". */
+  time?: string
+  injectionSite?: string
 }
 
 export interface WorkoutCompletion {

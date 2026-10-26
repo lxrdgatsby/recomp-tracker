@@ -17,6 +17,7 @@ import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
 import { addInjectionLogToState } from '../utils/injectionLogs'
 import { exportState } from '../utils/storage'
 import { loadVials, saveVials } from '../utils/inventoryStorage'
+import { commitMarkedDose } from '../utils/todayDose'
 import { applyVialToggle } from '../utils/vialUsage'
 import { recordWeight } from '../utils/calculations'
 
@@ -67,6 +68,7 @@ export interface AppContext {
   ) => Promise<void>
   logWeight: (date: string, weight: number) => Promise<void>
   toggleInjection: (date: string, peptideId: string) => Promise<void>
+  markDoseDone: (date: string, peptideId: string) => Promise<boolean>
   addInjectionLog: (log: DoseLog) => Promise<void>
   toggleWorkout: (date: string, week: number, dayIndex: number) => Promise<void>
   updateReconstitution: (
@@ -172,6 +174,32 @@ export function AppLayout() {
       } catch {
         /* ignore */
       }
+    },
+    markDoseDone: async (date, peptideId) => {
+      const vials =
+        trackerState.vialInventory && trackerState.vialInventory.length > 0
+          ? trackerState.vialInventory
+          : loadVials()
+      const result = commitMarkedDose({
+        vials,
+        peptides: trackerState.peptides,
+        startDate: trackerState.profile.startDate,
+        date,
+        peptideId,
+        logs: trackerState.injectionLogs,
+      })
+      if (!result.created) return false
+      await persistState({
+        ...trackerState,
+        injectionLogs: result.logs,
+        vialInventory: result.vials,
+      })
+      try {
+        window.dispatchEvent(new CustomEvent('pt-data-updated', { detail: 'dose' }))
+      } catch {
+        /* ignore */
+      }
+      return true
     },
     addInjectionLog: async (log) => {
       await persistState(addInjectionLogToState(trackerState, log))

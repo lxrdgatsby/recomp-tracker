@@ -237,9 +237,9 @@ export type NewDoseLogInput = {
   compoundId?: string
 }
 
-export function addDoseLog(input: NewDoseLogInput): DoseLog {
+function buildDoseLog(input: NewDoseLogInput): DoseLog {
   const createdAt = nowIso()
-  const log: DoseLog = {
+  return {
     id: generateId(),
     date: input.date || createdAt,
     compoundName: input.compoundName.trim(),
@@ -252,6 +252,10 @@ export function addDoseLog(input: NewDoseLogInput): DoseLog {
     taken: input.taken,
     createdAt,
   }
+}
+
+export function addDoseLog(input: NewDoseLogInput): DoseLog {
+  const log = buildDoseLog(input)
   const list = loadDoseLogs()
   list.unshift(log)
   saveDoseLogs(list)
@@ -261,6 +265,29 @@ export function addDoseLog(input: NewDoseLogInput): DoseLog {
   }
 
   return log
+}
+
+/** Append a taken-dose record. Vial remaining is updated by the injection log, not here. */
+export function recordScheduledDoseLog(input: NewDoseLogInput): DoseLog {
+  const log = buildDoseLog(input)
+  const list = loadDoseLogs()
+  list.unshift(log)
+  saveDoseLogs(list)
+  return log
+}
+
+export function hasTakenDoseLogOnDay(
+  compoundName: string,
+  day: string,
+  compoundId?: string
+): boolean {
+  const name = compoundName.trim().toLowerCase()
+  const date = day.slice(0, 10)
+  return loadDoseLogs().some((log) => {
+    if (!log.taken || log.date.slice(0, 10) !== date) return false
+    if (compoundId && log.compoundId === compoundId) return true
+    return log.compoundName.trim().toLowerCase() === name
+  })
 }
 
 export function getDoseLogsSince(days: number): DoseLog[] {

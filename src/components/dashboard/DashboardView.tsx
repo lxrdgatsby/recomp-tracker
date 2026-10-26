@@ -17,6 +17,8 @@ import {
 } from '../../utils/inventoryStorage'
 import { evaluatePlanHealth } from '../../utils/planHealth'
 import { getTodayDashboardData } from '../../utils/todayActions'
+import { loadVials } from '../../utils/inventoryStorage'
+import { vialMetaForPeptide } from '../../utils/todayDose'
 import { DoseLogger } from '../logging/DoseLogger'
 import { PlanHealthCard } from '../plan/PlanHealthCard'
 import { AdherenceSnapshot } from './sections/AdherenceSnapshot'
@@ -29,13 +31,13 @@ import { VialsSummary } from './sections/VialsSummary'
 interface DashboardViewProps {
   state: TrackerState
   username?: string | null
-  onToggleInjection: (date: string, peptideId: string) => void
+  onMarkDoseDone: (date: string, peptideId: string) => Promise<boolean>
 }
 
 export function DashboardView({
   state,
   username,
-  onToggleInjection,
+  onMarkDoseDone,
 }: DashboardViewProps) {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -89,6 +91,23 @@ export function DashboardView({
   }, [state, tick])
 
   const vials = useMemo(() => getActiveVials(), [tick])
+  const inventory = useMemo(
+    () =>
+      state.vialInventory && state.vialInventory.length > 0
+        ? state.vialInventory
+        : loadVials(),
+    [state.vialInventory, tick]
+  )
+  const vialMeta = useMemo(() => {
+    const map: Record<string, ReturnType<typeof vialMetaForPeptide>> = {}
+    for (const inj of enrichedInjections) {
+      const peptide = state.peptides.find((item) => item.id === inj.peptideId)
+      map[inj.peptideId] = peptide
+        ? vialMetaForPeptide(inventory, peptide, profile.startDate)
+        : { dosesLeft: null, expiresLabel: '—', empty: false }
+    }
+    return map
+  }, [enrichedInjections, inventory, state.peptides, profile.startDate])
   const lastCheckIn = getLastCheckIn()
 
   const weightSeries = useMemo(() => {
@@ -137,10 +156,11 @@ export function DashboardView({
         injections={enrichedInjections}
         peptides={state.peptides}
         startDate={profile.startDate}
-        onLog={(name, mg) => openLog(name, mg)}
-        onQuickDone={(id) => {
-          onToggleInjection(today, id)
+        vialMeta={vialMeta}
+        onMarkDone={async (id) => {
+          const created = await onMarkDoseDone(today, id)
           bump()
+          return created
         }}
         onLogUnscheduled={() => openLog()}
       />
