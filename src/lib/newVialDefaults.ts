@@ -4,6 +4,7 @@ import {
   getCatalogEntry,
   isVialSizeOption,
 } from '../constants/peptideCatalog'
+import { EIGHTY_MG_ONBOARDING_NOTE } from '../constants/reconstitutionGuide'
 import { getReconstitutionCompound, RECONSTITUTION_TABLE } from '../constants/reconstitutionTable'
 import { PROTOCOL_PEPTIDE_OPTIONS } from './vialInventory'
 import { u100UnitsFromMg } from '../utils/doseMath'
@@ -67,7 +68,13 @@ export function fillForNewVial(id: string): NewVialFill {
       : doseMg != null && units != null
         ? `Typical start: ${doseMg} mg ≈ ${units} units on U-100`
         : null
-    const helper = [start, table.note].filter(Boolean).join('. ') || null
+    const eighty =
+      table.vialMg === 80 && table.bacMl === 3 ? EIGHTY_MG_ONBOARDING_NOTE : null
+    const helper =
+      [start, eighty, table.note]
+        .filter(Boolean)
+        .join('. ')
+        .replace(/\.\.+/g, '.') || null
     return {
       vialMg: String(table.vialMg),
       bacMl: String(table.bacMl),

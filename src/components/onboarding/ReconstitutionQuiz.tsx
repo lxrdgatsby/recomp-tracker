@@ -69,7 +69,7 @@ export function ReconstitutionQuiz({ onComplete }: ReconstitutionQuizProps) {
       <h2 className="mb-2 text-2xl font-semibold">Quick reconstitution quiz</h2>
       <p className="mb-6 text-sm text-slate-400">
         Learn the standard BAC water volumes for 5mg, 10mg, 15mg, 20mg, 50mg,
-        100mg, and 1000mg vials using a U-100 insulin syringe (100 units = 1mL).
+        80mg, 100mg, and 1000mg vials using a U-100 insulin syringe (100 units = 1mL).
       </p>
 
       <p className="mb-1 text-xs text-emerald-400/80">

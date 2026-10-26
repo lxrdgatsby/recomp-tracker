@@ -3,7 +3,7 @@ import type { BacWaterUnits, Peptide, PeptideFrequency } from '../types'
 export const BAC_WATER_OPTIONS: BacWaterUnits[] = [100, 200, 300, 500]
 export const DEFAULT_BAC_WATER: BacWaterUnits = 200
 
-export const VIAL_SIZE_OPTIONS_MG = [5, 10, 15, 20, 30, 50, 100, 1000] as const
+export const VIAL_SIZE_OPTIONS_MG = [5, 10, 15, 20, 30, 50, 80, 100, 1000] as const
 export type VialSizeOptionMg = (typeof VIAL_SIZE_OPTIONS_MG)[number]
 
 export function formatVialSizeLabel(mg: number): string {

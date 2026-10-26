@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { ChevronDown, Syringe } from 'lucide-react'
 import {
   BAC_WATER_GUIDE_ROWS,
+  EIGHTY_MG_CONCENTRATION_LINE,
+  EIGHTY_MG_ONBOARDING_NOTE,
+  EIGHTY_MG_UNITS_LINE,
+  EIGHTY_MG_UNITS_NOTE,
   formatBacWaterGuideCompact,
   RECONSTITUTION_FAQ_QUESTION,
 } from '../../constants/reconstitutionGuide'
@@ -34,6 +38,12 @@ function GuideSections() {
             <li key={row.vialMg}>
               <strong className="text-white">{row.vialMg}mg vial</strong>:{' '}
               {row.units} units ({row.ml}mL)
+              {row.vialMg === 80 && (
+                <span className="mt-1 block text-slate-200">
+                  {EIGHTY_MG_ONBOARDING_NOTE} {EIGHTY_MG_CONCENTRATION_LINE}.{' '}
+                  {EIGHTY_MG_UNITS_NOTE} {EIGHTY_MG_UNITS_LINE}.
+                </span>
+              )}
             </li>
           ))}
         </ul>

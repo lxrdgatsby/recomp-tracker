@@ -104,7 +104,7 @@ export function DashboardView({
       const peptide = state.peptides.find((item) => item.id === inj.peptideId)
       map[inj.peptideId] = peptide
         ? vialMetaForPeptide(inventory, peptide, profile.startDate)
-        : { dosesLeft: null, expiresLabel: '—', empty: false }
+        : { dosesLeft: null, totalDoses: null, expiresLabel: '—', empty: false }
     }
     return map
   }, [enrichedInjections, inventory, state.peptides, profile.startDate])

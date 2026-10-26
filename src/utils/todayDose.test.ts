@@ -160,6 +160,7 @@ describe('today dose mark done', () => {
     )
     expect(meta.expiresLabel).toBe('Nov 22, 2026')
     expect(meta.dosesLeft).toBe(20)
+    expect(meta.totalDoses).toBe(20)
     expect(meta.empty).toBe(false)
   })
 
@@ -239,6 +240,10 @@ describe('today dose mark done', () => {
     )
     expect(beforeLeft).toBe(20)
     expect(afterLeft).toBe(19)
+    expect(result.vials.find((item) => item.id === 'new')?.vialMg).toBe(10)
+    const afterMeta = vialMetaForPeptide(result.vials, peptide(), '2026-08-23', NOW)
+    expect(afterMeta.totalDoses).toBe(20)
+    expect(afterMeta.dosesLeft).toBe(19)
 
     const again = markScheduledDoseDone({
       vials: result.vials,
@@ -278,7 +283,7 @@ describe('today dose mark done', () => {
     expect(result.vials[0]).toBe(empty)
     expect(
       vialMetaForPeptide([empty], peptide(), '2026-08-23', NOW)
-    ).toMatchObject({ dosesLeft: 0, empty: true })
+    ).toMatchObject({ dosesLeft: 0, totalDoses: 20, empty: true })
   })
 
   it('copies a newer saved site and appends a dose log without erasing history', () => {

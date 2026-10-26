@@ -13,6 +13,12 @@ describe('Dose Calculator KLOW 80 mg', () => {
     expect(screen.getByText('4 units')).toBeInTheDocument()
     expect(screen.getAllByText(/26\.67 mg\/mL/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/1 mg ≈ 3\.75 units/).length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(/Concentration = 80 mg ÷ 3 mL = 26\.67 mg\/mL/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Units for desired mg = \(desired_mg \/ 26\.67\) \* 100/)
+    ).toBeInTheDocument()
     expect(screen.getAllByText(/override units/i).length).toBeGreaterThan(0)
   })
 })

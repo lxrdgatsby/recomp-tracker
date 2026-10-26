@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { InjectionLog, Peptide } from '../../types'
 import type { Vial } from '../../types/v2'
 import { ToastProvider } from '../ui/Toast'
+import { buildLxrdgatsbyStack } from '../../lib/protocolSeed'
 import { getInjectionsForDate, isPeptideOnActiveStack } from '../../utils/peptideSchedule'
 import { describeShelfLife, formatVialDate, todayIso } from '../../utils/vialShelfLife'
+import { vialDoseStock } from '../../utils/vialUsage'
 import { VialInventory } from './VialInventory'
 
 function renderInventory() {
@@ -88,6 +90,29 @@ const tesaPeptide: Peptide = {
   name: 'Tesamorelin',
   dose: '1mg',
   frequency: 'daily',
+}
+
+function dosePeptide(id: string, name: string, doseMg: number): Peptide {
+  return {
+    id,
+    name,
+    dose: `${doseMg}mg`,
+    frequency: 'daily',
+    protocol: {
+      vialMg: 10,
+      bacWaterUnits: 200,
+      bacWaterMl: 2,
+      concentrationMgPerMl: doseMg === 0 ? 0 : 5,
+      concentrationLabel: '5 mg/mL',
+      startingDoseMg: doseMg,
+      startingDoseLabel: `${doseMg} mg`,
+      startingSyringeUnits: 20,
+      reconstituted: true,
+      calculationSummary: '',
+      reconstitutionSteps: [],
+      titration: [],
+    },
+  }
 }
 
 describe('Vial opened date, expiration, and remove', () => {
@@ -177,6 +202,89 @@ describe('Vial opened date, expiration, and remove', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it('shows total and remaining doses on every card', () => {
+    const aod = dosePeptide('aod9604', 'AOD-9604', 1)
+    const klow = dosePeptide('klow', 'KLOW', 1)
+    const aodVial = sampleVial({
+      id: 'vial-aod-c',
+      compoundName: 'AOD-9604',
+      compoundId: 'aod9604',
+      vialMg: 10,
+      bacWaterMl: 2,
+      concentrationMgPerMl: 5,
+      remainingMg: 9,
+    })
+    const klowVial = sampleVial({
+      id: 'vial-klow-example',
+      compoundName: 'KLOW',
+      compoundId: 'klow',
+      vialMg: 20,
+      bacWaterMl: 2,
+      concentrationMgPerMl: 10,
+      remainingMg: 18,
+      mixedDate: '2026-10-26',
+    })
+    const { rerender } = render(
+      <ToastProvider>
+        <VialInventory initialVials={[aodVial, klowVial]} peptides={[aod, klow]} />
+      </ToastProvider>
+    )
+    expect(screen.getByText('Total 10 / 9 doses left')).toBeInTheDocument()
+    expect(screen.getByText('Total 20 / 18 doses left')).toBeInTheDocument()
+
+    rerender(
+      <ToastProvider>
+        <VialInventory
+          initialVials={[{ ...aodVial, remainingMg: 8 }, klowVial]}
+          peptides={[aod, klow]}
+        />
+      </ToastProvider>
+    )
+    expect(screen.getByText('Total 10 / 8 doses left')).toBeInTheDocument()
+    expect(screen.getByText('Total 20 / 18 doses left')).toBeInTheDocument()
+    expect(screen.queryByText('Total 10 / 9 doses left')).not.toBeInTheDocument()
+
+    rerender(
+      <ToastProvider>
+        <VialInventory
+          initialVials={[{ ...aodVial, remainingMg: 0, depleted: true }, klowVial]}
+          peptides={[aod, klow]}
+        />
+      </ToastProvider>
+    )
+    expect(screen.getByText('Total 10 / 0 doses left')).toBeInTheDocument()
+    expect(screen.getByText('Total 20 / 18 doses left')).toBeInTheDocument()
+  })
+
+  it('counts lxrdgatsby AOD as 10 total and 9 remaining without touching logs', () => {
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const aod = peptides.find((peptide) => peptide.id === 'aod9604')!
+    const logs: InjectionLog[] = [
+      { date: '2026-08-23', peptideId: 'aod9604', doseMg: 0.3 },
+      { date: '2026-10-25', peptideId: 'aod9604', doseMg: 1, vialId: 'vial-aod-c' },
+    ]
+    const stock = vialDoseStock(
+      sampleVial({
+        id: 'vial-aod-c',
+        compoundName: 'AOD-9604',
+        compoundId: 'aod9604',
+        vialMg: 10,
+        bacWaterMl: 2,
+        concentrationMgPerMl: 5,
+        remainingMg: 9,
+        mixedDate: '2026-10-25',
+      }),
+      aod,
+      '2026-08-23',
+      new Date(2026, 9, 25)
+    )
+    expect(stock).toEqual({ total: 10, remaining: 9 })
+    expect(logs).toEqual([
+      { date: '2026-08-23', peptideId: 'aod9604', doseMg: 0.3 },
+      { date: '2026-10-25', peptideId: 'aod9604', doseMg: 1, vialId: 'vial-aod-c' },
+    ])
   })
 
   it('shows Opened, Expires 28 days later, and days left on each card', () => {

@@ -1,11 +1,16 @@
 import { CYCLE_START_DATE, DSIP_NOTE, DSIP_START_DATE } from '../constants/reconstitutionTable'
-import type { TrackerState } from '../types'
+import type { InjectionLog, Peptide, TrackerState } from '../types'
 import type { Vial } from '../types/v2'
 import {
   loadVials,
   saveVials,
 } from '../utils/inventoryStorage'
-import { recalculateVialInventory, vialIsClosed } from '../utils/vialUsage'
+import {
+  isReplacedVial,
+  recalculateVialInventory,
+  remainingDosesForVial,
+  vialIsClosed,
+} from '../utils/vialUsage'
 import { saveInventoryVials, type InventoryVial } from './vialInventory'
 import { writeLocal } from './protocolStorageScope'
 import { isLxrdgatsbyUser } from './protocolSeed'
@@ -417,6 +422,119 @@ function mergeVialTemplates(
   return out
 }
 
+function isAodVial(vial: Vial): boolean {
+  const compound = (vial.compoundId || '').trim().toLowerCase()
+  const name = vial.compoundName.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+  return compound === 'aod9604' || name === 'aod9604'
+}
+
+function aodOpenedKey(vial: Vial): string {
+  return `${(vial.mixedDate || '').slice(0, 10)} ${vial.createdAt || ''}`
+}
+
+function aodDosesLeft(
+  vial: Vial,
+  peptide: Peptide | undefined,
+  startDate: string,
+): number {
+  if (peptide) return remainingDosesForVial(vial, peptide, startDate)
+  if (isReplacedVial(vial) || vial.isPowder || vial.remainingMg <= 0.001) return 0
+  return Math.floor(vial.remainingMg)
+}
+
+function aodMixedWithStock(vial: Vial): boolean {
+  return !vial.isPowder && !isReplacedVial(vial) && !vial.depleted && vial.remainingMg > 0.001
+}
+
+/** Prefer the vial that shows 9 doses. A tie keeps the newest mixed vial. */
+function selectAodVialToKeep(
+  vials: Vial[],
+  peptide: Peptide | undefined,
+  startDate: string,
+): Vial | undefined {
+  if (vials.length === 0) return undefined
+  const nine = vials.filter((vial) => aodDosesLeft(vial, peptide, startDate) === 9)
+  const nineMixed = nine.filter(aodMixedWithStock)
+  const mixed = vials.filter(aodMixedWithStock)
+  const pool =
+    nineMixed.length > 0 ? nineMixed : nine.length > 0 ? nine : mixed.length > 0 ? mixed : vials
+  return [...pool].sort((a, b) => aodOpenedKey(b).localeCompare(aodOpenedKey(a)))[0]
+}
+
+function liveAodVial(vial: Vial): boolean {
+  return isAodVial(vial) && !vialIsClosed(vial)
+}
+
+/**
+ * Doses logged against a removed AOD vial stay in history.
+ * They are left out of the math so they cannot drain the vial that remains.
+ * Untagged Oct 25+ doses stay on Vial C while that vial is still in the list.
+ */
+function aodLogsForShownVials(logs: InjectionLog[], vials: Vial[]): InjectionLog[] {
+  const ids = new Set(vials.map((vial) => vial.id))
+  const sundayPresent = ids.has('vial-aod-c')
+  return logs.filter((log) => {
+    if (log.peptideId !== 'aod9604') return true
+    if (log.vialId) return ids.has(log.vialId)
+    return sundayPresent
+  })
+}
+
+function pinAodNine(vial: Vial, source: Vial): Vial {
+  return {
+    ...vial,
+    remainingMg: source.remainingMg,
+    depleted: false,
+    finishedAt: undefined,
+  }
+}
+
+function collapseExtraAodVials(
+  vials: Vial[],
+  source: Vial[],
+  peptide: Peptide | undefined,
+  startDate: string,
+  removed: Set<string>,
+): Vial[] {
+  const postAod = vials.filter(isAodVial)
+  const sourceById = new Map(source.filter(isAodVial).map((vial) => [vial.id, vial]))
+  const candidates: Vial[] = postAod.map((vial) => sourceById.get(vial.id) ?? vial)
+  for (const vial of source) {
+    if (!liveAodVial(vial)) continue
+    if (candidates.some((row) => row.id === vial.id)) continue
+    candidates.push(vial)
+  }
+  if (candidates.length < 2) return vials
+  const keeper = selectAodVialToKeep(candidates, peptide, startDate)
+  if (!keeper) return vials
+  const sourceKeeper = sourceById.get(keeper.id) ?? keeper
+  const keepNine = aodDosesLeft(sourceKeeper, peptide, startDate) === 9
+
+  const dropIds = new Set<string>()
+  for (const vial of postAod) {
+    if (vial.id !== keeper.id) dropIds.add(vial.id)
+  }
+  for (const vial of source) {
+    if (!isAodVial(vial) || vial.id === keeper.id) continue
+    if (vialIsClosed(vial) && !postAod.some((row) => row.id === vial.id)) continue
+    dropIds.add(vial.id)
+  }
+  if (dropIds.size === 0) return vials
+
+  for (const id of dropIds) {
+    removed.add(id)
+    rememberRemovedVial(id)
+  }
+
+  let next = vials.filter((vial) => !dropIds.has(vial.id))
+  if (!next.some((vial) => vial.id === keeper.id)) {
+    next = [...next, keepNine ? pinAodNine(sourceKeeper, sourceKeeper) : sourceKeeper]
+  } else if (keepNine) {
+    next = next.map((vial) => (vial.id === keeper.id ? pinAodNine(vial, sourceKeeper) : vial))
+  }
+  return next
+}
+
 export function applyLxrdgatsbyVialInventorySeed(
   current: TrackerState,
   username?: string | null,
@@ -435,14 +553,15 @@ export function applyLxrdgatsbyVialInventorySeed(
   const templates = buildLxrdgatsbyVials()
   const templateIds = new Set(templates.map((vial) => vial.id))
   const merged = mergeVialTemplates(existing, templates, removed)
+  const startDate = current.profile.startDate || CYCLE_START_DATE
   const kept = recalculateVialInventory({
     vials: merged,
-    logs: current.injectionLogs ?? [],
+    logs: aodLogsForShownVials(current.injectionLogs ?? [], merged),
     peptides: current.peptides,
-    startDate: current.profile.startDate || CYCLE_START_DATE,
+    startDate,
   }).filter((vial) => keepCurrentStackVial(vial, templateIds))
   const droppedKlow: string[] = []
-  const vials = kept.filter((vial) => {
+  const withoutExtraKlow = kept.filter((vial) => {
     const compound = (vial.compoundId || '').trim().toLowerCase()
     const name = vial.compoundName.trim().toLowerCase()
     const isKlow = compound === 'klow' || name === 'klow'
@@ -454,6 +573,14 @@ export function applyLxrdgatsbyVialInventorySeed(
     removed.add(id)
     rememberRemovedVial(id)
   }
+  const aodPeptide = current.peptides.find((peptide) => peptide.id === 'aod9604')
+  const vials = collapseExtraAodVials(
+    withoutExtraKlow,
+    existing,
+    aodPeptide,
+    startDate,
+    removed,
+  )
   const removedVialIds = [...removed]
   persistLocalVials(vials)
   return { ...current, vialInventory: vials, removedVialIds }

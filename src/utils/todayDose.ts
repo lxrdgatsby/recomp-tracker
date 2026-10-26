@@ -12,11 +12,13 @@ import {
   isReplacedVial,
   peptideIdOf,
   remainingDosesForVial,
+  vialDoseStock,
 } from './vialUsage'
 import { describeShelfLife, formatVialDate } from './vialShelfLife'
 
 export type TodayDoseVialMeta = {
   dosesLeft: number | null
+  totalDoses: number | null
   expiresLabel: string
   empty: boolean
 }
@@ -76,9 +78,13 @@ export function vialMetaForPeptide(
   now = new Date()
 ): TodayDoseVialMeta {
   const linked = linkedMixedVial(vials, peptide.id)
-  const dosesLeft = dosesLeftOnVial(linked, peptide, startDate, now)
+  const stock = linked
+    ? vialDoseStock(linked, peptide, startDate, now)
+    : { total: null, remaining: null }
+  const dosesLeft = stock.remaining ?? dosesLeftOnVial(linked, peptide, startDate, now)
   return {
     dosesLeft,
+    totalDoses: stock.total,
     expiresLabel: expiresLabelForVial(linked),
     empty: dosesLeft === 0,
   }

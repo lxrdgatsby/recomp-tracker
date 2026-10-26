@@ -27,6 +27,7 @@ describe('new vial compound defaults', () => {
     expect(fill.bacMl).toBe('3')
     expect(fill.helper).toMatch(/3\.75/)
     expect(fill.helper).toMatch(/1 mg/)
+    expect(fill.helper).toMatch(/80 mg vial \+ 3 mL BAC ≈ 26\.67 mg\/mL\. 1 mg ≈ 4 units\./)
   })
 
   it('fills Selank + Semax as 10 mg / 3 mL', () => {

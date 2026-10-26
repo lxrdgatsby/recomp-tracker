@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { Peptide } from '../../../types'
 import { getCurrentInjectionDose } from '../../../utils/recompProtocol'
 import type { TodayDoseVialMeta } from '../../../utils/todayDose'
+import { formatVialDoseStock } from '../../../utils/vialUsage'
 
 export type TodayDoseItem = {
   peptideId: string
@@ -24,6 +25,7 @@ interface TodayDosesSectionProps {
 
 const EMPTY_META: TodayDoseVialMeta = {
   dosesLeft: null,
+  totalDoses: null,
   expiresLabel: '—',
   empty: false,
 }
@@ -103,7 +105,8 @@ export function TodayDosesSection({
               pending && !inj.done && !inj.loggedTaken && meta.dosesLeft != null
                 ? Math.max(0, meta.dosesLeft - 1)
                 : meta.dosesLeft
-            const dosesLeftLabel = dosesLeft == null ? '—' : String(dosesLeft)
+            const stockLabel = formatVialDoseStock(meta.totalDoses, dosesLeft)
+            const dosesLeftLabel = stockLabel ?? `Doses left: ${dosesLeft == null ? '—' : dosesLeft}`
             const blocked = meta.empty && !complete
 
             return (
@@ -151,7 +154,7 @@ export function TodayDosesSection({
                       </p>
                     )}
                     <p className="mt-1 text-[11px] text-slate-300">
-                      Doses left: {dosesLeftLabel}
+                      {dosesLeftLabel}
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-400">
                       Expires: {meta.expiresLabel}

@@ -71,6 +71,20 @@ export const RECONSTITUTION_QUIZ: QuizQuestion[] = [
     explanation: '50mg and 100mg vials both use 300 units of BAC (3mL).',
   },
   {
+    id: 'bac-80mg',
+    prompt:
+      'For an 80mg peptide vial, including KLOW, how much bacteriostatic water should you add?',
+    options: [
+      { id: '200', label: '200 units (2mL)' },
+      { id: '300', label: '300 units (3.0mL)' },
+      { id: '400', label: '400 units (4mL)' },
+      { id: '500', label: '500 units (5mL)' },
+    ],
+    correctOptionId: '300',
+    explanation:
+      'An 80mg vial uses 3.0 mL (300 units) of BAC. Concentration = 80 mg ÷ 3 mL = 26.67 mg/mL. 1 mg ≈ 3.75 units on U-100, shown as ~4 units. Units for desired mg = (desired_mg / 26.67) * 100.',
+  },
+  {
     id: 'bac-1000mg',
     prompt: 'For a 1000mg peptide vial, how much bacteriostatic water should you add?',
     options: [

@@ -23,10 +23,11 @@ import {
   applyVialEdits,
   doseMgForDate,
   getActiveVialForPeptide,
+  formatVialDoseStock,
   isReplacedVial,
   peptideIdOf,
-  remainingDosesForVial,
   retireVial,
+  vialDoseStock,
   vialIsClosed,
 } from '../../utils/vialUsage'
 import { formatUnits } from '../../utils/doseMath'
@@ -541,10 +542,16 @@ export function VialInventory({
     const dose = peptide
       ? doseMgForDate(peptide, today, planStart)
       : { doseMg: doseHintFor(vial.compoundName), units: 0 }
-    const left = peptide
-      ? remainingDosesForVial(vial, peptide, planStart)
-      : Math.max(0, Math.floor((vial.remainingMg || 0) / (dose.doseMg || 1)))
-    const low = !empty && !replaced && peptideId !== 'test-cyp' && left <= 3
+    const stock = vialDoseStock(
+      vial,
+      peptide,
+      planStart,
+      new Date(),
+      dose.doseMg > 0 ? dose.doseMg : doseHintFor(vial.compoundName)
+    )
+    const left = stock.remaining
+    const stockLabel = formatVialDoseStock(stock.total, stock.remaining)
+    const low = !empty && !replaced && peptideId !== 'test-cyp' && left != null && left <= 3
     const status = replaced
       ? 'Replaced'
       : empty
@@ -640,12 +647,16 @@ export function VialInventory({
                     <span className={`font-semibold ${empty ? 'text-red-300' : 'text-emerald-400'}`}>
                       {formatMg(vial.remainingMg)}
                     </span>
-                    {!empty && (
-                      <span className="text-slate-500">
-                        {' '}
-                        · {left} dose{left === 1 ? '' : 's'} left
-                      </span>
+                    {stockLabel && (
+                      <div className={`mt-0.5 font-semibold ${empty ? 'text-red-300' : 'text-emerald-400'}`}>
+                        {stockLabel}
+                      </div>
                     )}
+                  </div>
+                )}
+                {peptideId === 'test-cyp' && stockLabel && (
+                  <div className={`mt-2 text-sm font-semibold ${empty ? 'text-red-300' : 'text-emerald-400'}`}>
+                    {stockLabel}
                   </div>
                 )}
                 {low && (

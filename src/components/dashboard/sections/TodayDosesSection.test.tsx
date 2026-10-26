@@ -12,7 +12,7 @@ const aod: TodayDoseItem = {
 
 function renderDoses(
   item: TodayDoseItem = aod,
-  meta = { dosesLeft: 18, expiresLabel: 'Nov 22, 2026', empty: false },
+  meta = { dosesLeft: 18, totalDoses: 20, expiresLabel: 'Nov 22, 2026', empty: false },
   onMarkDone = vi.fn()
 ) {
   return render(
@@ -35,20 +35,21 @@ describe('Today’s doses', () => {
     expect(screen.queryByRole('button', { name: /^Log$/ })).not.toBeInTheDocument()
     expect(screen.getByText('20 units on U-100')).toBeInTheDocument()
     expect(screen.getByText('Morning, fasted')).toBeInTheDocument()
-    expect(screen.getByText('Doses left: 18')).toBeInTheDocument()
+    expect(screen.getByText('Total 20 / 18 doses left')).toBeInTheDocument()
     expect(screen.getByText('Expires: Nov 22, 2026')).toBeInTheDocument()
   })
 
   it('marks the dose done and drops doses left by one on tap', () => {
     const onMarkDone = vi.fn(() => new Promise<boolean>(() => {}))
-    renderDoses(aod, { dosesLeft: 18, expiresLabel: 'Nov 22, 2026', empty: false }, onMarkDone)
+    renderDoses(aod, { dosesLeft: 18, totalDoses: 20, expiresLabel: 'Nov 22, 2026', empty: false }, onMarkDone)
 
     fireEvent.click(screen.getByRole('button', { name: 'Mark Done' }))
 
     expect(onMarkDone).toHaveBeenCalledTimes(1)
     expect(onMarkDone).toHaveBeenCalledWith('aod9604')
     expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
-    expect(screen.getByText('Doses left: 17')).toBeInTheDocument()
+    expect(screen.getByText('Total 20 / 17 doses left')).toBeInTheDocument()
+    expect(screen.queryByText('Total 20 / 18 doses left')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Mark Done' })).not.toBeInTheDocument()
   })
 
@@ -65,11 +66,11 @@ describe('Today’s doses', () => {
     const onMarkDone = vi.fn()
     const { rerender } = renderDoses(
       aod,
-      { dosesLeft: 0, expiresLabel: 'Nov 22, 2026', empty: true },
+      { dosesLeft: 0, totalDoses: 10, expiresLabel: 'Nov 22, 2026', empty: true },
       onMarkDone
     )
 
-    expect(screen.getByText('Doses left: 0')).toBeInTheDocument()
+    expect(screen.getByText('Total 10 / 0 doses left')).toBeInTheDocument()
     expect(screen.getByText('Vial empty')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Mark Done' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Mark Done' }))
@@ -81,7 +82,7 @@ describe('Today’s doses', () => {
         peptides={[]}
         startDate="2026-08-23"
         vialMeta={{
-          aod9604: { dosesLeft: null, expiresLabel: '—', empty: false },
+          aod9604: { dosesLeft: null, totalDoses: null, expiresLabel: '—', empty: false },
         }}
         onMarkDone={onMarkDone}
         onLogUnscheduled={vi.fn()}

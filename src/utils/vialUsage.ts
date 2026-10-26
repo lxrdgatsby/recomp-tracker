@@ -220,6 +220,66 @@ export function remainingDosesForVial(
   return Math.floor(vial.remainingMg / dose)
 }
 
+function isoFromDate(fromDate: Date): string {
+  return `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}-${String(fromDate.getDate()).padStart(2, '0')}`
+}
+
+/** Dose size the vial was mixed for. Falls back to today's dose, then the hint. */
+function doseSizeForVial(
+  vial: Vial,
+  peptide: Peptide | undefined,
+  startDate: string,
+  fromDate: Date,
+  hintDoseMg: number
+): number {
+  if (!peptide) return hintDoseMg > 0 ? hintDoseMg : 0
+  const todayDose = doseMgForDate(peptide, isoFromDate(fromDate), startDate).doseMg
+  if (todayDose > 0) return todayDose
+  const opened = (vial.mixedDate || '').slice(0, 10)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(opened)) {
+    const mixedDose = doseMgForDate(peptide, opened, startDate).doseMg
+    if (mixedDose > 0) return mixedDose
+  }
+  if ((peptide.protocol?.startingDoseMg ?? 0) > 0) return peptide.protocol!.startingDoseMg
+  return hintDoseMg > 0 ? hintDoseMg : 0
+}
+
+/**
+ * Total is the original dose count from vial mg and that peptide's dose size.
+ * Remaining is what's left after logged doses. Total does not change when a dose is taken.
+ */
+export function vialDoseStock(
+  vial: Vial,
+  peptide: Peptide | undefined,
+  startDate: string,
+  fromDate = new Date(),
+  hintDoseMg = 0
+): { total: number | null; remaining: number | null } {
+  if (peptide?.id === 'test-cyp') {
+    const total =
+      vial.startingMl != null && vial.startingMl > 0 ? Math.floor(vial.startingMl / 0.75) : null
+    if (vial.remainingMl == null) return { total, remaining: null }
+    const remaining = vial.remainingMl <= 0.001 ? 0 : Math.floor(vial.remainingMl / 0.75)
+    return { total, remaining }
+  }
+  const dose = doseSizeForVial(vial, peptide, startDate, fromDate, hintDoseMg)
+  if (dose <= 0 || vial.vialMg <= 0) return { total: null, remaining: null }
+  const total = Math.floor(vial.vialMg / dose)
+  if (isReplacedVial(vial) || vial.remainingMg <= 0.001) return { total, remaining: 0 }
+  if (peptide?.id === 'amino1mq') {
+    return { total, remaining: remainingDosesForVial(vial, peptide, startDate, fromDate) }
+  }
+  return { total, remaining: Math.floor(vial.remainingMg / dose) }
+}
+
+export function formatVialDoseStock(
+  total: number | null,
+  remaining: number | null
+): string | null {
+  if (total == null || remaining == null) return null
+  return `Total ${total} / ${remaining} doses left`
+}
+
 export function recalculateVialInventory(opts: {
   vials: Vial[]
   logs: InjectionLog[]

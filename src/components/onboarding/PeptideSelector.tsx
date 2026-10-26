@@ -10,7 +10,8 @@ import {
 } from '../../constants/peptideCatalog'
 import type { FamiliarityLevel } from '../../types/auth'
 import type { BacWaterUnits } from '../../types'
-import { previewStartingDose } from '../../utils/recompProtocol'
+import { EIGHTY_MG_ONBOARDING_NOTE } from '../../constants/reconstitutionGuide'
+import { parseDoseToMg, previewStartingDose } from '../../utils/recompProtocol'
 import { ReconstitutionGuide } from '../peptides/ReconstitutionGuide'
 
 const SELECT_CLASS =
@@ -119,6 +120,12 @@ export function PeptideSelector({
             const entry = getCatalogEntry(selection.catalogId)
             if (!entry) return null
             const preview = previewStartingDose(selection, familiarity)
+            const vialMg = parseDoseToMg(selection.dose)
+            const eightyMg = vialMg === 80
+            const concentration =
+              eightyMg && selection.bacWaterUnits > 0
+                ? vialMg / (selection.bacWaterUnits / 100)
+                : null
             return (
               <div
                 key={selection.catalogId}
@@ -181,6 +188,7 @@ export function PeptideSelector({
                               bacWaterUnits: units as BacWaterUnits,
                             })
                           }
+                          aria-pressed={selection.bacWaterUnits === units}
                           className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
                             selection.bacWaterUnits === units
                               ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
@@ -201,6 +209,13 @@ export function PeptideSelector({
                       updateSelection(selection.catalogId, { status })
                     }
                   />
+
+                  {eightyMg && concentration != null && (
+                    <p className="text-xs leading-relaxed text-amber-200/90">
+                      Concentration: ~{concentration.toFixed(2)} mg/mL
+                      {selection.bacWaterUnits === 300 ? `. ${EIGHTY_MG_ONBOARDING_NOTE}` : ''}
+                    </p>
+                  )}
 
                   {preview && (
                     <div className="rounded-lg border border-teal-500/20 bg-teal-500/5 px-3 py-2 text-xs">

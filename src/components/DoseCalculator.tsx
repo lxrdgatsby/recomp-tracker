@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Calculator } from 'lucide-react'
 import {
+  EIGHTY_MG_CONCENTRATION_LINE,
+  EIGHTY_MG_UNITS_LINE,
+  EIGHTY_MG_UNITS_NOTE,
+} from '../constants/reconstitutionGuide'
+import {
   getReconstitutionCompound,
   KLOW_80_NOTE,
   RECONSTITUTION_TABLE,
@@ -293,6 +298,11 @@ export function DoseCalculator({
 
       <p className="mb-4 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-mono text-xs text-slate-400">
         {U100_FORMULA}
+        {parsedVial === 80 && parsedBac === 3 && (
+          <span className="mt-2 block font-sans text-slate-300">
+            {EIGHTY_MG_CONCENTRATION_LINE}. {EIGHTY_MG_UNITS_LINE}. {EIGHTY_MG_UNITS_NOTE}
+          </span>
+        )}
       </p>
 
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">

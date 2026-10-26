@@ -15,8 +15,10 @@ import {
   vialIdForDate,
 } from '../utils/vialUsage'
 import { getInjectionsForDate } from '../utils/peptideSchedule'
-import { rememberRemovedVial } from './removedCompounds'
+import { linkedMixedVial } from '../utils/todayDose'
+import { forgetRemovedIds, rememberRemovedVial } from './removedCompounds'
 import type { InjectionLog } from '../types'
+import type { Vial } from '../types/v2'
 
 describe('lxrdgatsby vial inventory from logged doses', () => {
   afterEach(() => {
@@ -405,6 +407,220 @@ describe('lxrdgatsby vial inventory from logged doses', () => {
     expect(applyLxrdgatsbyVialInventorySeed(other, 'bubblesmama', 'bubblesmama@example.com')).toBeNull()
     expect(other.vialInventory).toEqual([fresh])
     expect(other.injectionLogs).toEqual([{ date: '2026-10-01', peptideId: 'ghkcu' }])
+    localStorage.clear()
+  })
+
+  it('keeps the AOD vial with 9 doses and drops the extra one', () => {
+    localStorage.clear()
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const aod = peptides.find((peptide) => peptide.id === 'aod9604')!
+    const extra: Vial = {
+      id: 'vial-aod-extra',
+      compoundName: 'AOD-9604',
+      compoundId: 'aod9604',
+      vialMg: 10,
+      bacWaterMl: 2,
+      concentrationMgPerMl: 5,
+      mixedDate: '2026-10-26',
+      isPowder: false,
+      remainingMg: 9,
+      depleted: false,
+      createdAt: '2026-10-26T18:00:00.000Z',
+    }
+    const logs: InjectionLog[] = [
+      { date: '2026-08-23', peptideId: 'aod9604', doseMg: 1 },
+      { date: '2026-10-25', peptideId: 'aod9604', doseMg: 1 },
+      { date: '2026-10-26', peptideId: 'aod9604', doseMg: 1, vialId: 'vial-aod-extra' },
+      { date: '2026-09-13', peptideId: 'tesamorelin', doseMg: 1 },
+    ]
+    const inventory = buildLxrdgatsbyVials().map((vial) =>
+      vial.id === 'vial-aod-c' ? { ...vial, remainingMg: 10 } : vial
+    )
+    const next = applyLxrdgatsbyVialInventorySeed(
+      {
+        profile: {
+          currentWeight: 156,
+          goalWeight: 145,
+          startDate: '2026-08-23',
+          weeklyLossTarget: 1.6,
+        },
+        peptides,
+        weightHistory: [],
+        injectionLogs: logs,
+        workoutCompletions: [],
+        vialInventory: [...inventory, extra],
+      },
+      'lxrdgatsby',
+      null,
+    )
+    const aodVials = next?.vialInventory?.filter((vial) => vial.compoundId === 'aod9604') ?? []
+    expect(aodVials.map((vial) => vial.id)).toEqual(['vial-aod-extra'])
+    expect(remainingDosesForVial(aodVials[0], aod, '2026-08-23', new Date(2026, 9, 26))).toBe(9)
+    expect(aodVials[0]?.remainingMg).toBe(9)
+    expect(next?.removedVialIds).toContain('vial-aod-c')
+    expect(next?.removedVialIds).not.toContain('vial-aod-extra')
+    expect(next?.injectionLogs).toEqual(logs)
+    expect(next?.peptides?.some((peptide) => peptide.id === 'aod9604')).toBe(true)
+    expect(next?.vialInventory?.some((vial) => vial.id === 'vial-reta-cagri')).toBe(true)
+    expect(linkedMixedVial(next?.vialInventory ?? [], 'aod9604')?.id).toBe('vial-aod-extra')
+
+    const again = applyLxrdgatsbyVialInventorySeed(next!, 'lxrdgatsby', null)
+    const againAod = again?.vialInventory?.filter((vial) => vial.compoundId === 'aod9604') ?? []
+    expect(againAod.map((vial) => vial.id)).toEqual(['vial-aod-extra'])
+    expect(remainingDosesForVial(againAod[0], aod, '2026-08-23', new Date(2026, 9, 26))).toBe(9)
+    expect(again?.injectionLogs).toEqual(logs)
+
+    forgetRemovedIds('vials', ['vial-aod-c'])
+    const revived = applyLxrdgatsbyVialInventorySeed(
+      {
+        ...again!,
+        removedVialIds: (again?.removedVialIds ?? []).filter((id) => id !== 'vial-aod-c'),
+      },
+      'lxrdgatsby',
+      null,
+    )
+    expect(revived?.vialInventory?.filter((vial) => vial.compoundId === 'aod9604').map((vial) => vial.id)).toEqual([
+      'vial-aod-extra',
+    ])
+    expect(revived?.vialInventory?.find((vial) => vial.id === 'vial-aod-extra')?.remainingMg).toBe(9)
+    expect(revived?.removedVialIds).toContain('vial-aod-c')
+    expect(revived?.injectionLogs).toEqual(logs)
+
+    const otherInventory = [extra, { ...extra, id: 'vial-aod-other', remainingMg: 10 }]
+    const other = {
+      profile: {
+        currentWeight: 160,
+        goalWeight: 145,
+        startDate: '2026-10-24',
+        weeklyLossTarget: 1,
+      },
+      peptides: [{ id: 'aod9604', name: 'AOD-9604', dose: '1mg', frequency: 'daily' as const }],
+      weightHistory: [],
+      injectionLogs: logs,
+      workoutCompletions: [],
+      vialInventory: otherInventory,
+    }
+    expect(applyLxrdgatsbyVialInventorySeed(other, 'bubblesmama', 'bubblesmama@example.com')).toBeNull()
+    expect(other.vialInventory).toEqual(otherInventory)
+    expect(other.injectionLogs).toEqual(logs)
+    localStorage.clear()
+  })
+
+  it('keeps the newer mixed AOD vial when both show 9 doses', () => {
+    localStorage.clear()
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const older: Vial = {
+      id: 'vial-aod-older',
+      compoundName: 'AOD-9604',
+      compoundId: 'aod9604',
+      vialMg: 10,
+      bacWaterMl: 2,
+      concentrationMgPerMl: 5,
+      mixedDate: '2026-10-25',
+      isPowder: false,
+      remainingMg: 9,
+      depleted: false,
+      createdAt: '2026-10-25T12:00:00.000Z',
+    }
+    const newer: Vial = {
+      ...older,
+      id: 'vial-aod-newer',
+      mixedDate: '2026-10-26',
+      createdAt: '2026-10-26T12:00:00.000Z',
+    }
+    const logs: InjectionLog[] = [
+      { date: '2026-10-25', peptideId: 'aod9604', doseMg: 1, vialId: 'vial-aod-older' },
+      { date: '2026-10-26', peptideId: 'aod9604', doseMg: 1, vialId: 'vial-aod-newer' },
+    ]
+    const base = buildLxrdgatsbyVials().filter((vial) => vial.compoundId !== 'aod9604')
+    const next = applyLxrdgatsbyVialInventorySeed(
+      {
+        profile: {
+          currentWeight: 156,
+          goalWeight: 145,
+          startDate: '2026-08-23',
+          weeklyLossTarget: 1.6,
+        },
+        peptides,
+        weightHistory: [],
+        injectionLogs: logs,
+        workoutCompletions: [],
+        vialInventory: [...base, older, newer],
+      },
+      'lxrdgatsby',
+      null,
+    )
+    const aodVials = next?.vialInventory?.filter((vial) => vial.compoundId === 'aod9604') ?? []
+    expect(aodVials.map((vial) => vial.id)).toEqual(['vial-aod-newer'])
+    expect(aodVials[0]?.remainingMg).toBe(9)
+    expect(next?.injectionLogs).toEqual(logs)
+    expect(linkedMixedVial(aodVials, 'aod9604')?.id).toBe('vial-aod-newer')
+    localStorage.clear()
+  })
+
+  it('keeps the Oct 25 AOD vial when that one has 9 doses left', () => {
+    localStorage.clear()
+    const { peptides } = buildLxrdgatsbyStack('2026-08-23')
+    const aod = peptides.find((peptide) => peptide.id === 'aod9604')!
+    const extra: Vial = {
+      id: 'vial-aod-full',
+      compoundName: 'AOD-9604',
+      compoundId: 'aod9604',
+      vialMg: 10,
+      bacWaterMl: 2,
+      concentrationMgPerMl: 5,
+      mixedDate: '2026-10-26',
+      isPowder: false,
+      remainingMg: 10,
+      depleted: false,
+      createdAt: '2026-10-26T18:00:00.000Z',
+    }
+    const logs: InjectionLog[] = [
+      { date: '2026-08-20', peptideId: 'aod9604', doseMg: 1 },
+      { date: '2026-10-25', peptideId: 'aod9604', doseMg: 1, vialId: 'vial-aod-c' },
+    ]
+    const inventory = buildLxrdgatsbyVials().map((vial) =>
+      vial.id === 'vial-aod-c' ? { ...vial, remainingMg: 9 } : vial
+    )
+    const next = applyLxrdgatsbyVialInventorySeed(
+      {
+        profile: {
+          currentWeight: 156,
+          goalWeight: 145,
+          startDate: '2026-08-23',
+          weeklyLossTarget: 1.6,
+        },
+        peptides,
+        weightHistory: [],
+        injectionLogs: logs,
+        workoutCompletions: [],
+        vialInventory: [...inventory, extra],
+      },
+      'lxrdgatsby',
+      null,
+    )
+    const aodVials = next?.vialInventory?.filter((vial) => vial.compoundId === 'aod9604') ?? []
+    expect(aodVials.map((vial) => vial.id)).toEqual(['vial-aod-c'])
+    expect(remainingDosesForVial(aodVials[0], aod, '2026-08-23', new Date(2026, 9, 25))).toBe(9)
+    expect(next?.removedVialIds).toContain('vial-aod-full')
+    expect(next?.injectionLogs).toEqual(logs)
+    expect(linkedMixedVial(aodVials, 'aod9604')?.id).toBe('vial-aod-c')
+
+    const marked = {
+      ...next!,
+      injectionLogs: [
+        ...logs,
+        { date: '2026-10-26', peptideId: 'aod9604', doseMg: 1, vialId: 'vial-aod-c' },
+      ],
+      vialInventory: next!.vialInventory?.map((vial) =>
+        vial.id === 'vial-aod-c' ? { ...vial, remainingMg: 8 } : vial
+      ),
+    }
+    const afterDose = applyLxrdgatsbyVialInventorySeed(marked, 'lxrdgatsby', null)
+    const afterAod = afterDose?.vialInventory?.find((vial) => vial.id === 'vial-aod-c')
+    expect(afterDose?.vialInventory?.filter((vial) => vial.compoundId === 'aod9604')).toHaveLength(1)
+    expect(remainingDosesForVial(afterAod!, aod, '2026-08-23', new Date(2026, 9, 26))).toBe(8)
+    expect(afterDose?.injectionLogs).toEqual(marked.injectionLogs)
     localStorage.clear()
   })
 
