@@ -27,11 +27,27 @@ Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 9
 | ~12:50 PM | Lifting block (day's split) | 50 min max | Jordan Yuam |
 | ~1:40 PM | Abs | 15 min | Jordan Yuam |
 | ~1:55 PM | Stretching | 10 min | Jordan Yuam |
-| ~2:00 PM | Post-workout meal | n/a | Meal 5 |
+| ~2:15 PM | **Dedicated cardio block** | 20 min | Research protocol (below) |
+| ~2:35 PM | Post-workout meal | n/a | Meal 5 |
 
 - Yuam's structure is 50 min lifting + 15 min abs + 10 min stretching = ~75 min total. The treadmill warm-up runs at the front, so the session ends right around 2:00 PM.
 - Training lands right after the 12:00 PM lunch and keeps the 6:00 AM – 10:00 AM eating window (shake, breakfast, mid-morning snack) clear of any session.
 - Well inside the "never train past 5 PM" rule.
+
+---
+
+## Dedicated Cardio Protocol (Dec 1 bulk start)
+
+**20 minutes, 12% incline, 3 mph — AFTER lifting and stretching, never before.**
+
+- **Days:** Monday, Wednesday, Friday (bench, squat, arms days)
+- **Timing:** ~2:15 PM, after the 10-min stretch, right before the 2:00 PM-shifted post-workout meal window
+- **Settings:** 12% incline, 3.0 mph, 20:00 duration
+- **Why this placement:** Research (umbrella review of 17 meta-analyses) shows lifting first preserves strength output; cardio before lifting measurably reduces same-session strength. Six-plus hours separation is ideal but unrealistic with this meal schedule, so post-lift is the next best slot.
+- **Muscle preservation:** 12% incline walking at 3 mph has almost no eccentric load, fires glutes 30–50% harder than flat walking, and burns ~250–300 kcal for a 155–180 lb person. Low catabolic potential compared to running.
+- **Retatrutide note:** The drug suppresses appetite, so every cardio calorie must be consciously replaced. This is why the 20-min cap matters more now than it did for Lautner at 17 eating 3,600 on autopilot. If strength slips on the same loads, cut to 2 days/week or drop incline to 8%.
+- **Tracking:** Weekly average weight must climb ~1 lb/week by week 3 of the bulk or the surplus — not the cardio — is the problem. Add 200 kcal if flat 7 days.
+- **Rest days:** Optional, any time, no incline requirement.
 
 ---
 
@@ -52,6 +68,7 @@ Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 9
 - Dips: 4×15
 - Dumbbell overhead tricep extension: 3×8–10
 - Incline chest flys: 4×15 light
+- **Cardio:** 20 min @ 12% incline, 3 mph (after stretching)
 
 ### Tuesday — Deadlift & Assistance
 - Deadlift: 5×5
@@ -68,6 +85,7 @@ Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 9
 - Box jumps: 4×15
 - Calf raises: 3×8–10
 - Hamstring curls: 4×15
+- **Cardio:** 20 min @ 12% incline, 3 mph (after stretching)
 
 ### Thursday — Shoulders
 - Military press: 5×5
@@ -79,6 +97,7 @@ Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 9
 
 ### Friday — Arms & Core Finisher
 - Superset pairs back-to-back, no rest between exercises
+- **Cardio:** 20 min @ 12% incline, 3 mph (after stretching)
 
 ### Abs (3 non-consecutive days)
 - Swiss ball pikes: 3–4×8–12
@@ -141,7 +160,7 @@ Lautner went 140→170 lbs over roughly 12 months. Your 156→186 is the same 30
 ### Phase 1 — Base Building (Weeks 11–14)
 - All main lifts at moderate loads, 3×8–10 volume
 - No eccentric "taste the weight" sessions yet
-- Cardio: 15 min max, 2x/week
+- Cardio: 20 min @ 12% incline, 3 mph, 3x/week (Mon/Wed/Fri), after stretching
 - Target: +1 lb/week on weekly average
 - Food swaps logged in diet tab if anything changes from the template
 
