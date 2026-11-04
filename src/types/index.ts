@@ -139,6 +139,7 @@ export interface WorkoutWeek {
   week: number
   days: WorkoutDay[]
   progressionNote: string
+  howTo?: readonly string[]
 }
 
 // v2 inventory / dose / plan models

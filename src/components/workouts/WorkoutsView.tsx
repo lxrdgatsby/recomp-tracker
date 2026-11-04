@@ -2,7 +2,7 @@ import { differenceInDays, parseISO } from 'date-fns'
 import { Check } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { TrackerState, WorkoutDay, WorkoutWeek } from '../types'
+import type { TrackerState, WorkoutDay, WorkoutWeek } from '../../types'
 import {
   LAUTNER_HOW_TO,
   LAUTNER_RULES,
@@ -10,10 +10,10 @@ import {
   isLautnerWeek,
   lautnerSessionDate,
   lautnerWeek,
-} from '../lib/lautnerPlan'
-import { getWorkoutDate, WORKOUT_PLAN } from '../utils/workoutPlan'
-import { getWorkoutQuickLog } from '../utils/workoutLogStorage'
-import { getWorkoutSessionLog } from '../utils/workoutSetStorage'
+} from '../../lib/lautnerPlan'
+import { getWorkoutDate, WORKOUT_PLAN } from '../../utils/workoutPlan'
+import { getWorkoutQuickLog } from '../../utils/workoutLogStorage'
+import { getWorkoutSessionLog } from '../../utils/workoutSetStorage'
 import { Card } from '../ui/Card'
 import { WorkoutLogModal } from './WorkoutLogModal'
 import { WorkoutQuickLogModal } from './WorkoutQuickLogModal'
