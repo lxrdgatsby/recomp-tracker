@@ -62,9 +62,22 @@ export function saveWorkoutSessionLog(log: WorkoutSessionLog): void {
   }
 }
 
+/** Set rows to open in Log Sets. A 3–4× range uses the top count. */
+export function prescribedSetCount(exercise: string): number {
+  const range = exercise.match(/(\d+)\s*[–-]\s*(\d+)\s*[×x]/i)
+  if (range) return Number(range[2])
+  const sets = exercise.match(/(\d+)\s*[×x]/i)
+  if (!sets) return 3
+  return Math.min(12, Math.max(1, Number(sets[1])))
+}
+
 export function buildEmptyExerciseLogs(exercises: string[]): ExerciseSetLog[] {
   return exercises.map((exercise) => ({
     exercise,
-    sets: [1, 2, 3].map((set) => ({ set, weight: '', reps: '' })),
+    sets: Array.from({ length: prescribedSetCount(exercise) }, (_, index) => ({
+      set: index + 1,
+      weight: '',
+      reps: '',
+    })),
   }))
 }

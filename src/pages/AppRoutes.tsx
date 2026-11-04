@@ -6,7 +6,10 @@ import { CompanyDashboard } from '../components/company/CompanyDashboard'
 import { SettingsPage } from '../components/settings/SettingsPage'
 import PeptidesPage from '../components/PeptidesPage'
 import { PlanView } from '../components/plan/PlanView'
+import { DietView } from '../components/diet/DietView'
 import { WorkoutsView } from '../components/workouts/WorkoutsView'
+import { isLxrdgatsbyUser } from '../lib/protocolSeed'
+import { Navigate } from 'react-router-dom'
 import { ProgressView } from '../components/progress/ProgressView'
 import { useAuth } from '../contexts/AuthContext'
 import { usePersistTrackerState } from '../hooks/usePersistTrackerState'
@@ -56,7 +59,18 @@ export function PlanRoute() {
 
 export function WorkoutsRoute() {
   const { state, toggleWorkout } = useAppContext()
-  return <WorkoutsView state={state} onToggleWorkout={toggleWorkout} />
+  const { userProfile } = useAuth()
+  const lautner = isLxrdgatsbyUser(userProfile?.username, userProfile?.email)
+  return <WorkoutsView state={state} onToggleWorkout={toggleWorkout} lautner={lautner} />
+}
+
+export function DietRoute() {
+  const { state } = useAppContext()
+  const { userProfile } = useAuth()
+  if (!isLxrdgatsbyUser(userProfile?.username, userProfile?.email)) {
+    return <Navigate to="/app" replace />
+  }
+  return <DietView startDate={state.profile.startDate} />
 }
 
 export function ProgressRoute() {

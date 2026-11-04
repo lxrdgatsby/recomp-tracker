@@ -2,7 +2,6 @@
 
 Source: Jordan Yuam's published program for Taylor Lautner's New Moon/Eclipse transformation.
 Adapted for Gatsby at 156 lbs targeting 186 lbs lean mass.
-
 Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 90.
 
 ---
@@ -69,6 +68,23 @@ Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 9
 - Swiss ball leg curls: 3–4×10–12
 - Hanging leg raises: hold 7–10 sec at top
 - Prone cobra: 3×60 sec
+
+---
+
+## Progression Timeline (matches Lautner's arc, week 11 onward)
+
+| Weeks | Block | What changes |
+|---|---|---|
+| 11–12 | Base solidification | Keep 3×8–10 volume. Log all working weights. No new maxes. |
+| 13–14 | First intensity block | Introduce "taste the weight" eccentrics on Monday bench and Wednesday squat. Jump straight to 4×15 on assistance lifts. |
+| 15–16 | Volume swing | Flip to 4×15 on primary lifts (bench, deadlift, squat, press), drop primary to 3×8–10 next week. Assistance stays 4×15. |
+| 17–18 | Load climb | When you hit top of every rep range on all sets, add 5 lbs. Eccentrics every other week. Cardio stays ≤20 min. |
+| 19–20 | Deload | Cut volume 40%, keep intensity. Recovery week — Yuam used these between shooting blocks. |
+| 21–24 | Second intensity block | Heaviest loads of the cycle. 5×5 on primaries at new maxes. Taste-the-weight on all four primary lifts. |
+| 25–28 | Volume swing + surplus check | Rotate 3×8–10 / 4×15 again. Weigh-in average must be climbing ~1 lb/week or add 200 kcal. |
+| 29–30 | Deload | Same as weeks 19–20. |
+| 31–36 | Peak block | Yuam's final months before filming: heaviest sustained loads, 2-hour sessions, food discipline at its strictest. Target 175–180 lbs here. |
+| 37–40 | Cut to shoot shape | Drop surplus to maintenance, keep protein at 186 g, keep lifting 3×/week to hold muscle. Photos weekly. |
 
 ---
 
@@ -159,4 +175,4 @@ Lautner went 140→170 lbs over roughly 12 months. Your 156→186 is the same 30
 - Weigh in daily, average weekly; if weekly average is flat for 7 days, add 200 kcal
 - Track photos weekly (front/side/back) to confirm muscle gain vs fat gain
 - Retatrutide: consider tapering or pausing during bulk — the drug's appetite suppression fights the surplus
-- Diet tab: check off each meal as eaten, log any swap with its macros so daily totals still hit 186 g protein / 93 g fat / ~330 g carbs
+- Diet tab: check off each meal as eaten. Totals auto-sum to 3,200 / 186 / 93 / 330. Log any swap with its macros so the day still hits those targets.

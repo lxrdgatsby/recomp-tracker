@@ -1,7 +1,15 @@
 import { differenceInDays, parseISO } from 'date-fns'
 import { Check } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import type { TrackerState, WorkoutDay } from '../../types'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import type { TrackerState, WorkoutDay, WorkoutWeek } from '../../types'
+import {
+  LAUTNER_RULES,
+  LAUTNER_WEEK_END,
+  isLautnerWeek,
+  lautnerSessionDate,
+  lautnerWeek,
+} from '../../lib/lautnerPlan'
 import { getWorkoutDate, WORKOUT_PLAN } from '../../utils/workoutPlan'
 import { getWorkoutQuickLog } from '../../utils/workoutLogStorage'
 import { getWorkoutSessionLog } from '../../utils/workoutSetStorage'
@@ -18,24 +26,37 @@ interface LogModalState {
 interface WorkoutsViewProps {
   state: TrackerState
   onToggleWorkout: (date: string, week: number, dayIndex: number) => void
+  lautner?: boolean
 }
 
-function getCurrentWeek(startDate: string): number {
+function getCurrentWeek(startDate: string, maxWeek: number): number {
   const offset = differenceInDays(new Date(), parseISO(startDate))
   if (offset < 0) return 1
-  return Math.min(Math.floor(offset / 7) + 1, WORKOUT_PLAN.length)
+  return Math.min(Math.floor(offset / 7) + 1, maxWeek)
 }
 
-export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
+function weekPlanFor(week: number, lautner: boolean): WorkoutWeek {
+  if (lautner && isLautnerWeek(week)) return lautnerWeek(week)
+  return WORKOUT_PLAN.find((item) => item.week === week) ?? WORKOUT_PLAN[0]
+}
+
+export function WorkoutsView({ state, onToggleWorkout, lautner = false }: WorkoutsViewProps) {
   const { profile, workoutCompletions, recompPlan } = state
+  const maxWeek = lautner ? LAUTNER_WEEK_END : WORKOUT_PLAN.length
+  const weeks = Array.from({ length: maxWeek }, (_, index) => index + 1)
   const [selectedWeek, setSelectedWeek] = useState(() =>
-    getCurrentWeek(profile.startDate)
+    getCurrentWeek(profile.startDate, maxWeek)
   )
+
+  useEffect(() => {
+    setSelectedWeek(getCurrentWeek(profile.startDate, maxWeek))
+  }, [lautner, profile.startDate, maxWeek])
   const [logModal, setLogModal] = useState<LogModalState | null>(null)
   const [quickLogModal, setQuickLogModal] = useState<LogModalState | null>(null)
   const [logsVersion, setLogsVersion] = useState(0)
 
-  const weekPlan = WORKOUT_PLAN.find((w) => w.week === selectedWeek) ?? WORKOUT_PLAN[0]
+  const bulkWeek = lautner && isLautnerWeek(selectedWeek)
+  const weekPlan = weekPlanFor(selectedWeek, lautner)
 
   const completedKeys = useMemo(
     () =>
@@ -52,7 +73,9 @@ export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
     <div className="min-w-0 max-w-full overflow-hidden pb-8 text-white">
       <h1 className="mb-1 text-2xl font-semibold sm:text-3xl">Workouts</h1>
       <p className="mb-2 text-xs text-slate-400 sm:text-sm">
-        5 on • 2 off • Progressive overload
+        {bulkWeek
+          ? 'Lautner bulk · 5 days · stop by 5 PM · cardio ≤ 20 min'
+          : '5 on • 2 off • Progressive overload'}
       </p>
 
       <div className="mb-3 flex items-center gap-2 sm:hidden">
@@ -65,9 +88,9 @@ export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
           onChange={(e) => setSelectedWeek(Number(e.target.value))}
           className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
         >
-          {WORKOUT_PLAN.map((w) => (
-            <option key={w.week} value={w.week}>
-              Week {w.week}
+          {weeks.map((week) => (
+            <option key={week} value={week}>
+              Week {week}
             </option>
           ))}
         </select>
@@ -79,24 +102,26 @@ export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
       </p>
 
       <div className="mb-4 hidden flex-wrap gap-1.5 sm:mb-6 sm:flex">
-        {WORKOUT_PLAN.map((w) => (
+        {weeks.map((week) => (
           <button
-            key={w.week}
+            key={week}
             type="button"
-            onClick={() => setSelectedWeek(w.week)}
+            onClick={() => setSelectedWeek(week)}
             className={`rounded-lg px-2.5 py-1.5 text-center text-xs font-medium transition-colors ${
-              selectedWeek === w.week
+              selectedWeek === week
                 ? 'bg-emerald-500/20 text-emerald-400'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10'
             }`}
           >
-            {w.week}
+            {week}
           </button>
         ))}
       </div>
 
       {weekPlan.days.map((day) => {
-        const date = getWorkoutDate(profile.startDate, selectedWeek, day.dayIndex)
+        const date = bulkWeek
+          ? lautnerSessionDate(profile.startDate, selectedWeek, day.dayIndex)
+          : getWorkoutDate(profile.startDate, selectedWeek, day.dayIndex)
         const done = isComplete(date, selectedWeek, day.dayIndex)
         void logsVersion
         const hasSetLog = !!getWorkoutSessionLog(selectedWeek, day.dayIndex, date)
@@ -176,21 +201,47 @@ export function WorkoutsView({ state, onToggleWorkout }: WorkoutsViewProps) {
               </p>
             )}
 
-            <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-slate-500 sm:mt-4 sm:gap-2 sm:text-xs">
-              <span className="rounded-full bg-white/5 px-2 py-0.5 sm:px-2.5 sm:py-1">
-                {day.stepsGoal.toLocaleString()} steps
-              </span>
-              <span className="rounded-full bg-white/5 px-2 py-0.5 sm:px-2.5 sm:py-1">
-                {day.pushupsGoal} pushups
-              </span>
-            </div>
+            {day.notes && (
+              <p className="mt-3 text-[11px] leading-relaxed text-slate-500 sm:text-xs">{day.notes}</p>
+            )}
+
+            {(day.stepsGoal > 0 || day.pushupsGoal > 0) && (
+              <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-slate-500 sm:mt-4 sm:gap-2 sm:text-xs">
+                {day.stepsGoal > 0 && (
+                  <span className="rounded-full bg-white/5 px-2 py-0.5 sm:px-2.5 sm:py-1">
+                    {day.stepsGoal.toLocaleString()} steps
+                  </span>
+                )}
+                {day.pushupsGoal > 0 && (
+                  <span className="rounded-full bg-white/5 px-2 py-0.5 sm:px-2.5 sm:py-1">
+                    {day.pushupsGoal} pushups
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )
       })}
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-400 sm:rounded-3xl sm:p-5 sm:text-sm">
-        Days 6 & 7 are rest days — aim for 10k+ steps, mobility, and recovery.
+        {bulkWeek
+          ? 'Saturday and Sunday are off. Do not train past 5 PM. Cardio stays at or under 20 minutes.'
+          : 'Days 6 & 7 are rest days — aim for 10k+ steps, mobility, and recovery.'}
       </div>
+
+      {bulkWeek && (
+        <div className="mt-4 rounded-2xl border border-[#c6a15b]/30 bg-[#c6a15b]/10 p-4 text-xs leading-relaxed text-[#f3ead8]">
+          <div className="mb-2 font-medium">Yuam’s three rules</div>
+          <ul className="space-y-1.5">
+            {LAUTNER_RULES.slice(0, 3).map((rule) => (
+              <li key={rule}>{rule}</li>
+            ))}
+          </ul>
+          <Link to="/app/diet" className="mt-3 inline-block text-emerald-400">
+            Diet · 3,200 kcal / 186 P / 93 F / 330 C
+          </Link>
+        </div>
+      )}
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <Card title="Nutrition">

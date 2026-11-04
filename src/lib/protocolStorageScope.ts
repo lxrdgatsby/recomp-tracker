@@ -33,6 +33,7 @@ export const PROTOCOL_LOCAL_KEYS = [
   'pt-v2-adaptive-plan',
   'workoutLogs',
   'workoutSetLogs',
+  'lautnerDietChecks',
   'reminderSettings',
   'reminderLastFired',
   'weighInReminderLastFired',

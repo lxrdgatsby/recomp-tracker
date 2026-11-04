@@ -122,6 +122,7 @@ export type ViewId =
   | 'peptides'
   | 'plan'
   | 'workouts'
+  | 'diet'
   | 'progress'
 
 export interface WorkoutDay {

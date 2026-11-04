@@ -5,6 +5,7 @@ import {
   CircleHelp,
   Dumbbell,
   Home,
+  Utensils,
   LogOut,
   MessageSquare,
   Settings,
@@ -25,6 +26,7 @@ const NAV: { id: ViewId; label: string; icon: typeof MessageSquare }[] = [
   { id: 'peptides', label: 'Peptides / Stack', icon: Syringe },
   { id: 'plan', label: '90-Day Plan', icon: Calendar },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },
+  { id: 'diet', label: 'Diet', icon: Utensils },
   { id: 'progress', label: 'Progress', icon: Activity },
   { id: 'faqs', label: 'FAQs', icon: CircleHelp },
 ]
@@ -35,6 +37,7 @@ interface SidebarProps {
   onExport: () => void
   username?: string | null
   onSignOut?: () => void
+  showDiet?: boolean
 }
 
 export function Sidebar({
@@ -43,7 +46,9 @@ export function Sidebar({
   onExport,
   username,
   onSignOut,
+  showDiet = false,
 }: SidebarProps) {
+  const items = NAV.filter((item) => item.id !== 'diet' || showDiet)
   return (
     <>
       <aside className="no-print hidden w-56 shrink-0 flex-col border-r border-white/10 bg-[#0a0a0a] lg:flex">
@@ -64,7 +69,7 @@ export function Sidebar({
           </Link>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {NAV.map(({ id, label, icon: Icon }) => (
+          {items.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
@@ -102,7 +107,7 @@ export function Sidebar({
         </div>
       </aside>
 
-      <BottomNav />
+      <BottomNav showDiet={showDiet} />
     </>
   )
 }

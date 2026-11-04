@@ -15,6 +15,7 @@ import {
   SettingsRoute,
   CompanyRoute,
   WorkoutsRoute,
+  DietRoute,
 } from './pages/AppRoutes'
 import { LoginPage } from './pages/LoginPage'
 import { OnboardingPage } from './pages/OnboardingPage'
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="peptides" element={<PeptidesRoute />} />
             <Route path="plan" element={<PlanRoute />} />
             <Route path="workouts" element={<WorkoutsRoute />} />
+            <Route path="diet" element={<DietRoute />} />
             <Route path="progress" element={<ProgressRoute />} />
           </Route>
           <Route path="/" element={<Navigate to="/app" replace />} />

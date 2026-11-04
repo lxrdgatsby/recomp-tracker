@@ -32,6 +32,7 @@ const ROUTE_MAP: Record<string, ViewId> = {
   '/app/peptides': 'peptides',
   '/app/plan': 'plan',
   '/app/workouts': 'workouts',
+  '/app/diet': 'diet',
   '/app/progress': 'progress',
 }
 
@@ -46,6 +47,7 @@ const VIEW_ROUTES: Record<ViewId, string> = {
   peptides: '/app/peptides',
   plan: '/app/plan',
   workouts: '/app/workouts',
+  diet: '/app/diet',
   progress: '/app/progress',
 }
 
@@ -242,6 +244,7 @@ export function AppLayout() {
         onExport={() => exportState(trackerState)}
         username={userProfile?.username}
         onSignOut={signOut}
+        showDiet={isLxrdgatsbyUser(userProfile?.username, userProfile?.email)}
       />
 
       <div className="pt-app-shell flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

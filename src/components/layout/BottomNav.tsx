@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Syringe,
   TrendingUp,
+  Utensils,
 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -16,17 +17,19 @@ const navItems = [
   { href: '/app/peptides', icon: Syringe, label: 'Peptides' },
   { href: '/app/plan', icon: Calendar, label: '90-Day' },
   { href: '/app/workouts', icon: Dumbbell, label: 'Workouts' },
+  { href: '/app/diet', icon: Utensils, label: 'Diet' },
   { href: '/app/progress', icon: TrendingUp, label: 'Progress' },
   { href: '/app/faqs', icon: HelpCircle, label: 'FAQs' },
 ] as const
 
-export function BottomNav() {
+export function BottomNav({ showDiet = false }: { showDiet?: boolean }) {
   const { pathname } = useLocation()
+  const items = navItems.filter((item) => item.href !== '/app/diet' || showDiet)
 
   return (
     <nav className="no-print fixed right-0 bottom-0 left-0 z-50 border-t border-white/10 bg-[#0a0a0a] px-2 pt-1 pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto flex max-w-lg items-center justify-around gap-0.5 overflow-x-auto">
-        {navItems.map(({ href, icon: Icon, label }) => {
+        {items.map(({ href, icon: Icon, label }) => {
           const isActive =
             href === '/app'
               ? pathname === '/app' || pathname === '/app/profile'
