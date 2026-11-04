@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isAdminEmail } from '../../constants/admin'
 import { useAuth } from '../../contexts/AuthContext'
+import { isLxrdgatsbyUser } from '../../lib/protocolSeed'
 import type { TrackerState } from '../../types'
 import {
   getLatestWeight,
@@ -22,6 +23,7 @@ import { vialMetaForPeptide } from '../../utils/todayDose'
 import { DoseLogger } from '../logging/DoseLogger'
 import { PlanHealthCard } from '../plan/PlanHealthCard'
 import { AdherenceSnapshot } from './sections/AdherenceSnapshot'
+import { BulkSwitchCountdown } from './sections/BulkSwitchCountdown'
 import { DashboardHeader } from './sections/DashboardHeader'
 import { ProgressSnapshot } from './sections/ProgressSnapshot'
 import { QuickActionsGrid } from './sections/QuickActionsGrid'
@@ -40,8 +42,9 @@ export function DashboardView({
   onMarkDoseDone,
 }: DashboardViewProps) {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, userProfile } = useAuth()
   const isAdmin = isAdminEmail(user?.email)
+  const isLxrd = isLxrdgatsbyUser(userProfile?.username, userProfile?.email)
   const { profile } = state
   const today = format(new Date(), 'yyyy-MM-dd')
   const dateLabel = format(new Date(), 'EEEE, MMM d')
@@ -150,6 +153,8 @@ export function DashboardView({
         dayInCycle={dayInCycle}
         totalDays={totalDays}
       />
+
+      {isLxrd && <BulkSwitchCountdown />}
 
       {/* 2. Today's Doses — highest priority */}
       <TodayDosesSection
