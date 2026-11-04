@@ -34,8 +34,12 @@ interface DayTemplate {
   abs: boolean
 }
 
-const SESSION_NOTE =
-  '12:45 PM start. Stretch 10 min (12:45-12:55). Lifting 50 min max (12:55-1:45). Abs 15 min (1:45-2:00). Cardio 20 min - 12% incline, 3 mph (2:00-2:20). Done by 5 PM.'
+const SESSION_NOTE_BASE =
+  '12:45 PM start. Stretch 10 min (12:45-12:55). Lifting 50 min max (12:55-1:45). Abs 15 min (1:45-2:00). Done by 5 PM.'
+
+const CARDIO_NOTE = 'Cardio 20 min - 12% incline, 3 mph (2:00-2:20).'
+
+const OFF_DAY_CARDIO_NOTE = 'Off day. Do 20 min cardio - 12% incline, 3 mph, anytime today.'
 
 const ABS: Lift[] = [
   {
@@ -296,6 +300,8 @@ export function lautnerWeek(week: number): WorkoutWeek {
         exercises.push(eccentricLine(lift.name))
       }
     }
+    const isCardioDay = day.dayIndex % 2 === 0
+    const notes = isCardioDay ? `${SESSION_NOTE_BASE} ${CARDIO_NOTE}` : SESSION_NOTE_BASE
     return {
       dayIndex: day.dayIndex,
       label: day.label,
@@ -303,10 +309,33 @@ export function lautnerWeek(week: number): WorkoutWeek {
       exercises,
       stepsGoal: 0,
       pushupsGoal: 0,
-      notes: SESSION_NOTE,
+      notes,
     }
   })
-  return { week, progressionNote: scheme.note, days }
+
+  // Off days: Saturday and Sunday with cardio note
+  const offDays: WorkoutDay[] = [
+    {
+      dayIndex: 5,
+      label: 'Saturday',
+      focus: 'Off Day — Cardio Day',
+      exercises: [],
+      stepsGoal: 0,
+      pushupsGoal: 0,
+      notes: OFF_DAY_CARDIO_NOTE,
+    },
+    {
+      dayIndex: 6,
+      label: 'Sunday',
+      focus: 'Off Day — Cardio Day',
+      exercises: [],
+      pushupsGoal: 0,
+      stepsGoal: 0,
+      notes: OFF_DAY_CARDIO_NOTE,
+    },
+  ]
+
+  return { week, progressionNote: scheme.note, days: [...days, ...offDays] }
 }
 
 /** Monday–Friday inside the plan week that starts on `startDate`. */
