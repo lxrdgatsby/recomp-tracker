@@ -1,8 +1,8 @@
 import { format } from 'date-fns'
 import { Check, Circle } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { isLautnerWeek, recompWeek } from '../..//lib/lautnerPlan'
-import { loadDietChecked, saveDietChecked } from '../..//utils/lautnerDietStorage'
+import { isLautnerWeek, recompWeek } from '../../lib/lautnerPlan'
+import { loadDietChecked, saveDietChecked } from '../../utils/lautnerDietStorage'
 
 type Meal = {
   id: string
@@ -213,7 +213,7 @@ export function DietView({ startDate }: { startDate: string }) {
       </div>
 
       <div className="rounded-lg bg-neutral-900 p-3 text-xs text-gray-500">
-        Swap any meal's foods anytime — just edit the numbers in <code>LAUTNER_MEALS</code> in{' '}
+        Swap any meal&apos;s foods anytime — just edit the numbers in <code>LAUTNER_MEALS</code> in{' '}
         <code>DietView.tsx</code> and the totals recompute automatically. Carry bag items count
         whenever you eat them.
       </div>
