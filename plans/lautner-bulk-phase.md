@@ -8,12 +8,30 @@ Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 9
 
 ## Overview
 
-- **Frequency:** 5 days/week, 2 hours/day
+- **Frequency:** 5 days/week, ~75 min/session (12:45 PM – 2:00 PM)
 - **Rest:** Day off every 3rd day, never train past 5 PM
 - **Warm-up:** Stretches + push-ups or air squats before every session
 - **Goal weight:** 186 lbs (add 30 lbs of muscle from 156)
 - **Start surplus:** ~3,200 kcal/day, add 200 kcal/week if no gain
 - **Protein:** 186 g/day | **Fat:** 93 g/day | **Carbs:** remainder
+
+---
+
+## Training Session Time Slot
+
+**Prescribed window: 12:45 PM – ~2:00 PM**, immediately before the 2:00 PM post-workout meal (protein bar, banana, raspberries), which is eaten right after lifting.
+
+| Time | Block | Duration | Source |
+|---|---|---|---|
+| 12:45 PM | Light treadmill warm-up | ~5 min (counts toward the 20-min cardio cap) | Project Swole |
+| ~12:50 PM | Lifting block (day's split) | 50 min max | Jordan Yuam |
+| ~1:40 PM | Abs | 15 min | Jordan Yuam |
+| ~1:55 PM | Stretching | 10 min | Jordan Yuam |
+| ~2:00 PM | Post-workout meal | n/a | Meal 5 |
+
+- Yuam's structure is 50 min lifting + 15 min abs + 10 min stretching = ~75 min total. The treadmill warm-up runs at the front, so the session ends right around 2:00 PM.
+- Training lands right after the 12:00 PM lunch and keeps the 6:00 AM – 10:00 AM eating window (shake, breakfast, mid-morning snack) clear of any session.
+- Well inside the "never train past 5 PM" rule.
 
 ---
 
@@ -99,11 +117,11 @@ Current position: Week 11 of 90-day recomp (Nov 2026). Bulk continues past day 9
 ### Meal Schedule
 
 1. **6:00 AM — Protein shake** (before fully awake)
-2. **Breakfast:** 4-egg omelet, yogurt, whole wheat toast, orange juice
-3. **Mid-morning snack:** nuts, strawberries, blueberries
-4. **Lunch:** roasted chicken, rice, green beans, fish
-5. **Post-workout:** protein bar, banana, raspberries
-6. **Dinner:** salmon, sweet potato, mixed vegetables, green tea
+2. **8:00 AM — Breakfast:** 4-egg omelet, yogurt, whole wheat toast, orange juice
+3. **10:00 AM — Mid-morning snack:** nuts, strawberries, blueberries
+4. **12:00 PM — Lunch:** roasted chicken, rice, green beans, fish
+5. **2:00 PM — Post-workout** (right after the 12:45 PM session): protein bar, banana, raspberries
+6. **4:00 PM — Dinner:** salmon, sweet potato, mixed vegetables, green tea
 
 ### Between-Meal Carry Bag
 - Beef patties
