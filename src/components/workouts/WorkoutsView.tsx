@@ -2,17 +2,18 @@ import { differenceInDays, parseISO } from 'date-fns'
 import { Check } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { TrackerState, WorkoutDay, WorkoutWeek } from '../../types'
+import type { TrackerState, WorkoutDay, WorkoutWeek } from '../types'
 import {
+  LAUTNER_HOW_TO,
   LAUTNER_RULES,
   LAUTNER_WEEK_END,
   isLautnerWeek,
   lautnerSessionDate,
   lautnerWeek,
-} from '../../lib/lautnerPlan'
-import { getWorkoutDate, WORKOUT_PLAN } from '../../utils/workoutPlan'
-import { getWorkoutQuickLog } from '../../utils/workoutLogStorage'
-import { getWorkoutSessionLog } from '../../utils/workoutSetStorage'
+} from '../lib/lautnerPlan'
+import { getWorkoutDate, WORKOUT_PLAN } from '../utils/workoutPlan'
+import { getWorkoutQuickLog } from '../utils/workoutLogStorage'
+import { getWorkoutSessionLog } from '../utils/workoutSetStorage'
 import { Card } from '../ui/Card'
 import { WorkoutLogModal } from './WorkoutLogModal'
 import { WorkoutQuickLogModal } from './WorkoutQuickLogModal'
@@ -89,7 +90,8 @@ export function WorkoutsView({ state, onToggleWorkout, lautner = false }: Workou
           className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-emerald-500/50 focus:outline-none"
         >
           {weeks.map((week) => (
-            <option key={week} value={week}>
+            <option key={week} value={week}
+            >
               Week {week}
             </option>
           ))}
@@ -107,8 +109,7 @@ export function WorkoutsView({ state, onToggleWorkout, lautner = false }: Workou
             key={week}
             type="button"
             onClick={() => setSelectedWeek(week)}
-            className={`rounded-lg px-2.5 py-1.5 text-center text-xs font-medium transition-colors ${
-              selectedWeek === week
+            className={`rounded-lg px-2.5 py-1.5 text-center text-xs font-medium transition-colors ${selectedWeek === week
                 ? 'bg-emerald-500/20 text-emerald-400'
                 : 'bg-white/5 text-slate-400 hover:bg-white/10'
             }`}
@@ -143,8 +144,7 @@ export function WorkoutsView({ state, onToggleWorkout, lautner = false }: Workou
                   onClick={() =>
                     setQuickLogModal({ day, date, week: selectedWeek })
                   }
-                  className={`flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all sm:rounded-2xl sm:px-5 ${
-                    hasQuickLog
+                  className={`flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all sm:rounded-2xl sm:px-5 ${hasQuickLog
                       ? 'bg-emerald-500/20 text-emerald-400'
                       : 'bg-emerald-500 text-black hover:bg-emerald-600'
                   }`}
@@ -156,8 +156,7 @@ export function WorkoutsView({ state, onToggleWorkout, lautner = false }: Workou
                   onClick={() =>
                     setLogModal({ day, date, week: selectedWeek })
                   }
-                  className={`flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition-all sm:rounded-2xl sm:px-5 ${
-                    hasSetLog
+                  className={`flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium transition-all sm:rounded-2xl sm:px-5 ${hasSetLog
                       ? 'border-white/20 bg-white/10 text-slate-200'
                       : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
                   }`}
@@ -169,8 +168,7 @@ export function WorkoutsView({ state, onToggleWorkout, lautner = false }: Workou
                   onClick={() =>
                     onToggleWorkout(date, selectedWeek, day.dayIndex)
                   }
-                  className={`flex items-center justify-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-medium transition-all sm:rounded-2xl sm:px-5 ${
-                    done
+                  className={`flex items-center justify-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-medium transition-all sm:rounded-2xl sm:px-5 ${done
                       ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-400'
                       : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/20'
                   }`}
@@ -237,12 +235,20 @@ export function WorkoutsView({ state, onToggleWorkout, lautner = false }: Workou
 
       {bulkWeek && (
         <div className="mt-4 rounded-2xl border border-[#c6a15b]/30 bg-[#c6a15b]/10 p-4 text-xs leading-relaxed text-[#f3ead8]">
-          <div className="mb-2 font-medium">Yuam’s three rules</div>
+          <div className="mb-2 font-medium">Yuam's three rules</div>
           <ul className="space-y-1.5">
             {LAUTNER_RULES.slice(0, 3).map((rule) => (
               <li key={rule}>{rule}</li>
             ))}
           </ul>
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <div className="mb-2 font-medium">How to follow them</div>
+            <ul className="space-y-2">
+              {LAUTNER_HOW_TO.map((step) => (
+                <li key={step} className="leading-relaxed">{step}</li>
+              ))}
+            </ul>
+          </div>
           <Link to="/app/diet" className="mt-3 inline-block text-emerald-400">
             Diet · 3,200 kcal / 186 P / 93 F / 330 C
           </Link>
