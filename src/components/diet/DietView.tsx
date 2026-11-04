@@ -202,6 +202,9 @@ export function DietView({ startDate }: { startDate: string }) {
                     <span className="text-xs text-gray-500">{m.calories} kcal</span>
                   </div>
                   <div className="text-sm text-gray-400">{m.foods}</div>
+                  {m.id === 'post' && (
+                    <div className="text-xs italic text-gray-500">Eat immediately after lifting.</div>
+                  )}
                   <div className="mt-1 text-xs text-gray-500">
                     P {m.protein}g · F {m.fat}g · C {m.carbs}g
                   </div>
