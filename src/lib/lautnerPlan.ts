@@ -13,6 +13,13 @@ export const LAUTNER_RULES = [
   'Retatrutide fights the surplus. Consider tapering or pausing it during this bulk. Research-use tracking only.',
 ]
 
+/** Plain-language reminder card for Yuam's three rules — read before every session. */
+export const LAUTNER_HOW_TO = [
+  'Rule 1 — Taste the weight: Load about 40% heavier than your normal 10-rep weight. Do NOT press it up. Only lower it slowly, 3 sets of 5, with someone spotting you. Do this every other week on your main lifts.',
+  'Rule 2 — Vary volume: Switch your assistance lifts between 3 sets of 8–10 reps one week and 4 sets of 15 reps the next. Alternate so your muscles never get comfortable.',
+  'Rule 3 — Cardio cap: Never do more than 20 minutes of cardio. It burns the calories you are trying to keep for muscle.',
+]
+
 type PrimaryKey = 'bench' | 'deadlift' | 'squat' | 'press'
 
 interface Lift {
@@ -47,22 +54,22 @@ const ABS: Lift[] = [
     sets: 4,
     reps: '8–12',
     role: 'finisher',
-    written: 'Swiss ball pikes: 3–4×8–12',
+    written: 'Swiss ball pikes: 3–4×8–12",
   },
   { name: 'Reverse crunches', sets: 3, reps: '15', role: 'finisher' },
   {
     name: 'Swiss ball leg curls',
     sets: 4,
-    reps: '10–12',
-    role: 'finisher',
-    written: 'Swiss ball leg curls: 3–4×10–12',
+    reps: '10–12",
+    role: 'finisher",
+    written: 'Swiss ball leg curls: 3–4×10–12",
   },
   {
     name: 'Hanging leg raises',
     sets: 3,
-    reps: 'hold',
-    role: 'finisher',
-    written: 'Hanging leg raises: 3×hold 7–10 sec at the top',
+    reps: 'hold",
+    role: 'finisher",
+    written: 'Hanging leg raises: 3×hold 7–10 sec at the top",
   },
   { name: 'Prone cobra', sets: 3, reps: '60 sec', role: 'finisher' },
 ]
@@ -112,8 +119,8 @@ const DAYS: DayTemplate[] = [
   },
   {
     dayIndex: 3,
-    label: 'Thursday',
-    focus: 'Shoulders',
+    label: 'Thursday",
+    focus: 'Shoulders",
     abs: false,
     lifts: [
       { name: 'Military press', sets: 5, reps: '5', role: 'primary', primaryKey: 'press' },
@@ -126,16 +133,16 @@ const DAYS: DayTemplate[] = [
   },
   {
     dayIndex: 4,
-    label: 'Friday',
-    focus: 'Arms & Core Finisher',
+    label: 'Friday",
+    focus: 'Arms & Core Finisher",
     abs: true,
     lifts: [
       {
-        name: 'Arm supersets',
+        name: 'Arm supersets",
         sets: 4,
-        reps: '10–12',
-        role: 'finisher',
-        extra: 'pairs back to back, no rest between exercises',
+        reps: '10–12",
+        role: 'finisher",
+        extra: 'pairs back to back, no rest between exercises",
       },
     ],
   },
@@ -157,7 +164,7 @@ function schemeForWeek(week: number): Scheme {
       assistance15: false,
       eccentric: [],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week <= 14) {
@@ -166,7 +173,7 @@ function schemeForWeek(week: number): Scheme {
       assistance15: true,
       eccentric: ['bench', 'squat'],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week === 15) {
@@ -176,7 +183,7 @@ function schemeForWeek(week: number): Scheme {
       primary: { sets: 4, reps: '15' },
       eccentric: [],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week === 16) {
@@ -186,7 +193,7 @@ function schemeForWeek(week: number): Scheme {
       primary: { sets: 3, reps: '8–10' },
       eccentric: [],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week <= 18) {
@@ -198,7 +205,7 @@ function schemeForWeek(week: number): Scheme {
       assistance15: false,
       eccentric: week % 2 === 1 ? ['bench', 'deadlift', 'squat', 'press'] : [],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week <= 20) {
@@ -207,7 +214,7 @@ function schemeForWeek(week: number): Scheme {
       assistance15: false,
       eccentric: [],
       deload: true,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week <= 24) {
@@ -216,7 +223,7 @@ function schemeForWeek(week: number): Scheme {
       assistance15: false,
       eccentric: ['bench', 'deadlift', 'squat', 'press'],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week <= 28) {
@@ -229,7 +236,7 @@ function schemeForWeek(week: number): Scheme {
       primary: high ? { sets: 4, reps: '15' } : { sets: 3, reps: '8–10' },
       eccentric: [],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week <= 30) {
@@ -238,7 +245,7 @@ function schemeForWeek(week: number): Scheme {
       assistance15: false,
       eccentric: [],
       deload: true,
-      days: 'all',
+      days: 'all",
     }
   }
   if (week <= 36) {
@@ -247,7 +254,7 @@ function schemeForWeek(week: number): Scheme {
       assistance15: false,
       eccentric: [],
       deload: false,
-      days: 'all',
+      days: 'all",
     }
   }
   return {
@@ -255,7 +262,7 @@ function schemeForWeek(week: number): Scheme {
     assistance15: false,
     eccentric: [],
     deload: false,
-    days: 'mwf',
+    days: 'mwf",
   }
 }
 
@@ -326,8 +333,8 @@ export function lautnerWeek(week: number): WorkoutWeek {
     },
     {
       dayIndex: 6,
-      label: 'Sunday',
-      focus: 'Off Day — Cardio Day',
+      label: 'Sunday",
+      focus: 'Off Day — Cardio Day",
       exercises: [],
       pushupsGoal: 0,
       stepsGoal: 0,
@@ -335,7 +342,7 @@ export function lautnerWeek(week: number): WorkoutWeek {
     },
   ]
 
-  return { week, progressionNote: scheme.note, days: [...days, ...offDays] }
+  return { week, progressionNote: scheme.note, days: [...days, ...offDays], howTo: LAUTNER_HOW_TO }
 }
 
 /** Monday–Friday inside the plan week that starts on `startDate`. */
