@@ -1,8 +1,8 @@
 import { format } from 'date-fns'
 import { Check, Circle } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { isLautnerWeek, recompWeek } from '../../lib/lautnerPlan'
-import { loadDietChecked, saveDietChecked } from '../../utils/lautnerDietStorage'
+import { isLautnerWeek, recompWeek } from '../..//lib/lautnerPlan'
+import { loadDietChecked, saveDietChecked } from '../..//utils/lautnerDietStorage'
 
 type Meal = {
   id: string
@@ -29,7 +29,7 @@ export const LAUTNER_MEALS: Meal[] = [
   },
   {
     id: 'breakfast',
-    time: 'Breakfast',
+    time: '8:00 AM',
     label: 'Breakfast',
     foods: '4-egg omelet, yogurt, whole wheat toast, orange juice',
     protein: 36,
@@ -39,8 +39,8 @@ export const LAUTNER_MEALS: Meal[] = [
   },
   {
     id: 'snack',
-    time: 'Mid-morning',
-    label: 'Snack',
+    time: '10:00 AM',
+    label: 'Mid-morning snack',
     foods: 'Nuts, strawberries, blueberries',
     protein: 10,
     fat: 20,
@@ -49,7 +49,7 @@ export const LAUTNER_MEALS: Meal[] = [
   },
   {
     id: 'lunch',
-    time: 'Lunch',
+    time: '12:00 PM',
     label: 'Lunch',
     foods: 'Roasted chicken, rice, green beans, fish',
     protein: 45,
@@ -59,7 +59,7 @@ export const LAUTNER_MEALS: Meal[] = [
   },
   {
     id: 'post',
-    time: 'Post-workout',
+    time: '2:00 PM',
     label: 'Post-workout',
     foods: 'Protein bar, banana, raspberries',
     protein: 25,
@@ -69,7 +69,7 @@ export const LAUTNER_MEALS: Meal[] = [
   },
   {
     id: 'dinner',
-    time: 'Dinner',
+    time: '4:00 PM',
     label: 'Dinner',
     foods: 'Salmon, sweet potato, mixed vegetables, green tea',
     protein: 30,
@@ -186,9 +186,7 @@ export function DietView({ startDate }: { startDate: string }) {
               role="checkbox"
               aria-checked={on}
               onClick={() => toggle(m.id)}
-              className={`w-full rounded-lg border p-3 text-left ${
-                on ? 'border-emerald-600 bg-emerald-950/40' : 'border-neutral-800 bg-neutral-900'
-              }`}
+              className={`w-full rounded-lg border p-3 text-left ${on ? 'border-emerald-600 bg-emerald-950/40' : 'border-neutral-800 bg-neutral-900'}`}
             >
               <div className="flex items-start gap-3">
                 {on ? (
@@ -215,7 +213,7 @@ export function DietView({ startDate }: { startDate: string }) {
       </div>
 
       <div className="rounded-lg bg-neutral-900 p-3 text-xs text-gray-500">
-        Swap any meal&apos;s foods anytime — just edit the numbers in <code>LAUTNER_MEALS</code> in{' '}
+        Swap any meal's foods anytime — just edit the numbers in <code>LAUTNER_MEALS</code> in{' '}
         <code>DietView.tsx</code> and the totals recompute automatically. Carry bag items count
         whenever you eat them.
       </div>
