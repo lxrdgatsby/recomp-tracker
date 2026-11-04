@@ -195,6 +195,12 @@ export function WorkoutsView({ state, onToggleWorkout, lautner = false }: Workou
               ))}
             </ul>
 
+            {bulkWeek && (
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+                12:45 PM · Lifting block 50 min max · Abs 15 min · Stretching 10 min · ~75 min total
+              </p>
+            )}
+
             {hasQuickLog && (
               <p className="mt-3 rounded-2xl bg-black/30 p-3 text-xs leading-relaxed text-slate-400 sm:text-sm">
                 {getWorkoutQuickLog(selectedWeek, day.dayIndex, date)?.sets}
