@@ -8,7 +8,7 @@ export const LAUTNER_WEEK_END = 40
 export const LAUTNER_RULES = [
   'Taste the weight: about 40% above your 10-rep max, lowering half only, spotter, 3×5.',
   'Vary volume between 3×8–10 and 4×15.',
-  'Cardio stays at or under 20 minutes.',
+  'Cardio: 20 min at 12% incline, 3 mph, after stretching on Mon/Wed/Fri only.',
   'Six meals, nothing more than 2 hours apart. Lean meats and vegetables. A cheat day is a planned refeed.',
   'Retatrutide fights the surplus. Consider tapering or pausing it during this bulk. Research-use tracking only.',
 ]
@@ -35,7 +35,7 @@ interface DayTemplate {
 }
 
 const SESSION_NOTE =
-  'Warm up with stretches and push-ups or air squats. Done by 5 PM. Cardio stays at or under 20 minutes.'
+  '12:45 PM start. Stretch 10 min (12:45-12:55). Lifting 50 min max (12:55-1:45). Abs 15 min (1:45-2:00). Cardio 20 min - 12% incline, 3 mph (2:00-2:20). Done by 5 PM.'
 
 const ABS: Lift[] = [
   {
